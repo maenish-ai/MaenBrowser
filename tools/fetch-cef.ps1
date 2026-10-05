@@ -13,7 +13,6 @@ $indexUrl = "$baseUrl/index.json"
 
 $destinationPath = [System.IO.Path]::GetFullPath($Destination)
 New-Item -ItemType Directory -Force -Path $destinationPath | Out-Null
-
 $cefRoot = Join-Path $destinationPath "cef_binary_${CefVersion}_${platform}_minimal"
 
 if (Test-Path (Join-Path $cefRoot "cmake\FindCEF.cmake")) {
@@ -23,25 +22,21 @@ if (Test-Path (Join-Path $cefRoot "cmake\FindCEF.cmake")) {
 
 Write-Host "Reading official CEF index..."
 $index = Invoke-RestMethod -Uri $indexUrl
-
 $versionEntry = $index.$platform.versions |
   Where-Object { $_.cef_version -eq $CefVersion } |
   Select-Object -First 1
-
-if (-not $versionEntry) {
-  throw "CEF $CefVersion not found for $platform."
-}
+if (-not $versionEntry) { throw "CEF $CefVersion not found for $platform." }
 
 $fileEntry = $versionEntry.files |
-  Where-Object { $_.name -eq $archiveName -or $_.type -eq "minimal" } |
+  Where-Object { $_.name -eq $archiveName } |
   Select-Object -First 1
-
-if (-not $fileEntry) {
-  throw "Minimal CEF archive metadata not found."
-}
+if (-not $fileEntry) { throw "Exact minimal CEF archive metadata not found: $archiveName" }
 
 $tempRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
 $tempArchive = Join-Path $tempRoot $archiveName
+$tempExtract = Join-Path $tempRoot "maen-cef-extract"
+Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $tempExtract | Out-Null
 
 Write-Host "Downloading CEF $CefVersion..."
 Invoke-WebRequest -Uri "$baseUrl/$archiveName" -OutFile $tempArchive
@@ -54,9 +49,33 @@ if ($fileEntry.sha1) {
   }
 }
 
-Write-Host "Extracting CEF..."
-tar -xjf $tempArchive -C $destinationPath
+$sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
+if (-not $sevenZip) {
+  $candidate = "C:\Program Files\7-Zip\7z.exe"
+  if (Test-Path $candidate) { $sevenZip = $candidate }
+}
+if (-not $sevenZip) { throw "7-Zip is required to extract CEF." }
+
+Write-Host "Extracting bzip2 layer with 7-Zip..."
+& $sevenZip x $tempArchive "-o$tempExtract" -y | Write-Host
+if ($LASTEXITCODE -ne 0) { throw "7-Zip failed to extract the bzip2 layer." }
+
+$tarFile = Get-ChildItem $tempExtract -Filter "*.tar" | Select-Object -First 1
+if (-not $tarFile) { throw "CEF tar payload was not produced." }
+
+Write-Host "Extracting CEF tar payload with 7-Zip..."
+& $sevenZip x $tarFile.FullName "-o$destinationPath" -y | Write-Host
+if ($LASTEXITCODE -ne 0) { throw "7-Zip failed to extract the CEF tar payload." }
+
 Remove-Item $tempArchive -Force -ErrorAction SilentlyContinue
+Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+
+if (-not (Test-Path (Join-Path $cefRoot "cmake\FindCEF.cmake"))) {
+  $found = Get-ChildItem $destinationPath -Directory |
+    Where-Object { Test-Path (Join-Path $_.FullName "cmake\FindCEF.cmake") } |
+    Select-Object -First 1
+  if ($found) { $cefRoot = $found.FullName }
+}
 
 if (-not (Test-Path (Join-Path $cefRoot "cmake\FindCEF.cmake"))) {
   throw "CEF extraction failed: FindCEF.cmake missing."

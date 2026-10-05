@@ -14,3 +14,10 @@ Before public production release: run the acceptance/RAM matrix, verify the pinn
 - Explicitly builds CEF with `USE_SANDBOX=ON`.
 - Added `tools/preflight.ps1` to catch repository/version/workflow drift before downloading/building dependencies.
 - Chrome Runtime download handling now delegates to Chromium's native download UI; MaenBrowser still observes completion events.
+
+
+## CI repair 2026-10-05
+- Pinned runner: windows-2022 / Visual Studio 2022.
+- Replaced Windows tar bzip2 extraction with deterministic two-stage 7-Zip extraction after the previous run stalled until the 90-minute job timeout.
+- Exact CEF archive metadata match and SHA-1 verification retained.
+- Repository preflight remains enabled before dependency download/build.

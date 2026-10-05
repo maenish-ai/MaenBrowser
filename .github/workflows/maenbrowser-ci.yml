@@ -18,11 +18,11 @@ concurrency:
 jobs:
   build-windows:
     runs-on: windows-2022
-    timeout-minutes: 90
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Verify version
         shell: pwsh
@@ -44,6 +44,14 @@ jobs:
           $nsis = "C:\Program Files (x86)\NSIS"
           if (Test-Path $nsis) {
             $nsis | Out-File -FilePath $env:GITHUB_PATH -Append
+          }
+
+      - name: Verify 7-Zip
+        shell: pwsh
+        run: |
+          $sevenZip = (Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip -and -not (Test-Path "C:\Program Files\7-Zip\7z.exe")) {
+            throw "7-Zip is not available on the runner."
           }
 
       - name: Download and verify CEF
