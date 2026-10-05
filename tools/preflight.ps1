@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.4") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.5") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -92,7 +92,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.4-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.5-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -135,10 +135,10 @@ if ($beforeDownloadBody.Contains("CloseBrowser")) {
 if (-not $beforeDownloadBody.Contains("return false;")) {
   throw "Chrome Runtime download delegation missing."
 }
-foreach ($removedUnsafeState in @("popup_browser_ids_", "browser->IsPopup()")) {
-  if ($clientH.Contains($removedUnsafeState) -or $beforeDownloadBody.Contains($removedUnsafeState)) {
-    throw "Removed download-race state unexpectedly returned: $removedUnsafeState"
-  }
+# Popup tracking itself is safe and required for transient-window cleanup.
+# The dangerous regression is acting on the popup during OnBeforeDownload.
+if ($beforeDownloadBody.Contains("CloseBrowser") -or $beforeDownloadBody.Contains("SW_HIDE")) {
+  throw "Download regression: popup tracking may not close/hide the initiating browser in OnBeforeDownload."
 }
 
 # Search-choice start page regression guards.
