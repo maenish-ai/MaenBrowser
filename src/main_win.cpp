@@ -1,18 +1,17 @@
 #include <windows.h>
 
 #include "include/cef_app.h"
-#include "include/maenbrowser/version.h"
+#include "include/cef_sandbox_win.h"
+#include "include/cef_version_info.h"
+
 #include "src/app/maen_app.h"
 #include "src/storage/local_profile.h"
 #include "src/updater/update_manager.h"
 
-int APIENTRY wWinMain(HINSTANCE instance,
-                      HINSTANCE,
-                      wchar_t*,
-                      int) {
-  CefMainArgs main_args(instance);
+namespace {
 
-  void* sandbox_info = nullptr;
+int RunMain(HINSTANCE instance, void* sandbox_info) {
+  CefMainArgs main_args(instance);
 
   CefRefPtr<maenbrowser::MaenApp> app(new maenbrowser::MaenApp());
 
@@ -24,20 +23,26 @@ int APIENTRY wWinMain(HINSTANCE instance,
   CefSettings settings;
   settings.chrome_runtime = true;
   settings.persist_session_cookies = true;
+  settings.persist_user_preferences = true;
   settings.log_severity = LOGSEVERITY_WARNING;
 
-  CefString(&settings.root_cache_path) = maenbrowser::storage::GetProfileRoot();
-  CefString(&settings.cache_path) = maenbrowser::storage::GetCachePath();
+  CefString(&settings.root_cache_path) =
+      maenbrowser::storage::GetProfileRoot();
 
-  // Foundation build mode. Public release must migrate to CEF bootstrap sandbox.
-  settings.no_sandbox = true;
+  // Chrome runtime uses its own "Default" profile below root_cache_path.
+  CefString(&settings.cache_path) =
+      maenbrowser::storage::GetProfileRoot();
+
+  if (!sandbox_info) {
+    settings.no_sandbox = true;
+  }
 
   if (!CefInitialize(main_args, settings, app, sandbox_info)) {
     MessageBoxW(nullptr,
-                L"MaenBrowser could not initialize the Chromium engine.",
+                L"MaenBrowser could not initialize Chromium.",
                 L"MaenBrowser",
                 MB_ICONERROR | MB_OK);
-    return 1;
+    return CefGetExitCode();
   }
 
   maenbrowser::updater::UpdateManager::Initialize();
@@ -46,3 +51,33 @@ int APIENTRY wWinMain(HINSTANCE instance,
   CefShutdown();
   return 0;
 }
+
+}  // namespace
+
+#if defined(CEF_USE_BOOTSTRAP)
+
+CEF_BOOTSTRAP_EXPORT int RunWinMain(HINSTANCE hInstance,
+                                    LPWSTR,
+                                    int,
+                                    void* sandbox_info,
+                                    cef_version_info_t*) {
+  return RunMain(hInstance, sandbox_info);
+}
+
+#else
+
+int APIENTRY wWinMain(HINSTANCE hInstance,
+                      HINSTANCE,
+                      LPWSTR,
+                      int) {
+  void* sandbox_info = nullptr;
+
+#if defined(CEF_USE_SANDBOX)
+  CefScopedSandboxInfo scoped_sandbox;
+  sandbox_info = scoped_sandbox.sandbox_info();
+#endif
+
+  return RunMain(hInstance, sandbox_info);
+}
+
+#endif

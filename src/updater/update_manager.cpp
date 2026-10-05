@@ -8,9 +8,12 @@ namespace maenbrowser::updater {
 
 void UpdateManager::Initialize() {
 #if MAEN_ENABLE_UPDATER
-  // Production values are injected when a release feed and signing key exist.
-  // Never ship an updater feed over plain HTTP.
-  win_sparkle_set_app_details(L"MaenBrowser", L"MaenBrowser", L"1.0.0");
+  // Keep disabled in public CI until an HTTPS appcast and signing key are
+  // configured. Never auto-install unsigned browser updates.
+  win_sparkle_set_app_details(
+      L"MaenBrowser",
+      L"MaenBrowser",
+      L"1.1.0");
   win_sparkle_set_automatic_check_for_updates(1);
   win_sparkle_set_update_check_interval(24 * 60 * 60);
   win_sparkle_init();

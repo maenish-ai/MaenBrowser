@@ -1,54 +1,23 @@
-# MaenBrowser 1.0.0 — Windows production foundation
+# MaenBrowser 1.1.0 — Windows Desktop
 
-MaenBrowser is a local-first Chromium/CEF browser project focused on low RAM pressure, broad modern-web compatibility and user-controlled extensions.
+MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
-## What this package is
-This is the first source foundation, not a falsely labeled finished public binary. It establishes the production architecture and the files required to build the Windows engine shell. Public 1.0.0 release gates are tracked in `docs/ROADMAP.md`.
+## What this build line uses
 
-## Current foundation features
-- Native C++ Windows target (no Electron).
-- Chromium via CEF Chrome runtime.
-- Persistent local profile under `%LOCALAPPDATA%\MaenBrowser\User Data`.
-- No MaenBrowser cloud account.
-- Unpacked extension loader foundation (`manifest.json` directory).
-- Optional WinSparkle integration point for signed updates.
-- NSIS installer + complete uninstall path, including local MaenBrowser profile removal.
-- Security baseline for sandbox, extension permissions and password storage.
+The Windows application uses C++20 and CEF Chrome Runtime. The design deliberately reuses Chromium's mature browser chrome and web platform instead of recreating security-sensitive browser behavior from scratch. The local profile is stored under `%LOCALAPPDATA%\MaenBrowser`.
 
-## Build prerequisites
-- Windows 10/11 development machine.
-- Visual Studio 2022 with Desktop development with C++.
-- CMake 3.21+.
-- Current CEF Standard Distribution for Windows x64.
-- NSIS for packaging.
-- Optional WinSparkle SDK for updater integration.
+## User-facing scope
 
-## Configure and build
-```powershell
-.\tools\configure-win-x64.ps1 -CefRoot "C:\SDK\cef_binary_xxx_windows64"
-.\tools\build-release.ps1
-```
+The source integrates a Chromium browser window, standard navigation/tab behavior exposed by Chrome Runtime, persistent local profile, download interception with Save As and completion actions, local preferences, CEF-supported unpacked extensions, private-window capability supplied by the runtime, installer/uninstaller, and automated Windows build packaging.
 
-CEF requires its DLLs and resource files next to the executable. The build configuration uses CEF's CMake helper lists to stage them.
+MaenBrowser automatically selects Lite Mode on machines with 6 GB RAM or less. Lite Mode disables speculative prerender and back-forward page caching and caps disk/media caches. It intentionally does **not** disable the Chromium sandbox or site isolation.
 
-## Package
-Place the complete Release runtime in `dist\`, then:
-```powershell
-.\tools\package-nsis.ps1
-```
+## Build
 
-The NSIS installer registers MaenBrowser under the current user's Windows uninstall registry and produces a normal uninstall entry.
+Push the repository to GitHub and run `Build MaenBrowser Windows` in Actions. The workflow fetches the pinned CEF distribution, builds Release x64, stages the Chromium runtime, creates an NSIS installer, and uploads Setup and Portable artifacts.
 
-## Extensions
-The foundation can load an unpacked web extension directory containing `manifest.json` using CEF `LoadExtension`. External `.crx` installation remains disabled until CRX3 signature verification and safe extraction are implemented; this is intentional security behavior, not a missing checkbox.
+See `docs/FEATURE_MATRIX.md`, `docs/TEST_PLAN.md`, `docs/SECURITY.md`, and `docs/ARCHITECTURE.md` before calling a release production-ready.
 
-## Updates
-Updater code is disabled by default until the project has a real HTTPS appcast URL and an EdDSA signing key. Enable only after configuring those release assets.
+## Important release boundary
 
-## Important production rule
-Do not ship this foundation build as a public browser yet. It currently uses the no-sandbox development path for straightforward bring-up. Before public distribution, migrate the Windows target to CEF's current bootstrap/sandbox architecture and make that a release gate.
-
-## GitHub Actions
-The repository includes `.github/workflows/maenbrowser-ci.yml`. On the first push to GitHub it starts automatically, validates the repository/version, and publishes a downloadable source artifact. It can also be started manually from **Actions > MaenBrowser CI > Run workflow**.
-
-> A distributable Windows `.exe` is intentionally not produced by CI yet because the Chromium/CEF SDK binaries are not vendored in this source foundation. The Windows release workflow will be enabled once the pinned CEF SDK/build dependency is added, so CI never pretends to have built a browser executable when it has not.
+This is a serious development release, not a claim of feature-for-feature parity with Chrome, Edge or Firefox. Chrome Web Store compatibility, signed auto-update infrastructure, custom password-manager UI, and measured RAM superiority across all workloads are not claimed until implemented and tested.

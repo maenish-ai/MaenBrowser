@@ -1,11 +1,8 @@
 #pragma once
 
-#ifndef MAEN_BROWSER_VERSION
-#define MAEN_BROWSER_VERSION "1.0.0"
-#endif
-
 namespace maenbrowser {
-inline constexpr const wchar_t* kProductName = L"MaenBrowser";
-inline constexpr const char* kVersion = MAEN_BROWSER_VERSION;
-inline constexpr const char* kHomepage = "https://www.google.com/";
+inline constexpr char kProductName[] = "MaenBrowser";
+inline constexpr char kVersion[] = "1.1.0";
+inline constexpr char kHomepage[] = "https://www.google.com/";
+inline constexpr char kRepositoryUrl[] = "https://github.com/maenish-ai/MaenBrowser";
 }  // namespace maenbrowser

@@ -7,33 +7,48 @@
 
 namespace maenbrowser::storage {
 namespace {
+
 std::wstring LocalAppData() {
   PWSTR raw = nullptr;
-  if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, &raw))) {
+  if (FAILED(SHGetKnownFolderPath(
+          FOLDERID_LocalAppData,
+          KF_FLAG_CREATE,
+          nullptr,
+          &raw))) {
     return L".";
   }
+
   std::wstring result(raw);
   CoTaskMemFree(raw);
   return result;
 }
 
-std::wstring Ensure(const std::filesystem::path& p) {
+std::wstring Ensure(const std::filesystem::path& path) {
   std::error_code ec;
-  std::filesystem::create_directories(p, ec);
-  return p.wstring();
+  std::filesystem::create_directories(path, ec);
+  return path.wstring();
 }
+
 }  // namespace
 
+std::wstring GetAppDataRoot() {
+  return Ensure(
+      std::filesystem::path(LocalAppData()) / L"MaenBrowser");
+}
+
 std::wstring GetProfileRoot() {
-  return Ensure(std::filesystem::path(LocalAppData()) / L"MaenBrowser" / L"User Data");
+  return Ensure(
+      std::filesystem::path(GetAppDataRoot()) / L"User Data");
 }
 
 std::wstring GetCachePath() {
-  return Ensure(std::filesystem::path(GetProfileRoot()) / L"Default");
+  return Ensure(
+      std::filesystem::path(GetProfileRoot()) / L"Default");
 }
 
 std::wstring GetExtensionsPath() {
-  return Ensure(std::filesystem::path(GetProfileRoot()) / L"Extensions");
+  return Ensure(
+      std::filesystem::path(GetProfileRoot()) / L"Extensions");
 }
 
 }  // namespace maenbrowser::storage

@@ -1,5 +1,5 @@
-# MaenBrowser Android
+# Android
 
-Reserved for the Android target. It will share product identity and user-facing concepts with Windows, but it will have its own build, update, extension and Google Play compliance layer.
-
-Do not copy the Windows self-update mechanism to Android. Store-distributed Android releases must use the supported Google Play update path.
+Android is intentionally separated from the Windows CEF build. A Play Store
+release needs an Android-specific engine/extension design and Play policy
+review; the Windows CEF binaries are not reused here.

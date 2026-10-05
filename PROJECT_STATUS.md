@@ -1,21 +1,9 @@
-# Current status
+# Project status — MaenBrowser 1.1.0
 
-Version identity: **MaenBrowser 1.0.0**
+This source tree is the expanded Windows desktop development release. It is designed to compile against the pinned CEF/Chromium distribution in GitHub Actions and package an installable Windows build.
 
-Implemented in source foundation:
-- Windows C++/CEF bootstrapping
-- Persistent local profile
-- Extension loader base for unpacked web extensions
-- Updater integration seam
-- Windows installer/uninstaller
-- Source sanity CI
+Major additions over the foundation: Chrome Runtime integration, persistent local profile/preferences, downloads flow, unpacked extension loading, Windows installer/uninstaller, automated CEF build pipeline, and automatic low-memory Lite Mode for <=6 GB systems.
 
-Not yet complete enough to call a public binary release:
-- custom MaenBrowser UI
-- tested tab memory suspension/discard
-- password manager UI/storage
-- CRX3 verification
-- signed release/update infrastructure
-- Android application
+Security boundary: Lite Mode does not turn off sandboxing or site isolation.
 
-The repository intentionally distinguishes implemented code from planned features so future releases are auditable.
+Before public production release: run the acceptance/RAM matrix, verify the pinned CEF build and extension APIs, code-sign binaries/installer, configure signed update infrastructure, and perform security/privacy review.

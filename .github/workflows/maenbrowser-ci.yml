@@ -1,67 +1,130 @@
-name: MaenBrowser CI
+name: Build MaenBrowser Windows
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["main"]
+    tags: ["v*"]
   pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: maenbrowser-ci-${{ github.ref }}
+  group: maenbrowser-windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate-and-package:
-    name: Validate repository and package source
+  build-windows:
     runs-on: windows-latest
+    timeout-minutes: 90
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify MaenBrowser version
+      - name: Verify version
         shell: pwsh
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
-          if ($version -ne "1.0.0") { throw "VERSION mismatch: expected 1.0.0, found $version" }
+          if ($version -ne "1.1.0") {
+            throw "Expected VERSION 1.1.0, got $version"
+          }
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Verify required project files
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          $nsis = "C:\Program Files (x86)\NSIS"
+          if (Test-Path $nsis) {
+            $nsis | Out-File -FilePath $env:GITHUB_PATH -Append
+          }
+
+      - name: Download and verify CEF
+        shell: pwsh
+        run: |
+          $cefRoot = & .\tools\fetch-cef.ps1
+          if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
+          "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            "-DCEF_ROOT=$env:CEF_ROOT" `
+            -DMAEN_ENABLE_UPDATER=OFF
+
+      - name: Build Release
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+
+      - name: Stage runtime
+        shell: pwsh
+        run: |
+          $release = "build\Release"
+          if (!(Test-Path "$release\MaenBrowser.exe")) {
+            throw "MaenBrowser.exe not found after build."
+          }
+
+          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "$release\*" dist -Recurse -Force
+
+          if (!(Test-Path "dist\libcef.dll")) {
+            throw "CEF runtime libcef.dll missing from staged build."
+          }
+
+      - name: Verify staged browser runtime
         shell: pwsh
         run: |
           $required = @(
-            "CMakeLists.txt",
-            "src/main_win.cpp",
-            "src/app/maen_app.cpp",
-            "src/app/maen_client.cpp",
-            "src/extensions/extension_manager.cpp",
-            "src/storage/local_profile.cpp",
-            "src/updater/update_manager.cpp",
-            "installer/MaenBrowser.nsi",
-            "docs/SECURITY.md",
-            "VERSION"
+            "dist\MaenBrowser.exe",
+            "dist\libcef.dll",
+            "dist\icudtl.dat",
+            "dist\resources.pak"
           )
           foreach ($file in $required) {
-            if (!(Test-Path $file)) { throw "Missing required file: $file" }
+            if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
 
-      - name: Check CMake syntax/configuration entry point
-        shell: pwsh
-        run: cmake --version
-
-      - name: Create source package
+      - name: Build NSIS installer
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $items = Get-ChildItem -Force | Where-Object { $_.Name -notin @(".git", "dist") }
-          Compress-Archive -Path $items.FullName -DestinationPath "dist/MaenBrowser-$env:MAEN_VERSION-source.zip" -Force
+          Push-Location installer
+          try {
+            makensis MaenBrowser.nsi
+          } finally {
+            Pop-Location
+          }
 
-      - name: Upload CI artifact
+          if (!(Test-Path "installer\MaenBrowser-1.1.0-Setup.exe")) {
+            throw "Installer was not created."
+          }
+
+      - name: Package portable runtime
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path dist\* `
+            -DestinationPath "MaenBrowser-$env:MAEN_VERSION-Windows-x64-Portable.zip" `
+            -Force
+
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-source
-          path: dist/MaenBrowser-${{ env.MAEN_VERSION }}-source.zip
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
+          path: installer/MaenBrowser-1.1.0-Setup.exe
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Portable
+          path: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Portable.zip
+          if-no-files-found: error
+          retention-days: 30
