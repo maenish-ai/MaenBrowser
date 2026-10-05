@@ -2,7 +2,7 @@
 !include "FileFunc.nsh"
 
 !define PRODUCT_NAME "MaenBrowser"
-!define PRODUCT_VERSION "1.5.1"
+!define PRODUCT_VERSION "1.5.2"
 !define PRODUCT_PUBLISHER "MaenBrowser"
 !define PRODUCT_EXE "MaenBrowser.exe"
 !define APP_REG_KEY "Software\Clients\StartMenuInternet\MaenBrowser"
@@ -10,7 +10,7 @@
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MaenBrowser"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "MaenBrowser-1.5.1-Setup.exe"
+OutFile "MaenBrowser-1.5.2-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MaenBrowser"
 RequestExecutionLevel user
 Unicode True
@@ -19,7 +19,7 @@ SetCompressor /SOLID lzma
 Icon "..\assets\maenbrowser.ico"
 UninstallIcon "..\assets\maenbrowser.ico"
 
-VIProductVersion "1.5.1.0"
+VIProductVersion "1.5.2.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"

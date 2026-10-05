@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.1") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.2") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -60,7 +60,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.1-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.2-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -81,16 +81,32 @@ foreach ($forbidden in @("disable-site-isolation","no-sandbox","ignore-certifica
   if ($resource.Contains($forbidden)) { throw "Forbidden security weakening in resource policy: $forbidden" }
 }
 
-# Smart-download popup regression guards.
+# Download reliability regression guards.
+# Chrome Runtime owns downloads. Never close the initiating browser during
+# OnBeforeDownload: doing so can race redirect/popup download handoff and
+# produce an immediate "Canceled" result (for example GitHub artifacts).
 $clientH = Get-Content "src/app/maen_client.h" -Raw
 $clientCpp = Get-Content "src/app/maen_client.cpp" -Raw
-foreach ($needle in @("OnBeforePopup", "popup_browser_ids_", "browser->IsPopup()", "CloseBrowser(false)")) {
-  if (-not ($clientH.Contains($needle) -or $clientCpp.Contains($needle))) {
-    throw "Smart download handling missing: $needle"
-  }
+if (-not ($clientH.Contains("OnBeforePopup") -or $clientCpp.Contains("OnBeforePopup"))) {
+  throw "Popup handler missing; OAuth/payment/login popup compatibility must be preserved."
 }
 if ($clientCpp -match 'OnBeforePopup[\s\S]{0,1800}return true;') {
   throw "Popup policy must not blanket-cancel normal OAuth/payment/login popups."
+}
+$beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")
+$updatedStart = $clientCpp.IndexOf("void MaenClient::OnDownloadUpdated")
+if ($beforeStart -lt 0 -or $updatedStart -le $beforeStart) { throw "Download handler boundaries not found." }
+$beforeDownloadBody = $clientCpp.Substring($beforeStart, $updatedStart - $beforeStart)
+if ($beforeDownloadBody.Contains("CloseBrowser")) {
+  throw "Download regression: never close the initiating browser from OnBeforeDownload."
+}
+if (-not $beforeDownloadBody.Contains("return false;")) {
+  throw "Chrome Runtime download delegation missing."
+}
+foreach ($removedUnsafeState in @("popup_browser_ids_", "browser->IsPopup()")) {
+  if ($clientH.Contains($removedUnsafeState) -or $beforeDownloadBody.Contains($removedUnsafeState)) {
+    throw "Removed download-race state unexpectedly returned: $removedUnsafeState"
+  }
 }
 
 # Search-choice start page regression guards.
@@ -144,15 +160,3 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
   Write-Warning "Review download flow: downloads must never auto-execute."
 }
 
-# Download reliability regression gate.
-$clientSource = Get-Content "src/app/maen_client.cpp" -Raw
-$beforeStart = $clientSource.IndexOf("bool MaenClient::OnBeforeDownload")
-$updatedStart = $clientSource.IndexOf("void MaenClient::OnDownloadUpdated")
-if ($beforeStart -lt 0 -or $updatedStart -le $beforeStart) { throw "Download handler boundaries not found." }
-$beforeDownloadBody = $clientSource.Substring($beforeStart, $updatedStart - $beforeStart)
-if ($beforeDownloadBody.Contains("CloseBrowser")) {
-  throw "Download regression: never close the initiating browser from OnBeforeDownload."
-}
-if (-not $beforeDownloadBody.Contains("return false;")) {
-  throw "Chrome Runtime download delegation missing."
-}
