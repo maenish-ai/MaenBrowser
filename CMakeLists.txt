@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.5.6 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.5.7 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")
@@ -107,7 +107,6 @@ target_link_libraries(MaenBrowser PRIVATE
   libcef_dll_wrapper
   comctl32
   shlwapi
-  shell32
   user32
   ${CEF_STANDARD_LIBS}
 )

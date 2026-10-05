@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.6") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.7") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -57,16 +57,17 @@ foreach ($needle in @("IsInProgress()", "GetReceivedBytes()", "SW_HIDE", "CloseB
 }
 
 
-# Windows taskbar identity compile/link regression guard.
+
+
+# Windows taskbar identity compile-portability guard.
 $mainWinSource = Get-Content "src/main_win.cpp" -Raw
-$cmakeSource = Get-Content "CMakeLists.txt" -Raw
-if ($mainWinSource.Contains("SetCurrentProcessExplicitAppUserModelID")) {
-  if (-not $mainWinSource.Contains("#include <shellapi.h>")) {
-    throw "AppUserModelID API requires shellapi.h."
+foreach ($needle in @("GetModuleHandleW", "GetProcAddress", '"SetCurrentProcessExplicitAppUserModelID"', '"MaenBrowser.Desktop"')) {
+  if (-not $mainWinSource.Contains($needle)) {
+    throw "Dynamic AppUserModelID resolution guard missing: $needle"
   }
-  if (-not $cmakeSource.ToLowerInvariant().Contains("shell32")) {
-    throw "AppUserModelID API requires explicit shell32 linkage."
-  }
+}
+if ($mainWinSource -match '(?m)^\s*SetCurrentProcessExplicitAppUserModelID\s*\(') {
+  throw "Do not directly call SetCurrentProcessExplicitAppUserModelID; resolve it dynamically for SDK portability."
 }
 
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
@@ -105,7 +106,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.6-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.7-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',

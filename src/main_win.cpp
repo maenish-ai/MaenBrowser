@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <shellapi.h>
 
 #include "include/cef_app.h"
 #include "include/cef_sandbox_win.h"
@@ -16,7 +15,15 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
   // Give every MaenBrowser top-level window one stable Windows taskbar identity.
   // This prevents the CEF Chrome Runtime window from being grouped/rendered as
   // a separate generic Chromium application.
-  SetCurrentProcessExplicitAppUserModelID(L"MaenBrowser.Desktop");
+  // Resolve the Windows 7+ taskbar identity API dynamically. This avoids
+  // compile-time SDK declaration gating while preserving a stable AppUserModelID.
+  // If unavailable, icon unification still falls back to the stamped EXE and WM_SETICON.
+  using SetAppIdFn = HRESULT (WINAPI*)(PCWSTR);
+  if (HMODULE shell32 = GetModuleHandleW(L"shell32.dll")) {
+    auto set_app_id = reinterpret_cast<SetAppIdFn>(
+        GetProcAddress(shell32, "SetCurrentProcessExplicitAppUserModelID"));
+    if (set_app_id) set_app_id(L"MaenBrowser.Desktop");
+  }
 
   CefMainArgs main_args(instance);
 
