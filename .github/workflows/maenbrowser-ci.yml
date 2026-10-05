@@ -11,10 +11,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: maenbrowser-windows-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-windows:
     runs-on: windows-2022
