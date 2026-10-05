@@ -1,24 +1,37 @@
-# MaenBrowser 1.1 development feature matrix
+# MaenBrowser 1.3.0 feature matrix
 
-## Integrated
-- Chromium/CEF 152 web engine with Chrome Runtime compatibility.
-- MaenBrowser-branded Windows executable, installer and shortcuts.
-- MaenBrowser start page with lightweight search and quick links.
-- Multi-tab/window navigation supplied by the CEF Chrome Runtime.
+## Integrated and buildable
+- CEF/Chromium 152 web engine with production sandbox enabled in CI.
+- Familiar Chromium tab/navigation behavior through Chrome Runtime.
+- MaenBrowser branding, start page, title branding and Windows icon assets.
 - Persistent local profile, cookies, cache and preferences.
-- Downloads delegated to Chromium UI plus MaenBrowser completion actions.
-- Automatic Lite Mode on systems with <= 6 GB RAM without disabling sandbox/site isolation.
-- Per-user NSIS installer and full-data uninstall.
-- GitHub Actions Windows x64 build.
+- Downloads through Chromium UI plus MaenBrowser completion actions.
+- History, PDF, printing, picture-in-picture and private-window capabilities where exposed by the pinned Chromium runtime.
+- Three-tier resource policy:
+  - Lite: <= 6 GB RAM; disables prerender + BFCache and caps caches.
+  - Balanced: 6–16 GB; disables prerender and uses moderate cache caps.
+  - Performance: >= 16 GB; stays close to Chromium defaults.
+- Windows Setup installer, Installed Apps entry, Start/Desktop shortcuts, App Paths and browser/default-app capability registration.
+- Full uninstall option removes MaenBrowser local profile data.
+- No mandatory Maen account or proprietary cloud service.
 
-## Deliberate boundaries
-- The current browser frame still uses CEF Chrome Runtime. A fully custom tab/address-bar shell is a later architectural step, not falsely claimed here.
-- Programmatic unpacked-extension loading is disabled because the legacy request-context extension APIs are absent in pinned CEF 152.
-- Chrome Web Store one-click compatibility is not guaranteed.
-- Google Sync is disabled; there is no proprietary MaenBrowser cloud account.
-- A MaenBrowser password-manager UI and signed update feed are not yet implemented.
-- RAM superiority is not claimed without benchmarks.
-- Android remains a separate future implementation.
+## Product principles accepted for the custom-shell phase
+These are requirements, but are not falsely marked as implemented until the custom MaenBrowser shell replaces the Chrome-style shell:
+- Maen-owned tab strip and omnibox.
+- Sleeping/discarding inactive tabs with audio/form/download safeguards.
+- Tab groups/stacks, optional vertical tabs and workspaces.
+- Split view.
+- Saved sessions.
+- Maen-owned Bookmarks/History/Downloads surfaces.
+- Reader mode.
+- Quick command palette spanning tabs/history/bookmarks/actions.
+- Resource dashboard and per-site/tab memory controls.
+- Extension management on a CEF-152-supported API path.
 
-## Design rule
-MaenBrowser may adopt useful browser interaction patterns, but it does not copy third-party browser branding, icons or proprietary visual assets.
+## Security/performance gate
+A feature is rejected or made optional if its steady-state RAM/CPU cost is disproportionate.
+Memory savings must never disable the Chromium sandbox, site isolation, TLS validation or other core security boundaries.
+
+## Compatibility boundary
+The current desktop engine is the pinned modern CEF/Chromium Windows x64 line. It does not claim safe support for every obsolete Windows release.
+Android requires a separate native mobile implementation and is not included in this Windows source package.

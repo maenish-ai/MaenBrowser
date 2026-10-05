@@ -1,4 +1,4 @@
-# Project status — MaenBrowser 1.1.0
+# Project status — MaenBrowser 1.3.0
 
 This source tree is the expanded Windows desktop development release. It is designed to compile against the pinned CEF/Chromium distribution in GitHub Actions and package an installable Windows build.
 
@@ -37,3 +37,12 @@ Before public production release: run the acceptance/RAM matrix, verify the pinn
 - Window titles retain MaenBrowser identity.
 - Kept the proven CEF Chrome Runtime frame for this build rather than risking a wholesale shell rewrite in one release.
 - Corrected feature documentation so extension support is not overstated.
+
+
+## 1.3.0 Windows integration
+- Added a normal double-click NSIS Setup executable as the primary Windows distribution.
+- Added Installed Apps, Start Menu, Desktop, App Paths and Windows browser-capability registration.
+- Added HTTP/HTTPS browser-candidate registration without hijacking the user's default-app choice.
+- Retained the portable ZIP as an optional secondary artifact.
+- Preserved Lite Mode and CEF sandbox/security boundaries.
+- Documented the honest platform boundary: current CEF 152 desktop line targets modern x64 Windows; Android requires a separate native implementation and is not falsely claimed complete.

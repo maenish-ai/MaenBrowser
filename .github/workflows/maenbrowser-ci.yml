@@ -28,8 +28,8 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
-          if ($version -ne "1.1.0") {
-            throw "Expected VERSION 1.1.0, got $version"
+          if ($version -ne "1.3.0") {
+            throw "Expected VERSION 1.3.0, got $version"
           }
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -124,7 +124,7 @@ jobs:
             Pop-Location
           }
 
-          if (!(Test-Path "installer\MaenBrowser-1.1.0-Setup.exe")) {
+          if (!(Test-Path "installer\MaenBrowser-1.3.0-Setup.exe")) {
             throw "Installer was not created."
           }
 
@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
-          path: installer/MaenBrowser-1.1.0-Setup.exe
+          path: installer/MaenBrowser-1.3.0-Setup.exe
           if-no-files-found: error
           retention-days: 30
 

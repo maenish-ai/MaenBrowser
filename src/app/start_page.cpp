@@ -1,11 +1,30 @@
 #include "src/app/start_page.h"
 #include <string>
 #include "include/cef_parser.h"
+
 namespace maenbrowser::ui {
 std::string GetStartPageDataUrl() {
-  static const char kHtml[] = R"HTML(<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MaenBrowser</title><style>
-:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#f7f8ff,#eef3ff);color:#11182d;min-height:100vh;display:grid;place-items:center}.wrap{width:min(760px,90vw);text-align:center}.brand{font-size:42px;font-weight:750;letter-spacing:-1.5px}.mark{display:inline-grid;place-items:center;width:56px;height:56px;margin-right:12px;border-radius:18px;background:linear-gradient(135deg,#123cff,#7b4cff);color:white;font-weight:900;box-shadow:0 10px 30px #3048b733}.sub{color:#626b83;margin:10px 0 30px}.search{display:flex;background:white;border:1px solid #dfe4f0;border-radius:18px;padding:8px;box-shadow:0 12px 35px #34436a1a}.search input{flex:1;border:0;outline:0;font-size:17px;padding:13px 15px;background:transparent;color:#11182d}.search button{border:0;border-radius:13px;padding:0 22px;background:#263de8;color:white;font-weight:650;cursor:pointer}.links{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}.links a{background:#ffffffcc;border:1px solid #e1e5ef;border-radius:16px;padding:18px 8px;text-decoration:none;color:#1b2440;font-weight:600}.foot{margin-top:28px;font-size:12px;color:#8991a5}@media(max-width:560px){.links{grid-template-columns:repeat(2,1fr)}.brand{font-size:34px}}@media(prefers-color-scheme:dark){body{background:linear-gradient(135deg,#101322,#151a30);color:#f5f7ff}.search,.links a{background:#1d2337;border-color:#303850;color:#f5f7ff}.search input{color:#f5f7ff}.sub,.foot{color:#aab1c5}}
-</style></head><body><main class="wrap"><div class="brand"><span class="mark">M</span>MaenBrowser</div><div class="sub">Fast · Private · Lightweight</div><form class="search" action="https://www.google.com/search" method="get"><input name="q" autofocus autocomplete="off" placeholder="Search the web"><button>Search</button></form><div class="links"><a href="https://www.youtube.com/">YouTube</a><a href="https://web.whatsapp.com/">WhatsApp</a><a href="https://mail.google.com/">Gmail</a><a href="https://www.wikipedia.org/">Wikipedia</a></div><div class="foot">MaenBrowser · Local-first browsing</div></main></body></html>)HTML";
+  static const char kHtml[] = R"HTML(<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>MaenBrowser</title>
+<style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f5f7fb;color:#172033;min-height:100vh}
+main{width:min(820px,92vw);margin:0 auto;padding:11vh 0 40px}.brand{display:flex;align-items:center;justify-content:center;gap:12px;font-size:38px;font-weight:760}.m{display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#273ee8,#7955e8);color:#fff;font-weight:900}
+.tag{text-align:center;color:#667085;margin:10px 0 28px}.search{display:flex;background:#fff;border:1px solid #dce2ed;border-radius:16px;padding:7px;box-shadow:0 8px 28px #1c2b4a14}
+.search input{flex:1;border:0;outline:0;background:transparent;color:inherit;padding:13px;font-size:16px}.search button{border:0;border-radius:11px;padding:0 20px;background:#3146df;color:#fff;font-weight:650}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}.row a,.card{background:#fff;border:1px solid #e0e5ee;border-radius:14px;padding:15px;text-decoration:none;color:inherit}
+.row a{text-align:center;font-weight:600}.card{margin-top:14px}.card b{display:block;margin-bottom:6px}.small{font-size:12px;color:#737d91}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.chip{border:1px solid #d9dfeb;border-radius:999px;padding:7px 10px;font-size:12px;background:transparent;color:inherit}
+footer{text-align:center;color:#9299a8;font-size:11px;margin-top:24px}
+@media(max-width:580px){.row{grid-template-columns:repeat(2,1fr)}.brand{font-size:31px}}
+@media(prefers-color-scheme:dark){body{background:#111522;color:#f4f6fb}.search,.row a,.card{background:#1a2030;border-color:#30394d}.tag,.small{color:#a8b0c1}.chip{border-color:#394359}}
+</style></head><body><main>
+<div class="brand"><span class="m">M</span>MaenBrowser</div><div class="tag">Fast · Private · Lightweight</div>
+<form class="search" action="https://www.google.com/search" method="get"><input name="q" autofocus autocomplete="off" placeholder="Search the web or type in the address bar"><button>Search</button></form>
+<div class="row"><a href="https://www.youtube.com/">YouTube</a><a href="https://web.whatsapp.com/">WhatsApp</a><a href="https://mail.google.com/">Gmail</a><a href="https://www.wikipedia.org/">Wikipedia</a></div>
+<div class="card"><b>Quick commands</b><div class="small">The browser keeps advanced tools out of the way. Use familiar Chromium shortcuts:</div>
+<div class="chips"><span class="chip">Ctrl+L Address</span><span class="chip">Ctrl+T New tab</span><span class="chip">Ctrl+Shift+T Restore tab</span><span class="chip">Ctrl+H History</span><span class="chip">Ctrl+J Downloads</span><span class="chip">Ctrl+Shift+N Private</span></div></div>
+<div class="card"><b>Performance first</b><div class="small">MaenBrowser automatically selects Lite, Balanced or Performance policy from installed RAM. No security boundary is disabled to save memory.</div></div>
+<footer>MaenBrowser 1.3 · Local-first · No mandatory Maen account</footer>
+</main></body></html>)HTML";
   return "data:text/html;charset=utf-8," + CefURIEncode(kHtml, false).ToString();
 }
-}
+}  // namespace maenbrowser::ui

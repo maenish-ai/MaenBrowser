@@ -10,11 +10,11 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.1.0") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.3.0") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
-if ($cmake -notmatch 'project\(MaenBrowser VERSION 1\.1\.0') { throw "CMake version mismatch" }
+if ($cmake -notmatch 'project\(MaenBrowser VERSION 1\.3\.0') { throw "CMake version mismatch" }
 $nsi=Get-Content installer/MaenBrowser.nsi -Raw
-if ($nsi -notmatch 'PRODUCT_VERSION "1\.1\.0"') { throw "NSIS version mismatch" }
+if ($nsi -notmatch 'PRODUCT_VERSION "1\.3\.0"') { throw "NSIS version mismatch" }
 $wf=Get-Content .github/workflows/maenbrowser-ci.yml -Raw
 if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must be pinned to windows-2022" }
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use VS 2022 generator" }
@@ -51,3 +51,27 @@ if ($cmake -notmatch 'src/app/start_page.cpp') { throw "Start page missing from 
 if ($cmake -notmatch 'src/win/maenbrowser.rc') { throw "Windows icon resource missing from CMake" }
 $nsi=Get-Content installer/MaenBrowser.nsi -Raw
 if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" }
+
+# Windows installation/registration guards.
+$nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
+$installerRequired = @(
+  'OutFile "MaenBrowser-1.3.0-Setup.exe"',
+  'WriteUninstaller "$INSTDIR\Uninstall.exe"',
+  'Software\RegisteredApplications',
+  'URLAssociations',
+  'MaenBrowserURL',
+  'App Paths\MaenBrowser.exe',
+  'CreateShortcut "$DESKTOP\MaenBrowser.lnk"'
+)
+foreach ($needle in $installerRequired) {
+  if (-not $nsi.Contains($needle)) { throw "Installer integration missing: $needle" }
+}
+
+# Unified lightweight policy regression guards.
+$resource = Get-Content "src/app/resource_mode.cpp" -Raw
+foreach ($needle in @("Mode::Lite","Mode::Balanced","Mode::Performance","Prerender2")) {
+  if (-not $resource.Contains($needle)) { throw "Resource policy missing: $needle" }
+}
+foreach ($forbidden in @("disable-site-isolation","no-sandbox","ignore-certificate-errors")) {
+  if ($resource.Contains($forbidden)) { throw "Forbidden security weakening in resource policy: $forbidden" }
+}

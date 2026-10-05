@@ -1,4 +1,4 @@
-# MaenBrowser 1.1.0 — Windows Desktop
+# MaenBrowser 1.3.0 — Unified Lightweight Windows Build
 
 MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
@@ -21,3 +21,13 @@ See `docs/FEATURE_MATRIX.md`, `docs/TEST_PLAN.md`, `docs/SECURITY.md`, and `docs
 ## Important release boundary
 
 This is a serious development release, not a claim of feature-for-feature parity with Chrome, Edge or Firefox. Chrome Web Store compatibility, signed auto-update infrastructure, custom password-manager UI, and measured RAM superiority across all workloads are not claimed until implemented and tested.
+
+
+## Windows installation
+
+Use the GitHub Actions artifact `MaenBrowser-1.3.0-Windows-x64-Setup` and run `MaenBrowser-1.3.0-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
+
+
+## Unified feature direction
+
+1.3 establishes the performance gate and keeps the proven Chromium browser surfaces while the Maen-owned shell is implemented safely. Features that would add disproportionate background RAM/CPU are optional or rejected. The exact implemented-vs-planned boundary is in `docs/FEATURE_MATRIX.md`.
