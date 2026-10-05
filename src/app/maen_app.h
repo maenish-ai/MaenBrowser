@@ -5,11 +5,10 @@
 #include "include/cef_app.h"
 #include "include/cef_browser_process_handler.h"
 
+#include "src/app/maen_client.h"
 #include "src/extensions/extension_manager.h"
 
 namespace maenbrowser {
-
-class MaenClient;
 
 class MaenApp final : public CefApp,
                       public CefBrowserProcessHandler {

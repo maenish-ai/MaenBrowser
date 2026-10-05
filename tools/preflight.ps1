@@ -33,3 +33,13 @@ foreach ($pattern in $obsoletePatterns) {
   $hit = $sourceFiles | Select-String -SimpleMatch $pattern | Select-Object -First 1
   if ($hit) { throw "Obsolete CEF 152 API detected: $pattern in $($hit.Path):$($hit.LineNumber)" }
 }
+
+# scoped_refptr<T> members need complete T where the owning class destructor is instantiated.
+$maenAppHeader = Get-Content "src/app/maen_app.h" -Raw
+if ($maenAppHeader -match "class\s+MaenClient\s*;" -and
+    $maenAppHeader -match "CefRefPtr<MaenClient>") {
+  throw "MaenApp stores CefRefPtr<MaenClient> but only forward-declares MaenClient."
+}
+if ($maenAppHeader -notmatch '#include\s+"src/app/maen_client.h"') {
+  throw "maen_app.h must include maen_client.h for CefRefPtr<MaenClient>."
+}
