@@ -12,9 +12,14 @@ foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file:
 $version=(Get-Content VERSION -Raw).Trim()
 if ($version -ne "1.4.0") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
-if ($cmake -notmatch 'project\(MaenBrowser VERSION 1\.3\.0') { throw "CMake version mismatch" }
+$escapedVersion = [regex]::Escape($version)
+if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
+  throw "CMake version mismatch: expected $version"
+}
 $nsi=Get-Content installer/MaenBrowser.nsi -Raw
-if ($nsi -notmatch 'PRODUCT_VERSION "1\.3\.0"') { throw "NSIS version mismatch" }
+if ($nsi -notmatch ('PRODUCT_VERSION "' + $escapedVersion + '"')) {
+  throw "NSIS version mismatch: expected $version"
+}
 $wf=Get-Content .github/workflows/maenbrowser-ci.yml -Raw
 if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must be pinned to windows-2022" }
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use VS 2022 generator" }
