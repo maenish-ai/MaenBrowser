@@ -7,3 +7,10 @@ Major additions over the foundation: Chrome Runtime integration, persistent loca
 Security boundary: Lite Mode does not turn off sandboxing or site isolation.
 
 Before public production release: run the acceptance/RAM matrix, verify the pinned CEF build and extension APIs, code-sign binaries/installer, configure signed update infrastructure, and perform security/privacy review.
+
+## CI hardening - 2026-10-05
+- Pinned GitHub Actions to `windows-2022` because `windows-latest` moved to a VS2026 image that does not provide the requested Visual Studio 17 2022 generator.
+- Added an explicit VS2022 C++ toolchain check before CMake configuration.
+- Explicitly builds CEF with `USE_SANDBOX=ON`.
+- Added `tools/preflight.ps1` to catch repository/version/workflow drift before downloading/building dependencies.
+- Chrome Runtime download handling now delegates to Chromium's native download UI; MaenBrowser still observes completion events.

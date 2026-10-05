@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 90
 
     steps:
@@ -32,6 +32,10 @@ jobs:
             throw "Expected VERSION 1.1.0, got $version"
           }
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Repository preflight
+        shell: pwsh
+        run: .\tools\preflight.ps1
 
       - name: Install NSIS
         shell: pwsh
@@ -49,14 +53,25 @@ jobs:
           if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Verify Visual Studio 2022 toolchain
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (!(Test-Path $vswhere)) { throw "vswhere.exe not found." }
+          $vs = & $vswhere -latest -products * -version "[17.0,18.0)" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "Visual Studio 2022 C++ x64 toolchain not found." }
+          Write-Host "Using Visual Studio 2022: $vs"
+          cmake --version
+
       - name: Configure
         shell: pwsh
         run: |
           cmake -S . -B build `
-            -G "Visual Studio 17 2022" `
+            -G "Visual Studio 17" `
             -A x64 `
             "-DCEF_ROOT=$env:CEF_ROOT" `
-            -DMAEN_ENABLE_UPDATER=OFF
+            -DMAEN_ENABLE_UPDATER=OFF `
+            -DUSE_SANDBOX=ON
 
       - name: Build Release
         shell: pwsh

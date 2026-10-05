@@ -57,10 +57,11 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser>,
   CEF_REQUIRE_UI_THREAD();
   if (!callback || !download_item) return false;
 
-  // Show the standard Save As picker. This gives MaenBrowser the same familiar
-  // user-controlled download destination flow expected from desktop browsers.
-  callback->Continue(suggested_name, true);
-  return true;
+  // Chrome Runtime already implements Chromium's native download UI.
+  // Returning false delegates the download to that UI (download bubble/shelf).
+  // The download.prompt_for_download preference controls whether Save As is shown.
+  // OnDownloadUpdated still receives progress/completion notifications.
+  return false;
 }
 
 void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
