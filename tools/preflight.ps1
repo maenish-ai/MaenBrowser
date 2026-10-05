@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.2") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.3") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -24,6 +24,17 @@ $wf=Get-Content .github/workflows/maenbrowser-ci.yml -Raw
 if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must be pinned to windows-2022" }
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use VS 2022 generator" }
 if ($wf -notmatch 'USE_SANDBOX=ON') { throw "Production CI must enable CEF sandbox" }
+
+# Clean-upgrade regression guards.
+$installer = Get-Content "installer/MaenBrowser.nsi" -Raw
+foreach ($needle in @("Function CleanOldProgramFiles", "Call CleanOldProgramFiles", 'RMDir /r "$INSTDIR"', 'tasklist /FI "IMAGENAME eq ${PRODUCT_EXE}"')) {
+  if (-not $installer.Contains($needle)) { throw "Clean-upgrade guard missing: $needle" }
+}
+$upgradeStart = $installer.IndexOf("Function CleanOldProgramFiles")
+$upgradeEnd = $installer.IndexOf("FunctionEnd", $upgradeStart)
+$upgradeBody = $installer.Substring($upgradeStart, $upgradeEnd - $upgradeStart)
+if ($upgradeBody.Contains('RMDir /r "$LOCALAPPDATA\MaenBrowser"')) { throw "Upgrade must preserve user profile." }
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
 
 # CEF 152 API regression guards.
@@ -60,7 +71,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.2-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.3-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',

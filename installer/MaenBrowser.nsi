@@ -1,8 +1,9 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+!include "LogicLib.nsh"
 
 !define PRODUCT_NAME "MaenBrowser"
-!define PRODUCT_VERSION "1.5.2"
+!define PRODUCT_VERSION "1.5.3"
 !define PRODUCT_PUBLISHER "MaenBrowser"
 !define PRODUCT_EXE "MaenBrowser.exe"
 !define APP_REG_KEY "Software\Clients\StartMenuInternet\MaenBrowser"
@@ -10,7 +11,7 @@
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MaenBrowser"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "MaenBrowser-1.5.2-Setup.exe"
+OutFile "MaenBrowser-1.5.3-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MaenBrowser"
 RequestExecutionLevel user
 Unicode True
@@ -19,7 +20,7 @@ SetCompressor /SOLID lzma
 Icon "..\assets\maenbrowser.ico"
 UninstallIcon "..\assets\maenbrowser.ico"
 
-VIProductVersion "1.5.2.0"
+VIProductVersion "1.5.3.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
@@ -41,8 +42,39 @@ VIAddVersionKey "LegalCopyright" "MaenBrowser contributors"
 !insertmacro MUI_UNPAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
+Function .onInit
+  SetShellVarContext current
+  nsExec::ExecToStack 'cmd /C tasklist /FI "IMAGENAME eq ${PRODUCT_EXE}" /NH | find /I "${PRODUCT_EXE}" >nul'
+  Pop $0
+  Pop $1
+  ${If} $0 == 0
+    MessageBox MB_ICONEXCLAMATION|MB_OK "MaenBrowser is currently running.$\r$\nClose all MaenBrowser windows, then run Setup again."
+    Abort
+  ${EndIf}
+FunctionEnd
+
+Function CleanOldProgramFiles
+  ; Clean application/runtime only. Preserve $LOCALAPPDATA\MaenBrowser user profile.
+  IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 no_old_install
+  DetailPrint "Removing previous MaenBrowser program files while preserving user data..."
+  Delete "$DESKTOP\MaenBrowser.lnk"
+  RMDir /r "$SMPROGRAMS\MaenBrowser"
+  DeleteRegKey HKCU "${UNINSTALL_KEY}"
+  DeleteRegKey HKCU "${APP_REG_KEY}"
+  DeleteRegKey HKCU "${CAP_KEY}"
+  DeleteRegValue HKCU "Software\RegisteredApplications" "${PRODUCT_NAME}"
+  DeleteRegKey HKCU "Software\Classes\MaenBrowserURL"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\MaenBrowser.exe"
+  RMDir /r "$INSTDIR"
+  IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 +3
+    MessageBox MB_ICONSTOP|MB_OK "The previous MaenBrowser installation could not be removed completely. Close MaenBrowser and try Setup again."
+    Abort
+  no_old_install:
+FunctionEnd
+
 Section "MaenBrowser" SEC_MAIN
   SetShellVarContext current
+  Call CleanOldProgramFiles
   SetOutPath "$INSTDIR"
   File /r "..\dist\*.*"
   File /oname=maenbrowser.ico "..\assets\maenbrowser.ico"
