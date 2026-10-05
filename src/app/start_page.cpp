@@ -51,4 +51,45 @@ paint();
 </script></body></html>)HTML";
   return "data:text/html;charset=utf-8," + CefURIEncode(kHtml, false).ToString();
 }
+
+std::string MediaDiagnosticsUrl() {
+  static const char kMediaHtml[] = R"HTML(<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>MaenBrowser Media Diagnostics</title>
+<style>
+body{font-family:system-ui,Segoe UI,sans-serif;background:#0f1220;color:#eef1ff;margin:0;padding:28px}
+main{max-width:920px;margin:auto}.card{background:#181d31;border:1px solid #2c3454;border-radius:16px;padding:18px;margin:14px 0}
+h1{margin:0 0 6px}.ok{color:#76e6a5}.bad{color:#ff9a9a}.muted{color:#aeb8d8}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid #2c3454}
+code{color:#c8d3ff}button{padding:9px 13px;border-radius:10px;border:0;cursor:pointer}
+</style></head><body><main><h1>MaenBrowser Media Diagnostics</h1>
+<p class="muted">Local capability test. No media or account data is uploaded.</p>
+<div class="card"><h2>HTML5 codec claims</h2><table id="codecs"><tr><th>Format</th><th>Result</th></tr></table></div>
+<div class="card"><h2>Browser media APIs</h2><table id="apis"></table></div>
+<div class="card"><h2>Graphics</h2><pre id="gpu">Checking…</pre></div>
+<div class="card"><button onclick="location.reload()">Run again</button></div>
+<script>
+const v=document.createElement('video'), a=document.createElement('audio');
+const tests=[
+['H.264 / MP4','video/mp4; codecs="avc1.42E01E"',v],
+['AAC / MP4','audio/mp4; codecs="mp4a.40.2"',a],
+['VP8 / WebM','video/webm; codecs="vp8"',v],
+['VP9 / WebM','video/webm; codecs="vp09.00.10.08"',v],
+['AV1','video/mp4; codecs="av01.0.05M.08"',v],
+['Opus / WebM','audio/webm; codecs="opus"',a],
+['Vorbis / WebM','audio/webm; codecs="vorbis"',a]
+];
+for(const [n,m,e] of tests){const r=e.canPlayType(m)||'no'; codecs.insertAdjacentHTML('beforeend',
+`<tr><td>${n}<br><code>${m}</code></td><td class="${r==='no'?'bad':'ok'}">${r}</td></tr>`);}
+const api=[['MediaSource',!!window.MediaSource],['Encrypted Media',!!navigator.requestMediaKeySystemAccess],
+['WebRTC',!!window.RTCPeerConnection],['Picture-in-Picture',!!document.pictureInPictureEnabled],
+['WebCodecs',!!window.VideoDecoder],['WebGL',(()=>{try{return !!document.createElement('canvas').getContext('webgl2')}catch(e){return false}})()]];
+for(const [n,r] of api) apis.insertAdjacentHTML('beforeend',`<tr><td>${n}</td><td class="${r?'ok':'bad'}">${r?'Available':'Unavailable'}</td></tr>`);
+try{const c=document.createElement('canvas'),g=c.getContext('webgl');const ext=g&&g.getExtension('WEBGL_debug_renderer_info');
+gpu.textContent=g?('WebGL: available\\nRenderer: '+(ext?g.getParameter(ext.UNMASKED_RENDERER_WEBGL):'protected/unknown')):'WebGL: unavailable';}
+catch(e){gpu.textContent='Graphics query failed: '+e;}
+</script></main></body></html>)HTML";
+  return std::string("data:text/html;charset=utf-8,") + PercentEncode(kMediaHtml);
+}
+
 }  // namespace maenbrowser::ui

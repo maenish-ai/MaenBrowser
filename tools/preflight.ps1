@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.7") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.8") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -70,6 +70,18 @@ if ($mainWinSource -match '(?m)^\s*SetCurrentProcessExplicitAppUserModelID\s*\('
   throw "Do not directly call SetCurrentProcessExplicitAppUserModelID; resolve it dynamically for SDK portability."
 }
 
+
+# Media compatibility regression gate: do not disable Chromium media/GPU paths.
+$resourceSource = Get-Content "src/app/resource_mode.cpp" -Raw
+$allCpp = (Get-ChildItem "src" -Recurse -Include *.cpp,*.h | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+foreach ($forbidden in @("disable-gpu", "disable-accelerated-video-decode", "disable-webrtc", "disable-media-source")) {
+  if ($allCpp.Contains($forbidden)) { throw "Media regression: forbidden switch present: $forbidden" }
+}
+$startPageSource = Get-Content "src/app/start_page.cpp" -Raw
+foreach ($needle in @("MediaDiagnosticsUrl", "H.264 / MP4", "AAC / MP4", "VP9 / WebM", "AV1", "MediaSource", "WebRTC", "WebCodecs")) {
+  if (-not $startPageSource.Contains($needle)) { throw "Media diagnostics guard missing: $needle" }
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
 
 # CEF 152 API regression guards.
@@ -106,7 +118,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.7-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.8-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
