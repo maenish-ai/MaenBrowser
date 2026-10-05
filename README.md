@@ -1,4 +1,4 @@
-# MaenBrowser 1.5.9 — Unified Lightweight Windows Build
+# MaenBrowser 1.5.10 — Unified Lightweight Windows Build
 
 MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
@@ -25,7 +25,7 @@ This is a serious development release, not a claim of feature-for-feature parity
 
 ## Windows installation
 
-Use the GitHub Actions artifact `MaenBrowser-1.5.9-Windows-x64-Setup` and run `MaenBrowser-1.5.9-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
+Use the GitHub Actions artifact `MaenBrowser-1.5.10-Windows-x64-Setup` and run `MaenBrowser-1.5.10-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
 
 
 ## Unified feature direction

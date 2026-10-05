@@ -16,23 +16,28 @@ main{width:min(880px,92vw);margin:auto;padding:8vh 0 36px}.brand{display:flex;ju
 .title{margin:22px 2px 10px;font-size:13px;font-weight:700;color:var(--muted)}.engines{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .engine{position:relative;border:1px solid var(--line);background:var(--card);border-radius:15px;padding:16px 10px;text-align:center;cursor:pointer;color:inherit}
 .engine:hover{transform:translateY(-1px);box-shadow:0 7px 20px #24345410}.engine.active{outline:2px solid var(--accent);border-color:transparent}
-.dot{width:34px;height:34px;border-radius:11px;margin:0 auto 8px;display:grid;place-items:center;background:#eef1f7;font-weight:800}.engine small{display:block;color:var(--muted);margin-top:4px}
-.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.quick a{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;text-decoration:none;color:inherit;font-weight:600}
+.brand-icon{width:38px;height:38px;margin:0 auto 9px;display:grid;place-items:center}.brand-icon svg{width:34px;height:34px;display:block}.engine small{display:block;color:var(--muted);margin-top:4px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.quick a{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;text-decoration:none;color:inherit;font-weight:600;transition:transform .12s ease,box-shadow .12s ease}.quick a:hover{transform:translateY(-1px);box-shadow:0 7px 20px #24345410}.quick .brand-icon{margin-bottom:7px}
 .note{text-align:center;color:var(--muted);font-size:11px;margin-top:22px}
 @media(max-width:650px){.engines,.quick{grid-template-columns:repeat(2,1fr)}.brand{font-size:31px}}
-@media(prefers-color-scheme:dark){:root{--card:#1a2030;--line:#30394d;--text:#f4f6fb;--muted:#a8b0c1}body{background:#111522}.dot{background:#252d40}}
+@media(prefers-color-scheme:dark){:root{--card:#1a2030;--line:#30394d;--text:#f4f6fb;--muted:#a8b0c1}body{background:#111522}}
 </style></head><body><main>
 <div class="brand"><span class="mark">M</span>MaenBrowser</div><div class="tag">Choose your search. Keep your browser yours.</div>
 <form id="search" class="search"><input id="q" autocomplete="off" autofocus placeholder="Search the web"><button>Search</button></form>
 <div class="title">SEARCH ENGINE — choose anytime</div>
 <div class="engines">
-<button class="engine" data-engine="google"><span class="dot">G</span><b>Google</b><small>Search</small></button>
-<button class="engine" data-engine="bing"><span class="dot">B</span><b>Bing</b><small>Search</small></button>
-<button class="engine" data-engine="duckduckgo"><span class="dot">D</span><b>DuckDuckGo</b><small>Search</small></button>
-<button class="engine" data-engine="brave"><span class="dot">Br</span><b>Brave Search</b><small>Search</small></button>
+<button class="engine" data-engine="google"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><text x="18" y="27" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="700" fill="#4285F4">G</text></svg></span><b>Google</b><small>Search</small></button>
+<button class="engine" data-engine="bing"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><path fill="#008373" d="M8 4l8 3v13l8-5 5 3-13 8-8-4z"/><path fill="#00A4A6" d="M16 20l8-5 5 3-13 8z"/></svg></span><b>Bing</b><small>Search</small></button>
+<button class="engine" data-engine="duckduckgo"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="#DE5833"/><circle cx="18" cy="16" r="9" fill="#fff"/><circle cx="15" cy="14" r="1.6" fill="#222"/><path d="M18 17l8 2-8 3z" fill="#F4A62A"/></svg></span><b>DuckDuckGo</b><small>Search</small></button>
+<button class="engine" data-engine="brave"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><path fill="#FB542B" d="M18 2l12 5 3 9-5 13-10 5-10-5-5-13 3-9z"/><path fill="#fff" d="M12 11h12l3 6-4 9H13l-4-9zm2 5l2 7h4l2-7-4-2z"/></svg></span><b>Brave Search</b><small>Search</small></button>
 </div>
 <div class="title">QUICK ACCESS</div>
-<div class="quick"><a href="https://www.youtube.com/">YouTube</a><a href="https://mail.google.com/">Gmail</a><a href="https://web.whatsapp.com/">WhatsApp</a><a href="https://www.wikipedia.org/">Wikipedia</a></div>
+<div class="quick">
+<a href="https://www.youtube.com/"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><rect x="3" y="8" width="30" height="20" rx="6" fill="#FF0000"/><path d="M15 13l10 5-10 5z" fill="#fff"/></svg></span>YouTube</a>
+<a href="https://mail.google.com/"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><path fill="#fff" d="M4 8h28v20H4z"/><path fill="none" stroke="#EA4335" stroke-width="5" d="M5 10l13 10 13-10"/><path fill="none" stroke="#4285F4" stroke-width="4" d="M5 10v17"/><path fill="none" stroke="#34A853" stroke-width="4" d="M31 10v17"/></svg></span>Gmail</a>
+<a href="https://web.whatsapp.com/"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="17" r="14" fill="#25D366"/><path fill="#25D366" d="M8 28l-2 6 7-3"/><path fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" d="M12 11c2 8 6 11 13 13"/></svg></span>WhatsApp</a>
+<a href="https://www.wikipedia.org/"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><text x="18" y="28" text-anchor="middle" font-family="Georgia,serif" font-size="29" font-weight="700" fill="currentColor">W</text></svg></span>Wikipedia</a>
+</div>
 <div class="note">Search choice is stored locally on this device. MaenBrowser is not affiliated with the listed services.</div>
 </main><script>
 const engines={
