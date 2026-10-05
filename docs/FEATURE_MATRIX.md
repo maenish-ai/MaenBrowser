@@ -1,4 +1,4 @@
-# MaenBrowser 1.5.5 feature matrix
+# MaenBrowser 1.5.6 feature matrix
 
 ## Integrated and buildable
 - CEF/Chromium 152 web engine with production sandbox enabled in CI.

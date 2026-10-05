@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <shellapi.h>
 
 #include "include/cef_app.h"
 #include "include/cef_sandbox_win.h"
