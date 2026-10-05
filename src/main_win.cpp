@@ -8,6 +8,7 @@
 #include "src/storage/local_profile.h"
 #include "src/updater/update_manager.h"
 
+#include "src/security/windows_hardening.h"
 namespace {
 
 int RunMain(HINSTANCE instance, void* sandbox_info) {
@@ -68,6 +69,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
                       HINSTANCE,
                       LPWSTR,
                       int) {
+  maenbrowser::security::ApplyWindowsProcessHardening();
   void* sandbox_info = nullptr;
 
 #if defined(CEF_USE_SANDBOX)

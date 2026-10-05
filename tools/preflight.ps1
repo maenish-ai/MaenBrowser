@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.4.0") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.0") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -60,7 +60,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.4.0-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.0-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -109,3 +109,37 @@ foreach ($needle in @(
   if (-not $start.Contains($needle)) { throw "Start-page provider missing: $needle" }
 }
 if ($start -match '<iframe') { throw "Start page must not preload third-party services in iframes." }
+
+# Unified icon regression guards: sandbox output is copied bootstrap.exe, so
+# both final EXE stamping and direct shortcut/shell icon references are required.
+$workflow = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
+$nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
+if (-not (Test-Path "tools/set-exe-icon.ps1")) { throw "EXE icon stamper missing." }
+if (-not $workflow.Contains("set-exe-icon.ps1")) { throw "CI does not stamp final sandbox EXE icon." }
+if (-not $nsi.Contains('File /oname=maenbrowser.ico "..\assets\maenbrowser.ico"')) { throw "Installer does not deploy unified icon." }
+if (-not $nsi.Contains('"$INSTDIR\maenbrowser.ico" 0')) { throw "Desktop/Start shortcut icon is not unified." }
+if (-not $nsi.Contains('"DisplayIcon" "$INSTDIR\maenbrowser.ico"')) { throw "Installed Apps icon is not unified." }
+if (-not $nsi.Contains('\DefaultIcon" "" "$INSTDIR\maenbrowser.ico"')) { throw "Browser/protocol shell icon is not unified." }
+
+# Security hardening release gates.
+$allSource = (Get-ChildItem "src" -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
+$workflow = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
+$securityDoc = Get-Content "docs/SECURITY.md" -Raw
+foreach ($forbidden in @(
+  "ignore-certificate-errors",
+  "allow-insecure-localhost",
+  "disable-web-security",
+  "disable-site-isolation-trials",
+  "disable-features=SitePerProcess",
+  "disable-features=IsolateOrigins",
+  "allow-running-insecure-content"
+)) {
+  if ($allSource.Contains($forbidden)) { throw "Release-blocking insecure browser switch detected: $forbidden" }
+}
+if (-not $workflow.Contains("-DUSE_SANDBOX=ON")) { throw "Release build must keep CEF sandbox enabled." }
+foreach ($needle in @("ApplyWindowsProcessHardening","ProcessDEPPolicy","ProcessASLRPolicy","ProcessExtensionPointDisablePolicy")) {
+  if (-not $allSource.Contains($needle)) { throw "Windows hardening layer missing: $needle" }
+}
+if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
+  Write-Warning "Review download flow: downloads must never auto-execute."
+}

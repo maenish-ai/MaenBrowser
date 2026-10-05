@@ -28,14 +28,26 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
-          if ($version -ne "1.4.0") {
-            throw "Expected VERSION 1.4.0, got $version"
+          if ($version -ne "1.5.0") {
+            throw "Expected VERSION 1.5.0, got $version"
           }
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Repository preflight
         shell: pwsh
         run: .\tools\preflight.ps1
+
+      - name: Security release gate
+        shell: pwsh
+        run: |
+          $source = (Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
+          $blocked = @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")
+          foreach ($flag in $blocked) {
+            if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" }
+          }
+          if (-not $source.Contains("ApplyWindowsProcessHardening")) {
+            throw "Windows process hardening is missing."
+          }
 
       - name: Install NSIS
         shell: pwsh
@@ -85,6 +97,20 @@ jobs:
         shell: pwsh
         run: cmake --build build --config Release --parallel
 
+      - name: Stamp MaenBrowser icon into sandbox bootstrap EXE
+        shell: pwsh
+        run: |
+          .\tools\set-exe-icon.ps1 `
+            -ExePath "build\Release\MaenBrowser.exe" `
+            -IconPath "assets\maenbrowser.ico"
+
+      - name: Verify EXE icon resource
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "build\Release\MaenBrowser.exe").Path
+          $sig = Get-AuthenticodeSignature $exe
+          Write-Host "Icon stamped into final sandbox bootstrap executable: $exe"
+
       - name: Stage runtime
         shell: pwsh
         run: |
@@ -124,7 +150,7 @@ jobs:
             Pop-Location
           }
 
-          if (!(Test-Path "installer\MaenBrowser-1.4.0-Setup.exe")) {
+          if (!(Test-Path "installer\MaenBrowser-1.5.0-Setup.exe")) {
             throw "Installer was not created."
           }
 
@@ -140,7 +166,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
-          path: installer/MaenBrowser-1.4.0-Setup.exe
+          path: installer/MaenBrowser-1.5.0-Setup.exe
           if-no-files-found: error
           retention-days: 30
 

@@ -2,7 +2,7 @@
 !include "FileFunc.nsh"
 
 !define PRODUCT_NAME "MaenBrowser"
-!define PRODUCT_VERSION "1.4.0"
+!define PRODUCT_VERSION "1.5.0"
 !define PRODUCT_PUBLISHER "MaenBrowser"
 !define PRODUCT_EXE "MaenBrowser.exe"
 !define APP_REG_KEY "Software\Clients\StartMenuInternet\MaenBrowser"
@@ -10,7 +10,7 @@
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MaenBrowser"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "MaenBrowser-1.4.0-Setup.exe"
+OutFile "MaenBrowser-1.5.0-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MaenBrowser"
 RequestExecutionLevel user
 Unicode True
@@ -19,7 +19,7 @@ SetCompressor /SOLID lzma
 Icon "..\assets\maenbrowser.ico"
 UninstallIcon "..\assets\maenbrowser.ico"
 
-VIProductVersion "1.4.0.0"
+VIProductVersion "1.5.0.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
@@ -45,20 +45,21 @@ Section "MaenBrowser" SEC_MAIN
   SetShellVarContext current
   SetOutPath "$INSTDIR"
   File /r "..\dist\*.*"
+  File /oname=maenbrowser.ico "..\assets\maenbrowser.ico"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; Windows shell integration.
   CreateDirectory "$SMPROGRAMS\MaenBrowser"
-  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
   CreateShortcut "$SMPROGRAMS\MaenBrowser\Uninstall MaenBrowser.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
-  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
 
   ; Installed Apps / Apps & features.
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXE},0"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\maenbrowser.ico"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
@@ -67,19 +68,19 @@ Section "MaenBrowser" SEC_MAIN
   ; Register as a browser candidate. Windows still requires the user to choose
   ; the default app; the installer never hijacks HTTP/HTTPS associations.
   WriteRegStr HKCU "${APP_REG_KEY}" "" "${PRODUCT_NAME}"
-  WriteRegStr HKCU "${APP_REG_KEY}\DefaultIcon" "" "$INSTDIR\${PRODUCT_EXE},0"
+  WriteRegStr HKCU "${APP_REG_KEY}\DefaultIcon" "" "$INSTDIR\maenbrowser.ico"
   WriteRegStr HKCU "${APP_REG_KEY}\shell\open\command" "" '"$INSTDIR\${PRODUCT_EXE}" "%1"'
 
   WriteRegStr HKCU "${CAP_KEY}" "ApplicationName" "${PRODUCT_NAME}"
   WriteRegStr HKCU "${CAP_KEY}" "ApplicationDescription" "Fast, lightweight Chromium-based web browser"
-  WriteRegStr HKCU "${CAP_KEY}" "ApplicationIcon" "$INSTDIR\${PRODUCT_EXE},0"
+  WriteRegStr HKCU "${CAP_KEY}" "ApplicationIcon" "$INSTDIR\maenbrowser.ico"
   WriteRegStr HKCU "${CAP_KEY}\URLAssociations" "http" "MaenBrowserURL"
   WriteRegStr HKCU "${CAP_KEY}\URLAssociations" "https" "MaenBrowserURL"
   WriteRegStr HKCU "Software\RegisteredApplications" "${PRODUCT_NAME}" "${CAP_KEY}"
 
   WriteRegStr HKCU "Software\Classes\MaenBrowserURL" "" "MaenBrowser URL"
   WriteRegStr HKCU "Software\Classes\MaenBrowserURL" "URL Protocol" ""
-  WriteRegStr HKCU "Software\Classes\MaenBrowserURL\DefaultIcon" "" "$INSTDIR\${PRODUCT_EXE},0"
+  WriteRegStr HKCU "Software\Classes\MaenBrowserURL\DefaultIcon" "" "$INSTDIR\maenbrowser.ico"
   WriteRegStr HKCU "Software\Classes\MaenBrowserURL\shell\open\command" "" '"$INSTDIR\${PRODUCT_EXE}" "%1"'
 
   ; App Paths allows Windows and other software to resolve MaenBrowser.exe.
@@ -87,6 +88,8 @@ Section "MaenBrowser" SEC_MAIN
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\MaenBrowser.exe" "Path" "$INSTDIR"
 
   ; Notify Explorer that associations/application registration changed.
+  ; Shortcuts point directly at maenbrowser.ico, and this refresh makes the
+  ; unified icon visible without relying on the copied CEF bootstrap icon.
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 SectionEnd
 
