@@ -89,7 +89,7 @@ try{const c=document.createElement('canvas'),g=c.getContext('webgl');const ext=g
 gpu.textContent=g?('WebGL: available\\nRenderer: '+(ext?g.getParameter(ext.UNMASKED_RENDERER_WEBGL):'protected/unknown')):'WebGL: unavailable';}
 catch(e){gpu.textContent='Graphics query failed: '+e;}
 </script></main></body></html>)HTML";
-  return std::string("data:text/html;charset=utf-8,") + PercentEncode(kMediaHtml);
+  return std::string("data:text/html;charset=utf-8,") + CefURIEncode(kMediaHtml, false).ToString();
 }
 
 }  // namespace maenbrowser::ui

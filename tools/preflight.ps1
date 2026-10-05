@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.8") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.9") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -82,6 +82,16 @@ foreach ($needle in @("MediaDiagnosticsUrl", "H.264 / MP4", "AAC / MP4", "VP9 / 
   if (-not $startPageSource.Contains($needle)) { throw "Media diagnostics guard missing: $needle" }
 }
 
+
+# Media diagnostics compile guard.
+$startPageCompileSource = Get-Content "src/app/start_page.cpp" -Raw
+if ($startPageCompileSource.Contains("PercentEncode(")) {
+  throw "Undefined PercentEncode helper must not be used; use CefURIEncode."
+}
+foreach ($needle in @('#include "include/cef_parser.h"', "CefURIEncode(kMediaHtml, false).ToString()")) {
+  if (-not $startPageCompileSource.Contains($needle)) { throw "Media diagnostics compile guard missing: $needle" }
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
 
 # CEF 152 API regression guards.
@@ -118,7 +128,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.8-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.9-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
