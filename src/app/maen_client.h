@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <map>
-#include <set>
 #include <mutex>
 #include <string>
 
@@ -63,8 +62,6 @@ class MaenClient final : public CefClient,
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;
-  std::mutex popup_mutex_;
-  std::set<int> popup_browser_ids_;
 
   IMPLEMENT_REFCOUNTING(MaenClient);
   DISALLOW_COPY_AND_ASSIGN(MaenClient);

@@ -32,10 +32,6 @@ void ShowInFolder(const std::wstring& path) {
 void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
   browser_count_.fetch_add(1, std::memory_order_relaxed);
-  if (browser && browser->IsPopup()) {
-    std::lock_guard<std::mutex> lock(popup_mutex_);
-    popup_browser_ids_.insert(browser->GetIdentifier());
-  }
 }
 
 bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser>,
@@ -58,12 +54,6 @@ bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser>,
   // payment and sign-in windows must remain functional.
   client = this;
 
-  // Mark the popup at creation time. CEF exposes the popup_id here and the
-  // matching browser identifier after creation. We only act on the browser
-  // when it actually initiates a download.
-  if (extra_info) {
-    extra_info->SetBool("maen.download_popup_candidate", true);
-  }
   return false;
 }
 
@@ -74,10 +64,6 @@ bool MaenClient::DoClose(CefRefPtr<CefBrowser>) {
 
 void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
-  if (browser) {
-    std::lock_guard<std::mutex> lock(popup_mutex_);
-    popup_browser_ids_.erase(browser->GetIdentifier());
-  }
   if (browser_count_.fetch_sub(1, std::memory_order_acq_rel) == 1)
     CefQuitMessageLoop();
 }
@@ -99,25 +85,16 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
   CEF_REQUIRE_UI_THREAD();
   if (!callback || !download_item) return false;
 
-  // Smart Download Window Handling: some sites create a separate popup whose
-  // sole purpose is to trigger a download. Once the download event exists,
-  // the network transfer belongs to Chromium's download manager, so that
-  // temporary popup can be closed without cancelling the transfer.
+  // Download reliability rule:
+  // Do NOT close the initiating browser/popup from OnBeforeDownload.
+  // In Chrome Runtime the download manager may still depend on that browser
+  // while ownership is being transferred. Closing it here can race with the
+  // transfer and surface as an immediate "Canceled" download on sites that
+  // use redirects or short-lived download pages (including GitHub artifacts).
   //
-  // Important: ordinary popups are never closed here. OAuth/payment/login
-  // windows remain open unless they themselves actually initiate a download.
-  if (browser) {
-    bool download_popup = false;
-    {
-      std::lock_guard<std::mutex> lock(popup_mutex_);
-      download_popup =
-          popup_browser_ids_.find(browser->GetIdentifier()) !=
-          popup_browser_ids_.end();
-    }
-    if (download_popup) {
-      browser->GetHost()->CloseBrowser(false);
-    }
-  }
+  // We intentionally prefer a harmless transient popup over a canceled file.
+  // Popup cleanup, if reintroduced later, must occur only after a separately
+  // proven lifecycle signal and must never be coupled to download start.
 
   // Chrome Runtime already implements Chromium's native download UI.
   // Returning false delegates the download to that UI (download bubble/shelf).

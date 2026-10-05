@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.0") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.1") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -60,7 +60,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.0-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.1-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -142,4 +142,17 @@ foreach ($needle in @("ApplyWindowsProcessHardening","ProcessDEPPolicy","Process
 }
 if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
   Write-Warning "Review download flow: downloads must never auto-execute."
+}
+
+# Download reliability regression gate.
+$clientSource = Get-Content "src/app/maen_client.cpp" -Raw
+$beforeStart = $clientSource.IndexOf("bool MaenClient::OnBeforeDownload")
+$updatedStart = $clientSource.IndexOf("void MaenClient::OnDownloadUpdated")
+if ($beforeStart -lt 0 -or $updatedStart -le $beforeStart) { throw "Download handler boundaries not found." }
+$beforeDownloadBody = $clientSource.Substring($beforeStart, $updatedStart - $beforeStart)
+if ($beforeDownloadBody.Contains("CloseBrowser")) {
+  throw "Download regression: never close the initiating browser from OnBeforeDownload."
+}
+if (-not $beforeDownloadBody.Contains("return false;")) {
+  throw "Chrome Runtime download delegation missing."
 }
