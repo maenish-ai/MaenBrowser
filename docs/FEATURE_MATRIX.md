@@ -1,9 +1,11 @@
-# MaenBrowser 1.3.0 feature matrix
+# MaenBrowser 1.4.0 feature matrix
 
 ## Integrated and buildable
 - CEF/Chromium 152 web engine with production sandbox enabled in CI.
 - Familiar Chromium tab/navigation behavior through Chrome Runtime.
-- MaenBrowser branding, start page, title branding and Windows icon assets.
+- MaenBrowser branding, title branding and Windows icon assets.
+- Lightweight local start page with user-selectable Google, Bing, DuckDuckGo or Brave Search.
+- Quick Access links for YouTube, Gmail, WhatsApp and Wikipedia without background preloading.
 - Persistent local profile, cookies, cache and preferences.
 - Downloads through Chromium UI plus MaenBrowser completion actions.
 - History, PDF, printing, picture-in-picture and private-window capabilities where exposed by the pinned Chromium runtime.

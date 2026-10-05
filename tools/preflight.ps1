@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.3.0") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.4.0") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 if ($cmake -notmatch 'project\(MaenBrowser VERSION 1\.3\.0') { throw "CMake version mismatch" }
 $nsi=Get-Content installer/MaenBrowser.nsi -Raw
@@ -55,7 +55,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.3.0-Setup.exe"',
+  'OutFile "MaenBrowser-1.4.0-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -75,3 +75,32 @@ foreach ($needle in @("Mode::Lite","Mode::Balanced","Mode::Performance","Prerend
 foreach ($forbidden in @("disable-site-isolation","no-sandbox","ignore-certificate-errors")) {
   if ($resource.Contains($forbidden)) { throw "Forbidden security weakening in resource policy: $forbidden" }
 }
+
+# Smart-download popup regression guards.
+$clientH = Get-Content "src/app/maen_client.h" -Raw
+$clientCpp = Get-Content "src/app/maen_client.cpp" -Raw
+foreach ($needle in @("OnBeforePopup", "popup_browser_ids_", "browser->IsPopup()", "CloseBrowser(false)")) {
+  if (-not ($clientH.Contains($needle) -or $clientCpp.Contains($needle))) {
+    throw "Smart download handling missing: $needle"
+  }
+}
+if ($clientCpp -match 'OnBeforePopup[\s\S]{0,1800}return true;') {
+  throw "Popup policy must not blanket-cancel normal OAuth/payment/login popups."
+}
+
+# Search-choice start page regression guards.
+$start = Get-Content "src/app/start_page.cpp" -Raw
+foreach ($needle in @(
+  "www.google.com/search?q=",
+  "www.bing.com/search?q=",
+  "duckduckgo.com/?q=",
+  "search.brave.com/search?q=",
+  "www.youtube.com/",
+  "mail.google.com/",
+  "web.whatsapp.com/",
+  "www.wikipedia.org/",
+  "localStorage"
+)) {
+  if (-not $start.Contains($needle)) { throw "Start-page provider missing: $needle" }
+}
+if ($start -match '<iframe') { throw "Start page must not preload third-party services in iframes." }

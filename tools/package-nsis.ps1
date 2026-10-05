@@ -16,7 +16,7 @@ try {
   Pop-Location
 }
 
-$setup = Join-Path $repoRoot "installer\MaenBrowser-1.3.0-Setup.exe"
+$setup = Join-Path $repoRoot "installer\MaenBrowser-1.4.0-Setup.exe"
 if (-not (Test-Path $setup)) {
   throw "Installer was not produced."
 }

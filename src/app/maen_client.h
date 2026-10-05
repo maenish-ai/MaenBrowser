@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <map>
+#include <set>
 #include <mutex>
 #include <string>
 
@@ -24,6 +25,19 @@ class MaenClient final : public CefClient,
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
 
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
+  bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame> frame,
+                     int popup_id,
+                     const CefString& target_url,
+                     const CefString& target_frame_name,
+                     WindowOpenDisposition target_disposition,
+                     bool user_gesture,
+                     const CefPopupFeatures& popupFeatures,
+                     CefWindowInfo& windowInfo,
+                     CefRefPtr<CefClient>& client,
+                     CefBrowserSettings& settings,
+                     CefRefPtr<CefDictionaryValue>& extra_info,
+                     bool* no_javascript_access) override;
   bool DoClose(CefRefPtr<CefBrowser> browser) override;
   void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
 
@@ -49,6 +63,8 @@ class MaenClient final : public CefClient,
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;
+  std::mutex popup_mutex_;
+  std::set<int> popup_browser_ids_;
 
   IMPLEMENT_REFCOUNTING(MaenClient);
   DISALLOW_COPY_AND_ASSIGN(MaenClient);

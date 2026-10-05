@@ -1,4 +1,4 @@
-# Project status — MaenBrowser 1.3.0
+# Project status — MaenBrowser 1.4.0
 
 This source tree is the expanded Windows desktop development release. It is designed to compile against the pinned CEF/Chromium distribution in GitHub Actions and package an installable Windows build.
 
@@ -39,10 +39,26 @@ Before public production release: run the acceptance/RAM matrix, verify the pinn
 - Corrected feature documentation so extension support is not overstated.
 
 
-## 1.3.0 Windows integration
+## 1.4.0 Windows integration
 - Added a normal double-click NSIS Setup executable as the primary Windows distribution.
 - Added Installed Apps, Start Menu, Desktop, App Paths and Windows browser-capability registration.
 - Added HTTP/HTTPS browser-candidate registration without hijacking the user's default-app choice.
 - Retained the portable ZIP as an optional secondary artifact.
 - Preserved Lite Mode and CEF sandbox/security boundaries.
 - Documented the honest platform boundary: current CEF 152 desktop line targets modern x64 Windows; Android requires a separate native implementation and is not falsely claimed complete.
+
+
+## 1.4.0 smart download windows
+- Tracks opener-created popup browsers without blanket-blocking popups.
+- If a popup actually initiates a Chromium download, closes that temporary popup after the download event is created.
+- Ordinary popups remain available for OAuth, sign-in and payment flows.
+- Download ownership remains with Chromium's download manager; no polling/background service was added.
+
+
+## 1.4.0 search choice start page
+- New local MaenBrowser start page presents Google, Bing, DuckDuckGo and Brave Search side by side.
+- Search choice is user-controlled and stored locally in the start-page origin.
+- Quick Access links: YouTube, Gmail, WhatsApp and Wikipedia.
+- No search engine or quick-access site is preloaded in the background.
+- The UI uses MaenBrowser-owned text cards rather than copying third-party logos/assets.
+- Third-party services remain external destinations; no affiliation is claimed.
