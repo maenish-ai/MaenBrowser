@@ -1,0 +1,16 @@
+/build/
+/out/
+/dist/
+/.vs/
+.vscode/
+*.user
+*.suo
+*.ninja
+CMakeCache.txt
+CMakeFiles/
+third_party/cef/
+third_party/winsparkle/
+*.pdb
+*.obj
+*.ilk
+*.log

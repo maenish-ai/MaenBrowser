@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "profile_mode": "local-only",
+  "cloud_sync": false,
+  "memory": {
+    "lite_mode_default": false,
+    "suspend_inactive_tabs_minutes": 10,
+    "restore_suspended_tab_on_focus": true
+  },
+  "extensions": {
+    "allow_unpacked": true,
+    "allow_external_crx": false,
+    "warn_on_proxy_permission": true,
+    "warn_on_all_urls_permission": true
+  },
+  "updates": {
+    "channel": "stable",
+    "automatic_checks": true
+  }
+}

@@ -1,0 +1,67 @@
+name: MaenBrowser CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maenbrowser-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-package:
+    name: Validate repository and package source
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify MaenBrowser version
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -ne "1.0.0") { throw "VERSION mismatch: expected 1.0.0, found $version" }
+          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Verify required project files
+        shell: pwsh
+        run: |
+          $required = @(
+            "CMakeLists.txt",
+            "src/main_win.cpp",
+            "src/app/maen_app.cpp",
+            "src/app/maen_client.cpp",
+            "src/extensions/extension_manager.cpp",
+            "src/storage/local_profile.cpp",
+            "src/updater/update_manager.cpp",
+            "installer/MaenBrowser.nsi",
+            "docs/SECURITY.md",
+            "VERSION"
+          )
+          foreach ($file in $required) {
+            if (!(Test-Path $file)) { throw "Missing required file: $file" }
+          }
+
+      - name: Check CMake syntax/configuration entry point
+        shell: pwsh
+        run: cmake --version
+
+      - name: Create source package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $items = Get-ChildItem -Force | Where-Object { $_.Name -notin @(".git", "dist") }
+          Compress-Archive -Path $items.FullName -DestinationPath "dist/MaenBrowser-$env:MAEN_VERSION-source.zip" -Force
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-source
+          path: dist/MaenBrowser-${{ env.MAEN_VERSION }}-source.zip
+          if-no-files-found: error
+          retention-days: 14
