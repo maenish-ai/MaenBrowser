@@ -3,7 +3,8 @@ $required = @(
   "VERSION", "CMakeLists.txt", "installer/MaenBrowser.nsi",
   ".github/workflows/maenbrowser-ci.yml", "tools/fetch-cef.ps1",
   "src/main_win.cpp", "src/app/maen_app.cpp", "src/app/maen_client.cpp",
-  "src/app/resource_mode.cpp", "src/app/browser_preferences.cpp",
+  "src/app/resource_mode.cpp", "src/app/browser_preferences.cpp", "src/app/start_page.cpp",
+  "src/win/maenbrowser.rc", "assets/maenbrowser.ico",
   "src/extensions/extension_manager.cpp", "src/storage/local_profile.cpp",
   "src/updater/update_manager.cpp"
 )
@@ -43,3 +44,10 @@ if ($maenAppHeader -match "class\s+MaenClient\s*;" -and
 if ($maenAppHeader -notmatch '#include\s+"src/app/maen_client.h"') {
   throw "maen_app.h must include maen_client.h for CefRefPtr<MaenClient>."
 }
+
+# Branding/start-page regression guards.
+$cmake=Get-Content CMakeLists.txt -Raw
+if ($cmake -notmatch 'src/app/start_page.cpp') { throw "Start page missing from CMake" }
+if ($cmake -notmatch 'src/win/maenbrowser.rc') { throw "Windows icon resource missing from CMake" }
+$nsi=Get-Content installer/MaenBrowser.nsi -Raw
+if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" }

@@ -2,7 +2,7 @@
 
 This source tree is the expanded Windows desktop development release. It is designed to compile against the pinned CEF/Chromium distribution in GitHub Actions and package an installable Windows build.
 
-Major additions over the foundation: Chrome Runtime integration, persistent local profile/preferences, downloads flow, unpacked extension loading, Windows installer/uninstaller, automated CEF build pipeline, and automatic low-memory Lite Mode for <=6 GB systems.
+Major additions over the foundation: CEF Chrome Runtime integration, persistent local profile/preferences, downloads flow, Windows installer/uninstaller, automated CEF build pipeline, automatic low-memory Lite Mode for <=6 GB systems, MaenBrowser Windows branding/icon resources, and a lightweight MaenBrowser start page. Programmatic unpacked-extension loading is intentionally disabled on the pinned CEF 152 API.
 
 Security boundary: Lite Mode does not turn off sandboxing or site isolation.
 
@@ -29,3 +29,11 @@ Before public production release: run the acceptance/RAM matrix, verify the pinn
 - Removed calls to legacy `CefRequestContext` extension APIs absent from CEF 152.
 - Added preflight regression guards for those removed APIs.
 - Extension programmatic loading is intentionally disabled until implemented through a CEF 152-supported path; no false compatibility claim is made.
+
+## Branding/UI pass
+- Added MaenBrowser multi-size Windows icon resource and installer icon.
+- Desktop/Start shortcuts explicitly use the application icon.
+- Added a lightweight MaenBrowser start page instead of launching directly into Google.
+- Window titles retain MaenBrowser identity.
+- Kept the proven CEF Chrome Runtime frame for this build rather than risking a wholesale shell rewrite in one release.
+- Corrected feature documentation so extension support is not overstated.

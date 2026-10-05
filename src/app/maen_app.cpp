@@ -10,6 +10,7 @@
 #include "src/app/maen_client.h"
 #include "src/app/resource_mode.h"
 #include "src/app/browser_preferences.h"
+#include "src/app/start_page.h"
 #include "src/storage/local_profile.h"
 
 namespace maenbrowser {
@@ -52,7 +53,7 @@ void MaenApp::OnContextInitialized() {
   CefBrowserHost::CreateBrowser(
       window_info,
       client_,
-      kHomepage,
+      ui::GetStartPageDataUrl(),
       browser_settings,
       nullptr,
       context);

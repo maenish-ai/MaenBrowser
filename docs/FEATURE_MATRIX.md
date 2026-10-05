@@ -1,29 +1,24 @@
-# MaenBrowser 1.0 development feature matrix
+# MaenBrowser 1.1 development feature matrix
 
-MaenBrowser uses CEF Chrome Runtime so that mature Chromium browser UI and web-platform behavior are reused instead of reimplementing insecure imitations.
+## Integrated
+- Chromium/CEF 152 web engine with Chrome Runtime compatibility.
+- MaenBrowser-branded Windows executable, installer and shortcuts.
+- MaenBrowser start page with lightweight search and quick links.
+- Multi-tab/window navigation supplied by the CEF Chrome Runtime.
+- Persistent local profile, cookies, cache and preferences.
+- Downloads delegated to Chromium UI plus MaenBrowser completion actions.
+- Automatic Lite Mode on systems with <= 6 GB RAM without disabling sandbox/site isolation.
+- Per-user NSIS installer and full-data uninstall.
+- GitHub Actions Windows x64 build.
 
-## Integrated in this source tree
-- Chromium/CEF Chrome Runtime window and standard browser chrome.
-- Multi-tab/window support supplied by Chrome Runtime.
-- Back/forward/reload/address/search behavior supplied by Chrome Runtime.
-- Downloads with Save As interception plus completion actions (Open / Show in folder).
-- Persistent local profile, cookies, cache and user preferences.
-- Private/incognito capability through Chrome Runtime UI/profile behavior.
-- Standard Chromium dialogs/permissions where exposed by CEF Chrome Runtime.
-- PDF viewing/printing capabilities provided by the CEF/Chromium runtime where supported.
-- Unpacked-extension loader for CEF-supported extension APIs.
-- Automatic Lite Mode on <= 6 GB RAM: disables prerender and back-forward cache; keeps sandbox and site isolation.
-- No MaenBrowser cloud account or proprietary sync service.
-- Windows per-user installer, shortcuts, Installed Apps registration and full-data uninstall.
-- GitHub Actions build producing installer and portable artifacts.
-
-## Not falsely claimed as complete
+## Deliberate boundaries
+- The current browser frame still uses CEF Chrome Runtime. A fully custom tab/address-bar shell is a later architectural step, not falsely claimed here.
+- Programmatic unpacked-extension loading is disabled because the legacy request-context extension APIs are absent in pinned CEF 152.
 - Chrome Web Store one-click compatibility is not guaranteed.
-- Google Sync is intentionally disabled.
-- A custom password-manager UI is not implemented by MaenBrowser.
-- Signed automatic update feed is not active until release signing/feed infrastructure exists.
-- RAM superiority versus every Chrome/Edge/Firefox workload is not guaranteed; it must be benchmarked.
-- Android is a separate future implementation.
+- Google Sync is disabled; there is no proprietary MaenBrowser cloud account.
+- A MaenBrowser password-manager UI and signed update feed are not yet implemented.
+- RAM superiority is not claimed without benchmarks.
+- Android remains a separate future implementation.
 
-## Performance rule
-Memory reductions must not disable the Chromium sandbox, site isolation, TLS validation, or other core security boundaries. Lite Mode favors removing speculative caching/pre-render work before considering more invasive process changes.
+## Design rule
+MaenBrowser may adopt useful browser interaction patterns, but it does not copy third-party browser branding, icons or proprietary visual assets.

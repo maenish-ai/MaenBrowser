@@ -10,6 +10,8 @@ OutFile "MaenBrowser-1.1.0-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MaenBrowser"
 RequestExecutionLevel user
 Unicode True
+Icon "..\assets\maenbrowser.ico"
+UninstallIcon "..\assets\maenbrowser.ico"
 
 VIProductVersion "1.1.0.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
@@ -38,8 +40,8 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   CreateDirectory "$SMPROGRAMS\MaenBrowser"
-  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\MaenBrowser.exe"
-  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\MaenBrowser.exe"
+  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\MaenBrowser.exe" "" "$INSTDIR\MaenBrowser.exe" 0
+  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\MaenBrowser.exe" "" "$INSTDIR\MaenBrowser.exe" 0
 
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"

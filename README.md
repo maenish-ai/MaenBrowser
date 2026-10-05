@@ -4,11 +4,11 @@ MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar 
 
 ## What this build line uses
 
-The Windows application uses C++20 and CEF Chrome Runtime. The design deliberately reuses Chromium's mature browser chrome and web platform instead of recreating security-sensitive browser behavior from scratch. The local profile is stored under `%LOCALAPPDATA%\MaenBrowser`.
+The Windows application uses C++20 and CEF Chrome Runtime. The build keeps Chromium/CEF for web compatibility while beginning a distinct MaenBrowser identity layer: Windows branding, a MaenBrowser start page and local-first behavior. The current outer browser frame still uses CEF Chrome Runtime for stability. The local profile is stored under `%LOCALAPPDATA%\MaenBrowser`.
 
 ## User-facing scope
 
-The source integrates a Chromium browser window, standard navigation/tab behavior exposed by Chrome Runtime, persistent local profile, download interception with Save As and completion actions, local preferences, CEF-supported unpacked extensions, private-window capability supplied by the runtime, installer/uninstaller, and automated Windows build packaging.
+The source integrates a Chromium browser window, standard navigation/tab behavior exposed by Chrome Runtime, persistent local profile, download interception with Save As and completion actions, local preferences, private-window capability supplied by the runtime, installer/uninstaller, and automated Windows build packaging.
 
 MaenBrowser automatically selects Lite Mode on machines with 6 GB RAM or less. Lite Mode disables speculative prerender and back-forward page caching and caps disk/media caches. It intentionally does **not** disable the Chromium sandbox or site isolation.
 

@@ -30,6 +30,8 @@ set(MAEN_SOURCES
   src/app/maen_client.cpp
   src/app/resource_mode.cpp
   src/app/browser_preferences.cpp
+  src/app/start_page.cpp
+  src/win/maenbrowser.rc
   src/extensions/extension_manager.cpp
   src/storage/local_profile.cpp
   src/updater/update_manager.cpp
@@ -41,6 +43,8 @@ set(MAEN_HEADERS
   src/app/maen_client.h
   src/app/resource_mode.h
   src/app/browser_preferences.h
+  src/app/start_page.h
+  src/win/resource.h
   src/extensions/extension_manager.h
   src/storage/local_profile.h
   src/updater/update_manager.h

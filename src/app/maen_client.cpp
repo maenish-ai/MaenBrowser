@@ -47,7 +47,11 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser>) {
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {
   CEF_REQUIRE_UI_THREAD();
   HWND hwnd = browser ? browser->GetHost()->GetWindowHandle() : nullptr;
-  if (hwnd) SetWindowTextW(hwnd, Utf16(title).c_str());
+  if (hwnd) {
+    std::wstring page_title = Utf16(title);
+    if (page_title.empty() || page_title == L"MaenBrowser") SetWindowTextW(hwnd, L"MaenBrowser");
+    else SetWindowTextW(hwnd, (page_title + L" — MaenBrowser").c_str());
+  }
 }
 
 bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser>,
