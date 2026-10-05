@@ -19,3 +19,17 @@ if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must be pinned to windows
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use VS 2022 generator" }
 if ($wf -notmatch 'USE_SANDBOX=ON') { throw "Production CI must enable CEF sandbox" }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
+
+# CEF 152 API regression guards.
+$obsoletePatterns = @(
+  "settings.chrome_runtime",
+  "settings.persist_user_preferences",
+  "->LoadExtension(",
+  "->HasExtension(",
+  "->GetExtension("
+)
+$sourceFiles = Get-ChildItem "src" -Recurse -Include *.cpp,*.h
+foreach ($pattern in $obsoletePatterns) {
+  $hit = $sourceFiles | Select-String -SimpleMatch $pattern | Select-Object -First 1
+  if ($hit) { throw "Obsolete CEF 152 API detected: $pattern in $($hit.Path):$($hit.LineNumber)" }
+}

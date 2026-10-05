@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <filesystem>
 #include "include/cef_values.h"
+#include "include/cef_preference.h"
 
 namespace maenbrowser::preferences {
 namespace {
@@ -11,12 +12,15 @@ std::wstring DownloadsDirectory() {
   if (n > 0 && n < MAX_PATH) return (std::filesystem::path(path) / L"Downloads").wstring();
   return L"";
 }
-void Set(CefRefPtr<CefRequestContext> c, const char* key, CefRefPtr<CefValue> v) {
+void Set(CefRefPtr<CefPreferenceManager> manager,
+         const char* key,
+         CefRefPtr<CefValue> value) {
+  if (!manager || !manager->CanSetPreference(key)) return;
   CefString error;
-  c->SetPreference(key, v, error);
+  manager->SetPreference(key, value, error);
 }
 }
-void ApplyLocalBrowserPreferences(CefRefPtr<CefRequestContext> context) {
+void ApplyLocalBrowserPreferences(CefRefPtr<CefPreferenceManager> context) {
   if (!context) return;
   auto v = CefValue::Create();
   v->SetBool(true);

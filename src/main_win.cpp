@@ -21,9 +21,7 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
   }
 
   CefSettings settings;
-  settings.chrome_runtime = true;
   settings.persist_session_cookies = true;
-  settings.persist_user_preferences = true;
   settings.log_severity = LOGSEVERITY_WARNING;
 
   CefString(&settings.root_cache_path) =

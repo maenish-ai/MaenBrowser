@@ -3,6 +3,7 @@
 #include "include/cef_browser.h"
 #include "include/cef_command_line.h"
 #include "include/cef_request_context.h"
+#include "include/cef_preference.h"
 #include "include/wrapper/cef_helpers.h"
 
 #include "include/maenbrowser/version.h"
@@ -36,12 +37,11 @@ void MaenApp::OnContextInitialized() {
   CEF_REQUIRE_UI_THREAD();
 
   auto context = CefRequestContext::GetGlobalContext();
-  preferences::ApplyLocalBrowserPreferences(context);
+  preferences::ApplyLocalBrowserPreferences(
+      CefPreferenceManager::GetGlobalPreferenceManager());
 
   extension_manager_ =
-      std::make_unique<extensions::ExtensionManager>(context);
-  extension_manager_->LoadAllUnpacked(
-      storage::GetExtensionsPath());
+      std::make_unique<extensions::ExtensionManager>();
 
   CefWindowInfo window_info;
   window_info.SetAsPopup(nullptr, L"MaenBrowser");

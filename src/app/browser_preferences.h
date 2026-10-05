@@ -1,5 +1,6 @@
 #pragma once
-#include "include/cef_request_context.h"
+#include "include/cef_preference.h"
+
 namespace maenbrowser::preferences {
-void ApplyLocalBrowserPreferences(CefRefPtr<CefRequestContext> context);
+void ApplyLocalBrowserPreferences(CefRefPtr<CefPreferenceManager> manager);
 }

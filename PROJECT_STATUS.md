@@ -21,3 +21,11 @@ Before public production release: run the acceptance/RAM matrix, verify the pinn
 - Replaced Windows tar bzip2 extraction with deterministic two-stage 7-Zip extraction after the previous run stalled until the 90-minute job timeout.
 - Exact CEF archive metadata match and SHA-1 verification retained.
 - Repository preflight remains enabled before dependency download/build.
+
+
+## CEF 152 compile repair
+- Removed obsolete `CefSettings.chrome_runtime` and `persist_user_preferences` fields.
+- Migrated browser preference writes to `CefPreferenceManager`.
+- Removed calls to legacy `CefRequestContext` extension APIs absent from CEF 152.
+- Added preflight regression guards for those removed APIs.
+- Extension programmatic loading is intentionally disabled until implemented through a CEF 152-supported path; no false compatibility claim is made.
