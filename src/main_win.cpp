@@ -12,6 +12,11 @@
 namespace {
 
 int RunMain(HINSTANCE instance, void* sandbox_info) {
+  // Give every MaenBrowser top-level window one stable Windows taskbar identity.
+  // This prevents the CEF Chrome Runtime window from being grouped/rendered as
+  // a separate generic Chromium application.
+  SetCurrentProcessExplicitAppUserModelID(L"MaenBrowser.Desktop");
+
   CefMainArgs main_args(instance);
 
   CefRefPtr<maenbrowser::MaenApp> app(new maenbrowser::MaenApp());
@@ -60,6 +65,7 @@ CEF_BOOTSTRAP_EXPORT int RunWinMain(HINSTANCE hInstance,
                                     int,
                                     void* sandbox_info,
                                     cef_version_info_t*) {
+  maenbrowser::security::ApplyWindowsProcessHardening();
   return RunMain(hInstance, sandbox_info);
 }
 

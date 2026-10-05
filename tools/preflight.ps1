@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.3") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.4") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -34,6 +34,27 @@ $upgradeStart = $installer.IndexOf("Function CleanOldProgramFiles")
 $upgradeEnd = $installer.IndexOf("FunctionEnd", $upgradeStart)
 $upgradeBody = $installer.Substring($upgradeStart, $upgradeEnd - $upgradeStart)
 if ($upgradeBody.Contains('RMDir /r "$LOCALAPPDATA\MaenBrowser"')) { throw "Upgrade must preserve user profile." }
+
+
+# Unified taskbar identity + safe background-download lifecycle guards.
+$clientCpp = Get-Content "src/app/maen_client.cpp" -Raw
+$mainWin = Get-Content "src/main_win.cpp" -Raw
+foreach ($needle in @("ApplyMaenWindowIcon", "WM_SETICON", "MAKEINTRESOURCEW(1)", "SetCurrentProcessExplicitAppUserModelID")) {
+  if (-not ($clientCpp.Contains($needle) -or $mainWin.Contains($needle))) {
+    throw "Unified Windows identity guard missing: $needle"
+  }
+}
+$beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")
+$updatedStart = $clientCpp.IndexOf("void MaenClient::OnDownloadUpdated")
+$beforeBody = $clientCpp.Substring($beforeStart, $updatedStart - $beforeStart)
+if ($beforeBody.Contains("CloseBrowser") -or $beforeBody.Contains("SW_HIDE")) {
+  throw "Download regression: popup must not be hidden/closed in OnBeforeDownload."
+}
+$updatedEnd = $clientCpp.IndexOf("void MaenClient::ShowDownloadComplete", $updatedStart)
+$updatedBody = $clientCpp.Substring($updatedStart, $updatedEnd - $updatedStart)
+foreach ($needle in @("IsInProgress()", "GetReceivedBytes()", "SW_HIDE", "CloseBrowser(false)")) {
+  if (-not $updatedBody.Contains($needle)) { throw "Safe background-download lifecycle guard missing: $needle" }
+}
 
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
 
@@ -71,7 +92,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.3-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.4-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <map>
+#include <set>
 #include <mutex>
 #include <string>
 
@@ -55,6 +56,8 @@ class MaenClient final : public CefClient,
     std::wstring path;
     int last_percent = -1;
     bool completed_notified = false;
+    int popup_browser_id = 0;
+    bool popup_hidden = false;
   };
 
   void ShowDownloadComplete(const DownloadState& state, const std::wstring& file_name);
@@ -62,6 +65,8 @@ class MaenClient final : public CefClient,
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;
+  std::set<int> popup_browser_ids_;
+  std::map<int, CefRefPtr<CefBrowser>> popup_browsers_;
 
   IMPLEMENT_REFCOUNTING(MaenClient);
   DISALLOW_COPY_AND_ASSIGN(MaenClient);
