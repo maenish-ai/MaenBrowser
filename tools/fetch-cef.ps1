@@ -14,7 +14,7 @@ $indexUrl = "$baseUrl/index.json"
 $destinationPath = [System.IO.Path]::GetFullPath($Destination)
 New-Item -ItemType Directory -Force -Path $destinationPath | Out-Null
 
-$cefRoot = Join-Path $destinationPath "cef_binary_${CefVersion}_${platform}"
+$cefRoot = Join-Path $destinationPath "cef_binary_${CefVersion}_${platform}_minimal"
 
 if (Test-Path (Join-Path $cefRoot "cmake\FindCEF.cmake")) {
   Write-Output $cefRoot
