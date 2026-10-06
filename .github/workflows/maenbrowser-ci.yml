@@ -87,11 +87,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "$release\*" dist -Recurse -Force
           if (!(Test-Path "dist\libcef.dll")) { throw "CEF runtime libcef.dll missing." }
+      - name: Verify CEF media runtime integrity
+        shell: pwsh
+        run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT"
       - name: Verify staged browser runtime
         shell: pwsh
         run: |
           foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) { if (!(Test-Path $file)) { throw "Required runtime file missing: $file" } }
-          if (Test-Path .\tools\verify-media-runtime.ps1) { .\tools\verify-media-runtime.ps1 -RuntimeDir dist }
       - name: Build NSIS installer
         shell: pwsh
         run: |

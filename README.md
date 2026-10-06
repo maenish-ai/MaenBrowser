@@ -1,4 +1,4 @@
-# MaenBrowser 1.5.16 — Unified Lightweight Windows Build
+# MaenBrowser 1.5.17 — Unified Lightweight Windows Build
 
 MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
@@ -25,7 +25,7 @@ This is a serious development release, not a claim of feature-for-feature parity
 
 ## Windows installation
 
-Use the GitHub Actions artifact `MaenBrowser-1.5.16-Windows-x64-Setup` and run `MaenBrowser-1.5.16-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
+Use the GitHub Actions artifact `MaenBrowser-1.5.17-Windows-x64-Setup` and run `MaenBrowser-1.5.17-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
 
 
 ## Unified feature direction
@@ -33,19 +33,19 @@ Use the GitHub Actions artifact `MaenBrowser-1.5.16-Windows-x64-Setup` and run `
 1.3 establishes the performance gate and keeps the proven Chromium browser surfaces while the Maen-owned shell is implemented safely. Features that would add disproportionate background RAM/CPU are optional or rejected. The exact implemented-vs-planned boundary is in `docs/FEATURE_MATRIX.md`.
 
 
-## 1.5.16 adaptive performance/media pass
+## 1.5.17 adaptive performance/media pass
 
 Low-memory cache ceilings are now tighter on 4 GiB systems while Chromium GPU/WebGL/video acceleration remains available. The start page includes a local Media & 3D capability check for current codec/API claims. See `docs/PERFORMANCE.md`. This does not claim that unsupported proprietary codecs or 4K decoding can be made fast in software on hardware that lacks the required capability.
 
 
-## 1.5.16 download reliability
+## 1.5.17 download reliability
 MaenBrowser explicitly continues user-initiated downloads through the CEF callback, including blob/service-worker media downloads used by modern web apps. Save As remains user-controlled. Media playback codec availability is tested separately and is not falsely inferred from download support.
 
-### 1.5.16 CI/download guard repair
+### 1.5.17 CI/download guard repair
 This revision corrects the 1.5.12 preflight false positive while retaining explicit CEF download continuation for WhatsApp/blob/service-worker downloads. It does not claim that H.264/AAC playback is solved by this change; playback codec support remains a separate CEF build/licensing boundary.
 
 
-## 1.5.16 media release gate
+## 1.5.17 media release gate
 - Treats WhatsApp/Web MP4 playback as a release blocker rather than a cosmetic issue.
 - Adds a documented compatibility matrix for H.264/AAC, VP8/VP9, AV1, Opus/Vorbis, MP3/FLAC, MSE, WebRTC and WebCodecs.
 - Preserves GPU/hardware decode and the adaptive low-memory policy; no external codec pack or background media service is added.
@@ -53,7 +53,7 @@ This revision corrects the 1.5.12 preflight false positive while retaining expli
 - Proprietary-codec redistribution remains gated on a version-matched custom CEF build plus licensing review; the public CEF binary is not falsely advertised as full H.264/AAC support.
 
 
-## 1.5.16 CI + media-runtime correction
+## 1.5.17 CI + media-runtime correction
 - Removes the hard-coded 1.5.14 GitHub Actions version check that caused run 37429335016 to stop before preflight/build.
 - VERSION is now the single release-version source checked against CMake, the version header and NSIS, so the same drift cannot silently recur.
 - Setup-only publishing remains intact.
