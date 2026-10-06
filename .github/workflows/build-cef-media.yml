@@ -1,0 +1,23 @@
+name: Build CEF 152 Media Runtime
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-cef-media:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build CEF 152 with H264 AAC MP4 support
+        shell: pwsh
+        run: .\tools\build-cef-media.ps1 -DownloadDir "C:\maen-cef-build" -OutputDir "$env:RUNNER_TEMP\maen-cef-output"
+      - name: Upload media CEF archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: maen-cef-152-media-windows64
+          path: |
+            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip
+            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip.sha256
+          if-no-files-found: error
+          retention-days: 30

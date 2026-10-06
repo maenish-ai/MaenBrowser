@@ -257,7 +257,7 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# Media release-policy guards (1.5.18).
+# Media release-policy guards (1.5.19).
 $mediaPolicy = Get-Content "docs/MEDIA_COMPATIBILITY.md" -Raw
 foreach ($needle in @("MP4/H.264/AVC + AAC", "WebM VP8/VP9", "AV1", "WebRTC", "WebCodecs", "WhatsApp Web", "licensing review")) {
   if (-not $mediaPolicy.Contains($needle)) { throw "Media release policy missing: $needle" }
@@ -273,15 +273,20 @@ foreach ($forbidden in @("ignore-gpu-blocklist", "disable-accelerated-video-deco
   if ($allCpp.Contains($forbidden)) { throw "Media/performance security regression: $forbidden" }
 }
 
-# 1.5.18 custom-media-runtime provenance guards.
+# 1.5.19 custom-media-runtime provenance guards.
 $cefFetch = Get-Content "tools/fetch-cef.ps1" -Raw
 foreach ($needle in @("MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Get-FileHash", "SHA256", "FindCEF.cmake")) {
   if (-not $cefFetch.Contains($needle)) { throw "Custom CEF integrity guard missing: $needle" }
 }
 
+# Release media hard gate: never silently fall back to stock CEF.
+foreach ($needle in @("Require media-enabled CEF", "MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256")) {
+  if (-not $wf.Contains($needle)) { throw "Media release hard gate missing: $needle" }
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
 
-# 1.5.18 custom CEF media build recipe guards.
+# 1.5.19 custom CEF media build recipe guards.
 $mediaBuild = Get-Content "tools/build-cef-media.ps1" -Raw
 foreach ($needle in @("proprietary_codecs=true", "ffmpeg_branding=Chrome", "is_official_build=true")) {
   if (-not $mediaBuild.Contains($needle)) { throw "Custom CEF media build flag missing: $needle" }
