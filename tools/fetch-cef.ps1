@@ -6,6 +6,32 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+# Optional trusted custom CEF archive. This is the supported path for a
+# version-matched media-enabled CEF build after codec licensing/provenance review.
+# Never accept an unverified runtime archive.
+$customUrl = $env:MAEN_CEF_ARCHIVE_URL
+$customSha256 = $env:MAEN_CEF_ARCHIVE_SHA256
+if ($customUrl) {
+  if (-not $customSha256 -or $customSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
+    throw "MAEN_CEF_ARCHIVE_URL requires a 64-hex MAEN_CEF_ARCHIVE_SHA256."
+  }
+  $tempRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
+  $customArchive = Join-Path $tempRoot "maen-custom-cef.zip"
+  $customExtract = Join-Path $tempRoot "maen-custom-cef-extract"
+  Remove-Item $customArchive -Force -ErrorAction SilentlyContinue
+  Remove-Item $customExtract -Recurse -Force -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force -Path $customExtract | Out-Null
+  Write-Host "Downloading trusted custom CEF media runtime..."
+  Invoke-WebRequest -Uri $customUrl -OutFile $customArchive
+  $actual=(Get-FileHash $customArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($actual -ne $customSha256.ToLowerInvariant()) { throw "Custom CEF SHA256 mismatch." }
+  Expand-Archive -Path $customArchive -DestinationPath $customExtract -Force
+  $found = Get-ChildItem $customExtract -Directory -Recurse | Where-Object { Test-Path (Join-Path $_.FullName "cmake\FindCEF.cmake") } | Select-Object -First 1
+  if (-not $found) { throw "Custom CEF archive is invalid: FindCEF.cmake missing." }
+  Write-Output $found.FullName
+  exit 0
+}
+
 $platform = "windows64"
 $archiveName = "cef_binary_${CefVersion}_${platform}_minimal.tar.bz2"
 $baseUrl = "https://cef-builds.spotifycdn.com"

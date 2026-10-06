@@ -11,7 +11,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.15") { throw "Unexpected VERSION: $version" }
+if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -146,7 +146,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.15-Setup.exe"',
+  ('OutFile "MaenBrowser-' + $version + '-Setup.exe"'),
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -259,7 +259,7 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# Media release-policy guards (1.5.15).
+# Media release-policy guards (1.5.16).
 $mediaPolicy = Get-Content "docs/MEDIA_COMPATIBILITY.md" -Raw
 foreach ($needle in @("MP4/H.264/AVC + AAC", "WebM VP8/VP9", "AV1", "WebRTC", "WebCodecs", "WhatsApp Web", "licensing review")) {
   if (-not $mediaPolicy.Contains($needle)) { throw "Media release policy missing: $needle" }
@@ -273,4 +273,10 @@ if (-not $wf.Contains("Verify CEF media runtime integrity")) {
 }
 foreach ($forbidden in @("ignore-gpu-blocklist", "disable-accelerated-video-decode", "disable-gpu", "disable-webgl")) {
   if ($allCpp.Contains($forbidden)) { throw "Media/performance security regression: $forbidden" }
+}
+
+# 1.5.16 custom-media-runtime provenance guards.
+$cefFetch = Get-Content "tools/fetch-cef.ps1" -Raw
+foreach ($needle in @("MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Get-FileHash", "SHA256", "FindCEF.cmake")) {
+  if (-not $cefFetch.Contains($needle)) { throw "Custom CEF integrity guard missing: $needle" }
 }
