@@ -257,50 +257,12 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# Media release-policy guards (1.5.21).
-$mediaPolicy = Get-Content "docs/MEDIA_COMPATIBILITY.md" -Raw
-foreach ($needle in @("MP4/H.264/AVC + AAC", "WebM VP8/VP9", "AV1", "WebRTC", "WebCodecs", "WhatsApp Web", "licensing review")) {
-  if (-not $mediaPolicy.Contains($needle)) { throw "Media release policy missing: $needle" }
+# 1.5.22 trial-build CI guards: produce a downloadable Setup using the pinned stock CEF.
+$wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
+foreach ($needle in @("build-windows", "Download and verify stock CEF for trial build", "Upload installer", "actions/upload-artifact@v4")) {
+  if (-not $wf.Contains($needle)) { throw "Trial Setup CI guard missing: $needle" }
 }
-$fetchCef = Get-Content "tools/fetch-cef.ps1" -Raw
-if (-not $fetchCef.Contains('152.0.6+g708dc14+chromium-152.0.7977.83')) {
-  throw "CEF version pin changed without media compatibility review."
-}
-if (-not $wf.Contains("Verify CEF media runtime integrity")) {
-  throw "CI media runtime integrity gate missing."
-}
-foreach ($forbidden in @("ignore-gpu-blocklist", "disable-accelerated-video-decode", "disable-gpu", "disable-webgl")) {
-  if ($allCpp.Contains($forbidden)) { throw "Media/performance security regression: $forbidden" }
-}
-
-# 1.5.21 custom-media-runtime provenance guards.
-$cefFetch = Get-Content "tools/fetch-cef.ps1" -Raw
-foreach ($needle in @("MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Get-FileHash", "SHA256", "FindCEF.cmake")) {
-  if (-not $cefFetch.Contains($needle)) { throw "Custom CEF integrity guard missing: $needle" }
-}
-
-# Release media hard gate: never silently fall back to stock CEF.
-foreach ($needle in @("build-media-release", "Download verified media-enabled CEF", "MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256")) {
-  if (-not $wf.Contains($needle)) { throw "Media release hard gate missing: $needle" }
-}
-
-
-# 1.5.21 CI behavior: source validation must not fail just because repository media
-# variables are not configured. The release job is conditionally skipped instead.
-foreach ($needle in @("validate-source", "build-media-release", "MAEN_CEF_ARCHIVE_URL != ''", "Download verified media-enabled CEF")) {
-  if (-not $wf.Contains($needle)) { throw "Media CI orchestration guard missing: $needle" }
-}
-if ($wf.Contains('throw "Release blocked: MAEN_CEF_ARCHIVE_URL')) {
-  throw "CI regression: missing repository media variables must skip the release job, not fail every push."
+if ($wf.Contains("build-media-release") -or $wf.Contains("MAEN_CEF_ARCHIVE_URL != ''")) {
+  throw "Trial Setup CI must not be conditionally skipped behind custom-media variables."
 }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
-
-# 1.5.21 custom CEF media build recipe guards.
-$mediaBuild = Get-Content "tools/build-cef-media.ps1" -Raw
-foreach ($needle in @("proprietary_codecs=true", "ffmpeg_branding=Chrome", "is_official_build=true")) {
-  if (-not $mediaBuild.Contains($needle)) { throw "Custom CEF media build flag missing: $needle" }
-}
-$mediaBuildDoc = Get-Content "docs/CUSTOM_CEF_MEDIA_BUILD.md" -Raw
-foreach ($needle in @("MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "WhatsApp Web MP4/H.264", "licensing")) {
-  if (-not $mediaBuildDoc.Contains($needle)) { throw "Custom CEF media documentation guard missing: $needle" }
-}

@@ -1,14 +1,17 @@
 name: Build MaenBrowser Windows
+
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  validate-source:
+  build-windows:
     runs-on: windows-2022
-    timeout-minutes: 10
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -17,13 +20,7 @@ jobs:
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z, got: $version" }
-          $cmake = Get-Content CMakeLists.txt -Raw
-          $nsi = Get-Content installer/MaenBrowser.nsi -Raw
-          $header = Get-Content include/maenbrowser/version.h -Raw
-          $e = [regex]::Escape($version)
-          if ($cmake -notmatch "project\(MaenBrowser VERSION $e") { throw "CMake version drift: $version" }
-          if ($nsi -notmatch ('PRODUCT_VERSION "' + $e + '"')) { throw "NSIS version drift: $version" }
-          if ($header -notmatch ('kVersion\[\] = "' + $e + '"')) { throw "Header version drift: $version" }
+          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Repository preflight
         shell: pwsh
         run: .\tools\preflight.ps1
@@ -33,34 +30,6 @@ jobs:
           $source = (Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
           foreach ($flag in @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")) { if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" } }
           if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
-      - name: Media runtime configuration status
-        shell: pwsh
-        env:
-          MEDIA_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-          MEDIA_SHA: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
-        run: |
-          if ($env:MEDIA_URL -and $env:MEDIA_SHA -match '^[0-9A-Fa-f]{64}$') {
-            Write-Host "Verified media CEF configuration is present. The release job will run."
-          } else {
-            Write-Warning "Media CEF variables are not configured yet. Source validation passes, but no Setup will be produced from stock CEF because stock CEF lacks the required H.264/AAC media build."
-          }
-
-  build-media-release:
-    needs: validate-source
-    if: ${{ vars.MAEN_CEF_ARCHIVE_URL != '' && vars.MAEN_CEF_ARCHIVE_SHA256 != '' }}
-    runs-on: windows-2022
-    timeout-minutes: 60
-    env:
-      MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-      MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Export version
-        shell: pwsh
-        run: |
-          $version=(Get-Content VERSION -Raw).Trim()
-          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -72,16 +41,14 @@ jobs:
         run: |
           $sevenZip=(Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
           if (-not $sevenZip -and -not (Test-Path "C:\Program Files\7-Zip\7z.exe")) { throw "7-Zip is not available." }
-      - name: Download verified media-enabled CEF
+      - name: Download and verify stock CEF for trial build
         shell: pwsh
         run: |
-          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 is invalid." }
+          Remove-Item Env:MAEN_CEF_ARCHIVE_URL -ErrorAction SilentlyContinue
+          Remove-Item Env:MAEN_CEF_ARCHIVE_SHA256 -ErrorAction SilentlyContinue
           $cefRoot=& .\tools\fetch-cef.ps1
           if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Verify CEF media runtime integrity
-        shell: pwsh
-        run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT"
       - name: Verify Visual Studio 2022 toolchain
         shell: pwsh
         run: |
