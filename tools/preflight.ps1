@@ -6,11 +6,11 @@ $required = @(
   "src/app/resource_mode.cpp", "src/app/browser_preferences.cpp", "src/app/start_page.cpp",
   "src/win/maenbrowser.rc", "assets/maenbrowser.ico",
   "src/extensions/extension_manager.cpp", "src/storage/local_profile.cpp",
-  "src/updater/update_manager.cpp"
+  "src/updater/update_manager.cpp", "docs/PERFORMANCE.md"
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.10") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.11") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -83,6 +83,19 @@ foreach ($needle in @("MediaDiagnosticsUrl", "H.264 / MP4", "AAC / MP4", "VP9 / 
 }
 
 
+
+# Adaptive performance/media regression guards.
+$resourceAdaptive = Get-Content "src/app/resource_mode.cpp" -Raw
+foreach ($needle in @("logical_processors", "67108864", "33554432", "100663296", "50331648")) {
+  if (-not $resourceAdaptive.Contains($needle)) { throw "Adaptive low-memory policy missing: $needle" }
+}
+foreach ($forbidden in @("ignore-gpu-blocklist", "disable-gpu", "disable-accelerated-video-decode", "disable-webgl")) {
+  if ($allCpp.Contains($forbidden)) { throw "Unsafe performance regression: $forbidden" }
+}
+foreach ($needle in @("HEVC/H.265", "FLAC", "Media &amp; 3D capability check")) {
+  if (-not $startPageSource.Contains($needle)) { throw "Adaptive media diagnostics missing: $needle" }
+}
+
 # Media diagnostics compile guard.
 $startPageCompileSource = Get-Content "src/app/start_page.cpp" -Raw
 if ($startPageCompileSource.Contains("PercentEncode(")) {
@@ -128,7 +141,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.10-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.11-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',

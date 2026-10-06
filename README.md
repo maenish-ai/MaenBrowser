@@ -1,4 +1,4 @@
-# MaenBrowser 1.5.10 — Unified Lightweight Windows Build
+# MaenBrowser 1.5.11 — Unified Lightweight Windows Build
 
 MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
@@ -25,9 +25,14 @@ This is a serious development release, not a claim of feature-for-feature parity
 
 ## Windows installation
 
-Use the GitHub Actions artifact `MaenBrowser-1.5.10-Windows-x64-Setup` and run `MaenBrowser-1.5.10-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
+Use the GitHub Actions artifact `MaenBrowser-1.5.11-Windows-x64-Setup` and run `MaenBrowser-1.5.11-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
 
 
 ## Unified feature direction
 
 1.3 establishes the performance gate and keeps the proven Chromium browser surfaces while the Maen-owned shell is implemented safely. Features that would add disproportionate background RAM/CPU are optional or rejected. The exact implemented-vs-planned boundary is in `docs/FEATURE_MATRIX.md`.
+
+
+## 1.5.11 adaptive performance/media pass
+
+Low-memory cache ceilings are now tighter on 4 GiB systems while Chromium GPU/WebGL/video acceleration remains available. The start page includes a local Media & 3D capability check for current codec/API claims. See `docs/PERFORMANCE.md`. This does not claim that unsupported proprietary codecs or 4K decoding can be made fast in software on hardware that lacks the required capability.

@@ -2,11 +2,11 @@
 
 ## Windows desktop — current release line
 
-MaenBrowser 1.5.10 is a native Windows x64 desktop application using CEF/Chromium 152.
+MaenBrowser 1.5.11 is a native Windows x64 desktop application using CEF/Chromium 152.
 The GitHub workflow produces:
 
-- `MaenBrowser-1.5.10-Setup.exe` — the normal double-click installer.
-- `MaenBrowser-1.5.10-Windows-x64-Portable.zip` — optional portable build.
+- `MaenBrowser-1.5.11-Setup.exe` — the normal double-click installer.
+- `MaenBrowser-1.5.11-Windows-x64-Portable.zip` — optional portable build.
 
 The installer installs under the current user's Local AppData, creates Start Menu and
 Desktop shortcuts, registers Installed Apps/uninstall information, registers MaenBrowser

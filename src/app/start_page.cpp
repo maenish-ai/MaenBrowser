@@ -39,6 +39,8 @@ main{width:min(880px,92vw);margin:auto;padding:8vh 0 36px}.brand{display:flex;ju
 <a href="https://www.wikipedia.org/"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 36 36"><text x="18" y="28" text-anchor="middle" font-family="Georgia,serif" font-size="29" font-weight="700" fill="currentColor">W</text></svg></span>Wikipedia</a>
 </div>
 <div class="note">Search choice is stored locally on this device. MaenBrowser is not affiliated with the listed services.</div>
+<div style="text-align:center;margin-top:12px"><button id="mediaCheck" type="button" style="border:1px solid var(--line);background:var(--card);color:inherit;border-radius:10px;padding:8px 12px;cursor:pointer">Media &amp; 3D capability check</button></div>
+<div id="mediaResult" class="note" style="white-space:pre-line;display:none"></div>
 </main><script>
 const engines={
  google:q=>"https://www.google.com/search?q="+encodeURIComponent(q),
@@ -52,6 +54,24 @@ if(!engines[selected])selected="google";
 function paint(){document.querySelectorAll(".engine").forEach(x=>x.classList.toggle("active",x.dataset.engine===selected))}
 document.querySelectorAll(".engine").forEach(x=>x.addEventListener("click",()=>{selected=x.dataset.engine;try{localStorage.setItem("maen.searchEngine",selected)}catch(e){}paint();document.getElementById("q").focus()}));
 document.getElementById("search").addEventListener("submit",e=>{e.preventDefault();const q=document.getElementById("q").value.trim();if(q)location.href=engines[selected](q)});
+document.getElementById("mediaCheck").addEventListener("click",()=>{
+ const v=document.createElement("video"),a=document.createElement("audio");
+ const tests=[
+  ["H.264",v.canPlayType('video/mp4; codecs="avc1.42E01E"')],
+  ["HEVC/H.265",v.canPlayType('video/mp4; codecs="hvc1"')],
+  ["VP9",v.canPlayType('video/webm; codecs="vp09.00.10.08"')],
+  ["AV1",v.canPlayType('video/mp4; codecs="av01.0.05M.08"')],
+  ["AAC",a.canPlayType('audio/mp4; codecs="mp4a.40.2"')],
+  ["Opus",a.canPlayType('audio/webm; codecs="opus"')],
+  ["FLAC",a.canPlayType('audio/flac')],
+  ["MP3",a.canPlayType('audio/mpeg')]
+ ];
+ let webgl=false;try{webgl=!!document.createElement("canvas").getContext("webgl2")}catch(e){}
+ const lines=tests.map(x=>x[0]+": "+(x[1]||"not reported"));
+ lines.push("WebGL2: "+(webgl?"available":"unavailable"));
+ lines.push("CPU threads reported: "+(navigator.hardwareConcurrency||"unknown"));
+ const out=document.getElementById("mediaResult");out.textContent=lines.join("\n");out.style.display="block";
+});
 paint();
 </script></body></html>)HTML";
   return "data:text/html;charset=utf-8," + CefURIEncode(kHtml, false).ToString();
@@ -81,8 +101,11 @@ const tests=[
 ['VP8 / WebM','video/webm; codecs="vp8"',v],
 ['VP9 / WebM','video/webm; codecs="vp09.00.10.08"',v],
 ['AV1','video/mp4; codecs="av01.0.05M.08"',v],
+['HEVC / H.265','video/mp4; codecs="hvc1"',v],
 ['Opus / WebM','audio/webm; codecs="opus"',a],
-['Vorbis / WebM','audio/webm; codecs="vorbis"',a]
+['Vorbis / WebM','audio/webm; codecs="vorbis"',a],
+['FLAC','audio/flac',a],
+['MP3','audio/mpeg',a]
 ];
 for(const [n,m,e] of tests){const r=e.canPlayType(m)||'no'; codecs.insertAdjacentHTML('beforeend',
 `<tr><td>${n}<br><code>${m}</code></td><td class="${r==='no'?'bad':'ok'}">${r}</td></tr>`);}
