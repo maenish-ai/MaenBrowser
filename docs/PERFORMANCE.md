@@ -1,6 +1,6 @@
 # MaenBrowser adaptive performance policy
 
-MaenBrowser 1.5.11 keeps Chromium/CEF GPU and media acceleration available and applies conservative resource policy around it.
+MaenBrowser 1.5.12 keeps Chromium/CEF GPU and media acceleration available and applies conservative resource policy around it.
 
 ## Low-memory systems
 
@@ -17,7 +17,7 @@ The browser does not ship random codec packs or download executable codecs. It e
 
 ## 3D/games
 
-WebGL/WebGL2 remain enabled. MaenBrowser does not force GPU features past Chromium's compatibility blocklist because doing so can make old GPUs unstable. The 1.5.11 policy reduces browser-side speculative/cache overhead on 4–6 GiB systems so more resources remain available to the active workload. A future tab-aware Game Boost must be benchmarked before release and must not weaken process isolation.
+WebGL/WebGL2 remain enabled. MaenBrowser does not force GPU features past Chromium's compatibility blocklist because doing so can make old GPUs unstable. The 1.5.12 policy reduces browser-side speculative/cache overhead on 4–6 GiB systems so more resources remain available to the active workload. A future tab-aware Game Boost must be benchmarked before release and must not weaken process isolation.
 
 ## Acceptance target
 

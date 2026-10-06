@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.11") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.12") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -141,7 +141,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.11-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.12-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -181,13 +181,21 @@ $beforeDownloadBody = $clientCpp.Substring($beforeStart, $updatedStart - $before
 if ($beforeDownloadBody.Contains("CloseBrowser")) {
   throw "Download regression: never close the initiating browser from OnBeforeDownload."
 }
-if (-not $beforeDownloadBody.Contains("return false;")) {
-  throw "Chrome Runtime download delegation missing."
+if (-not $beforeDownloadBody.Contains("callback->Continue(CefString(), true)")) {
+  throw "Explicit CEF download continuation missing."
+}
+if (-not $beforeDownloadBody.Contains("return true;")) {
+  throw "OnBeforeDownload must return true when MaenBrowser explicitly continues the transfer."
 }
 # Popup tracking itself is safe and required for transient-window cleanup.
 # The dangerous regression is acting on the popup during OnBeforeDownload.
 if ($beforeDownloadBody.Contains("CloseBrowser") -or $beforeDownloadBody.Contains("SW_HIDE")) {
   throw "Download regression: popup tracking may not close/hide the initiating browser in OnBeforeDownload."
+}
+
+# WhatsApp/blob download reliability guard.
+if ($beforeDownloadBody.Contains("return false;")) {
+  throw "Download regression: implicit handling must not replace explicit Continue for blob/service-worker downloads."
 }
 
 # Search-choice start page regression guards.

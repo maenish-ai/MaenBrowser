@@ -138,11 +138,15 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
     }
   }
 
-  // Chrome Runtime already implements Chromium's native download UI.
-  // Returning false delegates the download to that UI (download bubble/shelf).
-  // The download.prompt_for_download preference controls whether Save As is shown.
-  // OnDownloadUpdated still receives progress/completion notifications.
-  return false;
+  // Explicitly continue the download. CEF's download callback contract requires
+  // Continue() when the application takes ownership of OnBeforeDownload. Using
+  // an empty path preserves Chromium/CEF's suggested filename and default
+  // download location; show_dialog=true keeps the user in control with Save As.
+  // This is important for blob/service-worker generated downloads such as
+  // WhatsApp Web media, where relying only on implicit Chrome Runtime handling
+  // can surface as an immediate canceled transfer in embedded builds.
+  callback->Continue(CefString(), true);
+  return true;
 }
 
 void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
