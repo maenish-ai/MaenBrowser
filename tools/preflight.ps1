@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.13") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.14") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -21,6 +21,10 @@ if ($nsi -notmatch ('PRODUCT_VERSION "' + $escapedVersion + '"')) {
   throw "NSIS version mismatch: expected $version"
 }
 $wf=Get-Content .github/workflows/maenbrowser-ci.yml -Raw
+# Distribution policy: publish Setup only; do not spend CI/storage on a Portable artifact.
+if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable|Compress-Archive') {
+  throw "Distribution regression: GitHub Actions must publish Setup only (no Portable artifact)."
+}
 if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must be pinned to windows-2022" }
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use VS 2022 generator" }
 if ($wf -notmatch 'USE_SANDBOX=ON') { throw "Production CI must enable CEF sandbox" }
@@ -141,7 +145,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.13-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.14-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',

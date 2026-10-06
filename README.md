@@ -1,4 +1,4 @@
-# MaenBrowser 1.5.13 — Unified Lightweight Windows Build
+# MaenBrowser 1.5.14 — Unified Lightweight Windows Build
 
 MaenBrowser is a local-first Chromium/CEF browser project focused on a familiar full desktop browsing experience with a conservative low-memory mode for older PCs. It does not require a MaenBrowser cloud account or proprietary sync backend.
 
@@ -14,7 +14,7 @@ MaenBrowser automatically selects Lite Mode on machines with 6 GB RAM or less. L
 
 ## Build
 
-Push the repository to GitHub and run `Build MaenBrowser Windows` in Actions. The workflow fetches the pinned CEF distribution, builds Release x64, stages the Chromium runtime, creates an NSIS installer, and uploads Setup and Portable artifacts.
+Push the repository to GitHub and run `Build MaenBrowser Windows` in Actions. The workflow fetches the pinned CEF distribution, builds Release x64, stages the Chromium runtime, creates an NSIS installer and uploads the Setup artifact only.
 
 See `docs/FEATURE_MATRIX.md`, `docs/TEST_PLAN.md`, `docs/SECURITY.md`, and `docs/ARCHITECTURE.md` before calling a release production-ready.
 
@@ -25,7 +25,7 @@ This is a serious development release, not a claim of feature-for-feature parity
 
 ## Windows installation
 
-Use the GitHub Actions artifact `MaenBrowser-1.5.13-Windows-x64-Setup` and run `MaenBrowser-1.5.13-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
+Use the GitHub Actions artifact `MaenBrowser-1.5.14-Windows-x64-Setup` and run `MaenBrowser-1.5.14-Setup.exe`. The installer registers MaenBrowser with Windows Installed Apps, Start Menu, Desktop, App Paths and the Windows browser/default-app capabilities system. See `docs/PLATFORM_SUPPORT.md` for supported-platform boundaries.
 
 
 ## Unified feature direction
@@ -33,13 +33,13 @@ Use the GitHub Actions artifact `MaenBrowser-1.5.13-Windows-x64-Setup` and run `
 1.3 establishes the performance gate and keeps the proven Chromium browser surfaces while the Maen-owned shell is implemented safely. Features that would add disproportionate background RAM/CPU are optional or rejected. The exact implemented-vs-planned boundary is in `docs/FEATURE_MATRIX.md`.
 
 
-## 1.5.13 adaptive performance/media pass
+## 1.5.14 adaptive performance/media pass
 
 Low-memory cache ceilings are now tighter on 4 GiB systems while Chromium GPU/WebGL/video acceleration remains available. The start page includes a local Media & 3D capability check for current codec/API claims. See `docs/PERFORMANCE.md`. This does not claim that unsupported proprietary codecs or 4K decoding can be made fast in software on hardware that lacks the required capability.
 
 
-## 1.5.13 download reliability
+## 1.5.14 download reliability
 MaenBrowser explicitly continues user-initiated downloads through the CEF callback, including blob/service-worker media downloads used by modern web apps. Save As remains user-controlled. Media playback codec availability is tested separately and is not falsely inferred from download support.
 
-### 1.5.13 CI/download guard repair
+### 1.5.14 CI/download guard repair
 This revision corrects the 1.5.12 preflight false positive while retaining explicit CEF download continuation for WhatsApp/blob/service-worker downloads. It does not claim that H.264/AAC playback is solved by this change; playback codec support remains a separate CEF build/licensing boundary.
