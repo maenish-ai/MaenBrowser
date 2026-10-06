@@ -34,3 +34,9 @@ Before public distribution, test the exact runtime, not only `canPlayType()`:
 ## Licensing boundary
 
 Enabling `ffmpeg_branding=Chrome proprietary_codecs=true` changes the codec set and may create patent/licensing obligations for redistribution. Open-source source code does not itself remove those obligations. Obtain appropriate licensing/legal clearance before distributing such binaries publicly.
+
+## Maen Media Engine integration (1.5.23)
+
+MaenBrowser deliberately reuses the Chromium/CEF media architecture rather than embedding a second Gecko/Firefox engine. The custom runtime is built from the CEF/Chromium source line already used by MaenBrowser, with the Chrome FFmpeg branding and proprietary-codec build gates enabled. The browser keeps Chromium GPU selection, MSE, WebRTC, WebCodecs and software fallback behavior intact; no GPU blocklist bypass or security weakening is introduced.
+
+The media-runtime workflow also emits a build manifest and SHA-256. This proves the archive came from the intended build configuration; it is not a claim that a particular WhatsApp file has decoded successfully. Runtime acceptance still requires the real playback tests listed above.

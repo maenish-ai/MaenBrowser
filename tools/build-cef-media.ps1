@@ -37,6 +37,8 @@ Remove-Item $zip -Force -ErrorAction SilentlyContinue
 Compress-Archive -Path $dist.FullName -DestinationPath $zip -CompressionLevel Optimal
 $sha=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path "$zip.sha256" -Value $sha -NoNewline
+$manifest = Join-Path $OutputDir 'maen-cef-152-media-build-manifest.txt'
+@('MaenBrowser CEF media runtime','branch=7977','cef_line=152.0.6+g708dc14+chromium-152.0.7977.83','is_official_build=true','proprietary_codecs=true','ffmpeg_branding=Chrome','chrome_pgo_phase=0',"sha256=$sha") | Set-Content -Path $manifest -Encoding UTF8
 Write-Host "MEDIA_CEF_ARCHIVE=$zip"
 Write-Host "MEDIA_CEF_SHA256=$sha"
 Write-Host 'Build complete. Use this exact archive + SHA256 as MAEN_CEF_ARCHIVE_URL / MAEN_CEF_ARCHIVE_SHA256.'

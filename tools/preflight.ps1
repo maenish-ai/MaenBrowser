@@ -257,7 +257,7 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.22 trial-build CI guards: produce a downloadable Setup using the pinned stock CEF.
+# 1.5.23 trial-build CI guards: produce a downloadable Setup using the pinned stock CEF.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
 foreach ($needle in @("build-windows", "Download and verify stock CEF for trial build", "Upload installer", "actions/upload-artifact@v4")) {
   if (-not $wf.Contains($needle)) { throw "Trial Setup CI guard missing: $needle" }

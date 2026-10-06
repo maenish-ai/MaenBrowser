@@ -1,4 +1,4 @@
-name: Build CEF 152 Media Runtime
+name: Build CEF 152 Maen Media Runtime
 on:
   workflow_dispatch:
 permissions:
@@ -6,18 +6,22 @@ permissions:
 jobs:
   build-cef-media:
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 360
+    timeout-minutes: 720
     steps:
       - uses: actions/checkout@v5
-      - name: Build CEF 152 with H264 AAC MP4 support
+      - name: Build Chromium CEF media runtime
         shell: pwsh
         run: .\tools\build-cef-media.ps1 -DownloadDir "C:\maen-cef-build" -OutputDir "$env:RUNNER_TEMP\maen-cef-output"
-      - name: Upload media CEF archive
+      - name: Verify media build manifest
+        shell: pwsh
+        run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\maen-cef-output"
+      - name: Upload Maen media CEF archive
         uses: actions/upload-artifact@v4
         with:
           name: maen-cef-152-media-windows64
           path: |
             ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip
             ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip.sha256
+            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-build-manifest.txt
           if-no-files-found: error
           retention-days: 30
