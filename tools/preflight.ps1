@@ -10,7 +10,7 @@ $required = @(
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
-if ($version -ne "1.5.12") { throw "Unexpected VERSION: $version" }
+if ($version -ne "1.5.13") { throw "Unexpected VERSION: $version" }
 $cmake=Get-Content CMakeLists.txt -Raw
 $escapedVersion = [regex]::Escape($version)
 if ($cmake -notmatch "project\(MaenBrowser VERSION $escapedVersion") {
@@ -141,7 +141,7 @@ if ($nsi -notmatch 'maenbrowser.ico') { throw "Installer icon branding missing" 
 # Windows installation/registration guards.
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 $installerRequired = @(
-  'OutFile "MaenBrowser-1.5.12-Setup.exe"',
+  'OutFile "MaenBrowser-1.5.13-Setup.exe"',
   'WriteUninstaller "$INSTDIR\Uninstall.exe"',
   'Software\RegisteredApplications',
   'URLAssociations',
@@ -194,8 +194,11 @@ if ($beforeDownloadBody.Contains("CloseBrowser") -or $beforeDownloadBody.Contain
 }
 
 # WhatsApp/blob download reliability guard.
-if ($beforeDownloadBody.Contains("return false;")) {
-  throw "Download regression: implicit handling must not replace explicit Continue for blob/service-worker downloads."
+# Do not use a naive search for every `return false;` in this function: guard
+# clauses may legitimately return before a valid callback exists. Validate the
+# actual ownership path instead: explicit Continue + terminal return true.
+if ($beforeDownloadBody -notmatch 'callback->Continue\(CefString\(\), true\);\s*return true;') {
+  throw "Download regression: explicit Continue must be followed by return true for blob/service-worker downloads."
 }
 
 # Search-choice start page regression guards.

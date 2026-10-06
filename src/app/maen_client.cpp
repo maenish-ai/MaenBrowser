@@ -114,7 +114,7 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
                                   const CefString& suggested_name,
                                   CefRefPtr<CefBeforeDownloadCallback> callback) {
   CEF_REQUIRE_UI_THREAD();
-  if (!callback || !download_item) return false;
+  if (!callback || !download_item) return true;
 
   // Download reliability rule:
   // Do NOT close the initiating browser/popup from OnBeforeDownload.
