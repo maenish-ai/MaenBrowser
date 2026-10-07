@@ -116,7 +116,9 @@ jobs:
     if: ${{ vars.MAEN_CEF_ARCHIVE_URL == '' || vars.MAEN_CEF_ARCHIVE_SHA256 == '' }}
     runs-on: windows-2022
     steps:
-      - name: Stop before producing a misleading Setup
+      - name: Media runtime not configured
         shell: pwsh
         run: |
-          throw "Verified custom CEF media runtime is not configured. No Setup will be produced. Build CEF with .github/workflows/build-cef-media.yml, publish its archive, then set MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256."
+          Write-Host "::warning title=Media runtime required::Source validation passed, but the verified custom CEF media archive is not configured. No Setup is produced. Configure MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 after building the Windows x64 media CEF."
+          Write-Host "This is an intentional non-release state, not a source compilation failure."
+          exit 0

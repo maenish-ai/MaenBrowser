@@ -278,7 +278,8 @@ foreach ($needle in @(
   "Build Release",
   "Build NSIS installer",
   "Upload verified MaenBrowser Media Setup",
-  "media-runtime-required"
+  "media-runtime-required",
+  "Media runtime not configured"
 )) {
   if (-not $wf.Contains($needle)) { throw "Media Setup CI guard missing: $needle" }
 }
