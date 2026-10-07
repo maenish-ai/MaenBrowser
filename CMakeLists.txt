@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.5.33 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.5.34 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")

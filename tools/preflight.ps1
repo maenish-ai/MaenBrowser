@@ -294,7 +294,7 @@ foreach ($needle in @('[switch]$RequireMedia','stock CEF fallback is forbidden',
   if (-not $fetch.Contains($needle)) { throw "Verified media CEF fetch guard missing: $needle" }
 }
 $builder = Get-Content "tools/build-cef-media.ps1" -Raw
-foreach ($needle in @('proprietary_codecs=true','ffmpeg_branding=Chrome','MAEN_MEDIA_RUNTIME.txt','cef_version.h','152.0.6+g708dc14+chromium-152.0.7977.83','checkout=$ExpectedCheckout')) {
+foreach ($needle in @('proprietary_codecs=true','ffmpeg_branding=Chrome','MAEN_MEDIA_RUNTIME.txt','cef_version.h','152.0.6+g708dc14+chromium-152.0.7977.83','--checkout=$Checkout')) {
   if (-not $builder.Contains($needle)) { throw "Media CEF build guard missing: $needle" }
 }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
