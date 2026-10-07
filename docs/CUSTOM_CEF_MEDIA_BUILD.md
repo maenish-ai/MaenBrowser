@@ -40,3 +40,6 @@ Enabling `ffmpeg_branding=Chrome proprietary_codecs=true` changes the codec set 
 MaenBrowser deliberately reuses the Chromium/CEF media architecture rather than embedding a second Gecko/Firefox engine. The custom runtime is built from the CEF/Chromium source line already used by MaenBrowser, with the Chrome FFmpeg branding and proprietary-codec build gates enabled. The browser keeps Chromium GPU selection, MSE, WebRTC, WebCodecs and software fallback behavior intact; no GPU blocklist bypass or security weakening is introduced.
 
 The media-runtime workflow also emits a build manifest and SHA-256. This proves the archive came from the intended build configuration; it is not a claim that a particular WhatsApp file has decoded successfully. Runtime acceptance still requires the real playback tests listed above.
+
+## 1.5.29 release rule
+The Windows Media Setup workflow no longer falls back to stock CEF. A media release requires a SHA-256 pinned custom CEF archive produced with `proprietary_codecs=true` and `ffmpeg_branding=Chrome`. The archive must contain the embedded `MAEN_MEDIA_RUNTIME.txt` marker and the exact CEF 152.0.6 / Chromium 152.0.7977.83 version header. This prevents a green Setup build from being mistaken for a codec-enabled build.

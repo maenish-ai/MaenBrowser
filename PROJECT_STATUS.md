@@ -1,6 +1,10 @@
-# MaenBrowser 1.5.26
+# MaenBrowser 1.5.29 status
 
-- Fixed CI/preflight package consistency after the 1.5.24 failed run.
-- Media release remains hard-gated to a verified custom CEF media runtime; stock CEF is not mislabeled as media-capable.
-- Refreshed the new-tab/start page with a lightweight embedded natural landscape, glass panels, and Maen purple/teal visual identity. No remote wallpaper request or background service is added.
-- Sandbox, Windows hardening, adaptive Lite/Balanced/Performance policy, downloads, and installer behavior are preserved.
+- Full Windows Setup-producing MaenBrowser source project.
+- CEF 152 / Chromium 152 pinned.
+- Verified custom CEF Media path remains the release path for H.264/AAC HTML5/MSE playback.
+- Added native Windows Media Foundation H.264/AAC capability plumbing using OS MFTs; no codec pack or background service.
+- Security sandbox, Windows process hardening, GPU/WebGL/WebRTC/MSE paths and adaptive Lite/Balanced/Performance policy remain intact.
+- Setup-only distribution; no Portable artifact.
+
+Runtime truth: the new Media Foundation layer does not magically replace CEF's HTML5 decoder. WhatsApp/Messenger H.264/AAC playback must be validated with the media-enabled CEF runtime; do not claim success before runtime testing.

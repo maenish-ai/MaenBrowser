@@ -32,6 +32,25 @@ if ($customUrl) {
   Expand-Archive -Path $customArchive -DestinationPath $customExtract -Force
   $found = Get-ChildItem $customExtract -Directory -Recurse | Where-Object { Test-Path (Join-Path $_.FullName "cmake\FindCEF.cmake") } | Select-Object -First 1
   if (-not $found) { throw "Custom CEF archive is invalid: FindCEF.cmake missing." }
+  if ($RequireMedia) {
+    $marker = Join-Path $found.FullName "MAEN_MEDIA_RUNTIME.txt"
+    if (!(Test-Path $marker)) { throw "Custom CEF is not a verified Maen media runtime: MAEN_MEDIA_RUNTIME.txt missing." }
+    $markerText = Get-Content $marker -Raw
+    foreach ($needle in @(
+      "cef_version=152.0.6+g708dc14+chromium-152.0.7977.83",
+      "proprietary_codecs=true",
+      "ffmpeg_branding=Chrome",
+      "branch=7977"
+    )) {
+      if (-not $markerText.Contains($needle)) { throw "Custom CEF media marker missing: $needle" }
+    }
+    $versionHeader = Join-Path $found.FullName "include\cef_version.h"
+    if (!(Test-Path $versionHeader)) { throw "Custom CEF media runtime is missing cef_version.h." }
+    $versionText = Get-Content $versionHeader -Raw
+    if (-not $versionText.Contains('CEF_VERSION "152.0.6+g708dc14+chromium-152.0.7977.83"')) {
+      throw "Custom CEF media runtime version mismatch."
+    }
+  }
   Write-Output $found.FullName
   exit 0
 }

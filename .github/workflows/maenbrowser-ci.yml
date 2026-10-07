@@ -1,4 +1,4 @@
-name: Build MaenBrowser Windows Setup
+name: Build MaenBrowser Windows Media Setup
 
 on:
   push:
@@ -36,6 +36,15 @@ jobs:
           }
           if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
 
+      - name: Require verified media CEF
+        shell: pwsh
+        env:
+          MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
+          MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) { throw "MAEN_CEF_ARCHIVE_URL is required. Build/publish the CEF media runtime first; stock CEF cannot be used for a WhatsApp/Facebook media release." }
+          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be the 64-hex SHA256 of the media CEF archive." }
+
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -49,23 +58,13 @@ jobs:
           $sevenZip=(Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
           if (-not $sevenZip -and -not (Test-Path "C:\Program Files\7-Zip\7z.exe")) { throw "7-Zip is not available." }
 
-      - name: Select and verify CEF runtime
+      - name: Download and verify media-enabled CEF
         shell: pwsh
         env:
           MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
           MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
         run: |
-          if (-not [string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) {
-            Write-Host "Using verified custom media-enabled CEF runtime."
-            if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
-            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
-            "MAEN_MEDIA_BUILD=1" | Out-File -FilePath $env:GITHUB_ENV -Append
-          } else {
-            Write-Warning "MAEN_CEF_ARCHIVE_URL is not configured. Building Setup with pinned stock CEF; proprietary H.264/AAC playback is not claimed for this artifact."
-            Remove-Item Env:MAEN_CEF_ARCHIVE_SHA256 -ErrorAction SilentlyContinue
-            $cefRoot=& .\tools\fetch-cef.ps1
-            "MAEN_MEDIA_BUILD=0" | Out-File -FilePath $env:GITHUB_ENV -Append
-          }
+          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
           if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -117,7 +116,7 @@ jobs:
       - name: Upload MaenBrowser Setup
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Media-Setup
           path: installer/MaenBrowser-${{ env.MAEN_VERSION }}-Setup.exe
           if-no-files-found: error
           retention-days: 30

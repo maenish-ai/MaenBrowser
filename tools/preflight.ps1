@@ -7,7 +7,8 @@ $required = @(
   "src/win/maenbrowser.rc", "assets/maenbrowser.ico",
   "src/extensions/extension_manager.cpp", "src/storage/local_profile.cpp",
   "src/updater/update_manager.cpp", "docs/PERFORMANCE.md", "docs/MEDIA_COMPATIBILITY.md",
-  "tools/verify-media-runtime.ps1", "tools/build-cef-media.ps1", "docs/CUSTOM_CEF_MEDIA_BUILD.md"
+  "tools/verify-media-runtime.ps1", "tools/build-cef-media.ps1", "docs/CUSTOM_CEF_MEDIA_BUILD.md",
+  "src/media/windows_media_foundation.cpp", "src/media/windows_media_foundation.h", "docs/WINDOWS_MEDIA_FOUNDATION.md"
 )
 foreach ($f in $required) { if (!(Test-Path $f)) { throw "Missing required file: $f" } }
 $version=(Get-Content VERSION -Raw).Trim()
@@ -263,13 +264,14 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.27 Setup-producing CI guards. The normal workflow must always produce a
-# Windows Setup artifact. If verified media CEF variables are configured it
-# uses that runtime; otherwise it builds with the exact pinned stock CEF and
-# explicitly does not claim proprietary H.264/AAC support for that artifact.
+# 1.5.29 media-release CI guards. Never silently fall back to stock CEF for a
+# release that is expected to play common WhatsApp/Facebook H.264/AAC media.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
-foreach ($needle in @("build-windows", "Select and verify CEF runtime", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
-  if (-not $wf.Contains($needle)) { throw "Setup-producing CI guard missing: $needle" }
+foreach ($needle in @("build-windows", "Require verified media CEF", "Download and verify media-enabled CEF", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
+  if (-not $wf.Contains($needle)) { throw "Media Setup CI guard missing: $needle" }
+}
+if ($wf.Contains('Select and verify CEF runtime') -or $wf.Contains('pinned stock CEF')) {
+  throw "Media release workflow must not fall back to stock CEF."
 }
 if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
   throw "Distribution regression: publish Setup only, not Portable."
@@ -278,7 +280,18 @@ if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must use windows-2022." }
 if ($wf -notmatch 'Visual Studio 17') { throw "CI must use Visual Studio 2022." }
 if ($wf -notmatch 'USE_SANDBOX=ON') { throw "Production Setup must keep CEF sandbox enabled." }
 $fetch = Get-Content "tools/fetch-cef.ps1" -Raw
-foreach ($needle in @("[switch]$RequireMedia", "stock CEF fallback is forbidden")) {
+foreach ($needle in @('[switch]$RequireMedia', 'stock CEF fallback is forbidden', 'MAEN_MEDIA_RUNTIME.txt', 'proprietary_codecs=true', 'ffmpeg_branding=Chrome')) {
   if (-not $fetch.Contains($needle)) { throw "Verified media CEF fetch guard missing: $needle" }
 }
+$builder = Get-Content "tools/build-cef-media.ps1" -Raw
+foreach ($needle in @('proprietary_codecs=true', 'ffmpeg_branding=Chrome', 'MAEN_MEDIA_RUNTIME.txt', 'include\\cef_version.h', '152.0.6+g708dc14+chromium-152.0.7977.83')) {
+  if (-not $builder.Contains($needle)) { throw "Media CEF build guard missing: $needle" }
+}
+
+# Native Windows Media Foundation capability layer.
+$mf = Get-Content "src/media/windows_media_foundation.cpp" -Raw
+foreach ($needle in @("MFStartup", "MFTEnumEx", "MFVideoFormat_H264", "MFAudioFormat_AAC", "MFShutdown")) {
+  if (-not $mf.Contains($needle)) { throw "Windows Media Foundation integration missing: $needle" }
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

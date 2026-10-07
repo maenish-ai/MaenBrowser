@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.5.27 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.5.29 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")
@@ -32,6 +32,7 @@ set(MAEN_SOURCES
   src/app/browser_preferences.cpp
   src/app/start_page.cpp
   src/security/windows_hardening.cpp
+  src/media/windows_media_foundation.cpp
   src/win/maenbrowser.rc
   src/extensions/extension_manager.cpp
   src/storage/local_profile.cpp
@@ -46,6 +47,7 @@ set(MAEN_HEADERS
   src/app/browser_preferences.h
   src/app/start_page.h
   src/security/windows_hardening.h
+  src/media/windows_media_foundation.h
   src/win/resource.h
   src/extensions/extension_manager.h
   src/storage/local_profile.h
@@ -108,6 +110,9 @@ target_link_libraries(MaenBrowser PRIVATE
   comctl32
   shlwapi
   user32
+  mfplat
+  mf
+  mfuuid
   ${CEF_STANDARD_LIBS}
 )
 
