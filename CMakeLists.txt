@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.5.35 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.6.0 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")
@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CEF_ROOT "" CACHE PATH "Path to extracted CEF binary distribution")
 option(MAEN_ENABLE_UPDATER "Enable WinSparkle updater" OFF)
 set(WINSPARKLE_ROOT "" CACHE PATH "Path to WinSparkle SDK")
+set(WEBVIEW2_SDK_ROOT "" CACHE PATH "Path to extracted Microsoft.Web.WebView2 NuGet package")
 
 if(NOT CEF_ROOT)
   message(FATAL_ERROR "CEF_ROOT is required. Run tools/fetch-cef.ps1 first.")
@@ -33,6 +34,7 @@ set(MAEN_SOURCES
   src/app/start_page.cpp
   src/security/windows_hardening.cpp
   src/media/windows_media_foundation.cpp
+  src/media/webview2_media_router.cpp
   src/win/maenbrowser.rc
   src/extensions/extension_manager.cpp
   src/storage/local_profile.cpp
@@ -48,6 +50,7 @@ set(MAEN_HEADERS
   src/app/start_page.h
   src/security/windows_hardening.h
   src/media/windows_media_foundation.h
+  src/media/webview2_media_router.h
   src/win/resource.h
   src/extensions/extension_manager.h
   src/storage/local_profile.h
@@ -110,6 +113,7 @@ target_link_libraries(MaenBrowser PRIVATE
   comctl32
   shlwapi
   user32
+  shell32
   mfplat
   mf
   mfuuid
@@ -119,3 +123,33 @@ target_link_libraries(MaenBrowser PRIVATE
 # Copy CEF runtime DLLs/resources beside MaenBrowser.
 COPY_FILES("MaenBrowser" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${MAEN_OUT_DIR}")
 COPY_FILES("MaenBrowser" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${MAEN_OUT_DIR}")
+
+
+# WhatsApp media host: use Microsoft's supported Edge WebView2 Runtime for the
+# one web app that requires proprietary media codecs unavailable in stock CEF.
+# The main browser remains native C++ + CEF and keeps the existing lightweight
+# resource/security policy. WebView2 Evergreen is shared with Windows/apps.
+if(WEBVIEW2_SDK_ROOT)
+  set(WEBVIEW2_INCLUDE "${WEBVIEW2_SDK_ROOT}/build/native/include")
+  set(WEBVIEW2_STATIC_LOADER "${WEBVIEW2_SDK_ROOT}/build/native/x64/WebView2LoaderStatic.lib")
+  if(NOT EXISTS "${WEBVIEW2_INCLUDE}/WebView2.h")
+    message(FATAL_ERROR "WebView2.h missing under WEBVIEW2_SDK_ROOT")
+  endif()
+  if(NOT EXISTS "${WEBVIEW2_STATIC_LOADER}")
+    message(FATAL_ERROR "WebView2 x64 static loader missing under WEBVIEW2_SDK_ROOT")
+  endif()
+
+  add_executable(MaenMediaHost WIN32
+    src/media/webview2_media_host.cpp
+    src/win/maenbrowser.rc
+  )
+  target_include_directories(MaenMediaHost PRIVATE "${WEBVIEW2_INCLUDE}")
+  target_compile_definitions(MaenMediaHost PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_link_libraries(MaenMediaHost PRIVATE
+    "${WEBVIEW2_STATIC_LOADER}"
+    user32 shell32 ole32 oleaut32 runtimeobject shlwapi version
+  )
+  set_target_properties(MaenMediaHost PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAEN_OUT_DIR}")
+else()
+  message(FATAL_ERROR "WEBVIEW2_SDK_ROOT is required for the WhatsApp media host.")
+endif()

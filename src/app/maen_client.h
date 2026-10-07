@@ -10,19 +10,22 @@
 #include "include/cef_display_handler.h"
 #include "include/cef_download_handler.h"
 #include "include/cef_life_span_handler.h"
+#include "include/cef_request_handler.h"
 
 namespace maenbrowser {
 
 class MaenClient final : public CefClient,
                          public CefLifeSpanHandler,
                          public CefDisplayHandler,
-                         public CefDownloadHandler {
+                         public CefDownloadHandler,
+                         public CefRequestHandler {
  public:
   MaenClient() = default;
 
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
+  CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
   bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
@@ -42,6 +45,12 @@ class MaenClient final : public CefClient,
   void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
 
   void OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) override;
+
+  bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+                      CefRefPtr<CefFrame> frame,
+                      CefRefPtr<CefRequest> request,
+                      bool user_gesture,
+                      bool is_redirect) override;
 
   bool OnBeforeDownload(CefRefPtr<CefBrowser> browser,
                         CefRefPtr<CefDownloadItem> download_item,

@@ -264,38 +264,37 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.33 media-release hard gate.
-# A Media Setup may only be produced from the verified custom CEF archive.
+# 1.6.0 hybrid media release gate.
+# Main browsing remains CEF 152. WhatsApp Web is deliberately routed to a
+# Microsoft WebView2 host so H.264/AAC playback does not depend on a custom CEF.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
 foreach ($needle in @(
-  "validate-source",
-  "build-media-setup",
-  "Download and verify media-enabled CEF",
-  "verify-media-runtime.ps1 -CefRoot",
-  "-RequireMedia",
-  "MAEN_CEF_ARCHIVE_URL",
-  "MAEN_CEF_ARCHIVE_SHA256",
-  "Build Release",
-  "Build NSIS installer",
-  "Upload verified MaenBrowser Media Setup",
-  "media-runtime-required",
-  "Media runtime not configured"
+  "WEBVIEW2_SDK_VERSION",
+  "Microsoft.Web.WebView2",
+  "WebView2LoaderStatic.lib",
+  "MicrosoftEdgeWebview2Setup.exe",
+  "MaenMediaHost.exe",
+  "fetch-cef.ps1",
+  "-DUSE_SANDBOX=ON",
+  "Upload Setup only"
 )) {
-  if (-not $wf.Contains($needle)) { throw "Media Setup CI guard missing: $needle" }
-}
-if ($wf.Contains("fetch-cef.ps1`n") -or $wf.Contains("MAEN_MEDIA_BUILD=0") -or
-    $wf.Contains("Custom media CEF is not configured. Building")) {
-  throw "Media release regression: stock CEF fallback is forbidden."
+  if (-not $wf.Contains($needle)) { throw "Hybrid media CI guard missing: $needle" }
 }
 if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
   throw "Distribution regression: publish Setup only."
 }
-$fetch = Get-Content "tools/fetch-cef.ps1" -Raw
-foreach ($needle in @('[switch]$RequireMedia','stock CEF fallback is forbidden','MAEN_MEDIA_RUNTIME.txt','proprietary_codecs=true','ffmpeg_branding=Chrome')) {
-  if (-not $fetch.Contains($needle)) { throw "Verified media CEF fetch guard missing: $needle" }
+$router = Get-Content "src/media/webview2_media_router.cpp" -Raw
+$host = Get-Content "src/media/webview2_media_host.cpp" -Raw
+$client = Get-Content "src/app/maen_client.cpp" -Raw
+foreach ($needle in @("web.whatsapp.com", "MaenMediaHost.exe")) {
+  if (-not $router.Contains($needle)) { throw "WhatsApp media router missing: $needle" }
 }
-$builder = Get-Content "tools/build-cef-media.ps1" -Raw
-foreach ($needle in @('proprietary_codecs=true','ffmpeg_branding=Chrome','MAEN_MEDIA_RUNTIME.txt','cef_version.h','152.0.6+g708dc14+chromium-152.0.7977.83','--checkout=$Checkout')) {
-  if (-not $builder.Contains($needle)) { throw "Media CEF build guard missing: $needle" }
+foreach ($needle in @("CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "Navigate")) {
+  if (-not $host.Contains($needle)) { throw "WebView2 media host missing: $needle" }
+}
+if (-not $client.Contains("OpenInMediaHost")) { throw "CEF-to-WebView2 WhatsApp routing is missing." }
+$nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
+foreach ($needle in @("MicrosoftEdgeWebview2Setup.exe", "/silent /install")) {
+  if (-not $nsi.Contains($needle)) { throw "WebView2 installer integration missing: $needle" }
 }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

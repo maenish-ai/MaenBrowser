@@ -3,7 +3,7 @@
 !include "LogicLib.nsh"
 
 !define PRODUCT_NAME "MaenBrowser"
-!define PRODUCT_VERSION "1.5.35"
+!define PRODUCT_VERSION "1.6.0"
 !define PRODUCT_PUBLISHER "MaenBrowser"
 !define PRODUCT_EXE "MaenBrowser.exe"
 !define APP_REG_KEY "Software\Clients\StartMenuInternet\MaenBrowser"
@@ -11,7 +11,7 @@
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MaenBrowser"
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "MaenBrowser-1.5.35-Setup.exe"
+OutFile "MaenBrowser-1.6.0-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MaenBrowser"
 RequestExecutionLevel user
 Unicode True
@@ -20,7 +20,7 @@ SetCompressor /SOLID lzma
 Icon "..\assets\maenbrowser.ico"
 UninstallIcon "..\assets\maenbrowser.ico"
 
-VIProductVersion "1.5.35.0"
+VIProductVersion "1.6.0.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
@@ -79,6 +79,14 @@ Section "MaenBrowser" SEC_MAIN
   File /r "..\dist\*.*"
   File /oname=maenbrowser.ico "..\assets\maenbrowser.ico"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+  ; WhatsApp media uses Microsoft's supported Evergreen WebView2 Runtime.
+  ; The bootstrapper is bundled by CI and installs only when needed.
+  IfFileExists "$INSTDIR\MicrosoftEdgeWebview2Setup.exe" 0 webview2_done
+  DetailPrint "Ensuring Microsoft Edge WebView2 Runtime for WhatsApp media..."
+  ExecWait '"$INSTDIR\MicrosoftEdgeWebview2Setup.exe" /silent /install' $0
+  DetailPrint "WebView2 Runtime installer exit code: $0"
+  webview2_done:
 
   ; Windows shell integration.
   CreateDirectory "$SMPROGRAMS\MaenBrowser"

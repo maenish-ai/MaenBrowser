@@ -8,6 +8,7 @@
 
 #include "include/cef_app.h"
 #include "include/wrapper/cef_helpers.h"
+#include "src/media/webview2_media_router.h"
 
 namespace maenbrowser {
 namespace {
@@ -97,6 +98,24 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   }
   if (browser_count_.fetch_sub(1, std::memory_order_acq_rel) == 1)
     CefQuitMessageLoop();
+}
+
+bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser>,
+                                CefRefPtr<CefFrame> frame,
+                                CefRefPtr<CefRequest> request,
+                                bool user_gesture,
+                                bool) {
+  CEF_REQUIRE_UI_THREAD();
+  if (!frame || !frame->IsMain() || !request) return false;
+  const std::wstring url = request->GetURL().ToWString();
+  if (!media::IsWhatsAppWebUrl(url)) return false;
+
+  // WhatsApp is routed to Microsoft's supported Edge/WebView2 runtime.
+  // This avoids relying on proprietary H.264/AAC codecs that are absent from
+  // the stock CEF distribution while keeping the rest of MaenBrowser on CEF.
+  // Redirects are also routed so a typed whatsapp.com URL cannot fall back to CEF.
+  if (media::OpenInMediaHost(url)) return true;
+  return false;
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {

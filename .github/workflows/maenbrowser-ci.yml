@@ -1,4 +1,4 @@
-name: Build MaenBrowser Windows Media Setup
+name: Build MaenBrowser Windows Setup
 
 on:
   push:
@@ -8,92 +8,70 @@ on:
 permissions:
   contents: read
 
+env:
+  WEBVIEW2_SDK_VERSION: 1.0.4258.31
+
 jobs:
-  validate-source:
+  build-setup:
     runs-on: windows-2022
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Verify version
+
+      - name: Verify source and security
         shell: pwsh
         run: |
           $version=(Get-Content VERSION -Raw).Trim()
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z" }
-      - name: Repository preflight
-        shell: pwsh
-        run: .\tools\preflight.ps1
-      - name: Security release gate
-        shell: pwsh
-        run: |
-          $source=(Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
-          foreach ($flag in @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")) {
-            if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" }
-          }
-          if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
-
-  build-media-setup:
-    needs: validate-source
-    if: ${{ vars.MAEN_CEF_ARCHIVE_URL != '' && vars.MAEN_CEF_ARCHIVE_SHA256 != '' }}
-    runs-on: windows-2022
-    timeout-minutes: 60
-    env:
-      MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-      MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Read version
-        shell: pwsh
-        run: |
-          $version=(Get-Content VERSION -Raw).Trim()
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          .\tools\preflight.ps1
 
-      - name: Download and verify media-enabled CEF
+      - name: Fetch pinned stock CEF 152
         shell: pwsh
         run: |
-          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
-          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
-          if (-not $cefRoot) { throw "Verified media CEF root was not returned." }
+          $cefRoot=& .\tools\fetch-cef.ps1
+          if (-not $cefRoot) { throw "CEF root was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Verify CEF media runtime integrity
-        shell: pwsh
-        run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT" -RequireMedia
-
-      - name: Verify Visual Studio 2022 toolchain
+      - name: Fetch Microsoft WebView2 SDK
         shell: pwsh
         run: |
-          $vswhere="${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          if (!(Test-Path $vswhere)) { throw "vswhere.exe not found." }
-          $vs=& $vswhere -latest -products * -version "[17.0,18.0)" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $vs) { throw "Visual Studio 2022 C++ x64 toolchain not found." }
-          cmake --version
+          $version=$env:WEBVIEW2_SDK_VERSION
+          $pkg="$env:RUNNER_TEMP\webview2.zip"
+          $root="$env:RUNNER_TEMP\webview2-sdk"
+          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$version" -OutFile $pkg
+          Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          Expand-Archive -Path $pkg -DestinationPath $root -Force
+          foreach ($required in @("$root\build\native\include\WebView2.h", "$root\build\native\x64\WebView2LoaderStatic.lib")) {
+            if (!(Test-Path $required)) { throw "WebView2 SDK file missing: $required" }
+          }
+          "WEBVIEW2_SDK_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$env:CEF_ROOT" -DMAEN_ENABLE_UPDATER=OFF -DUSE_SANDBOX=ON
+        run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$env:CEF_ROOT" "-DWEBVIEW2_SDK_ROOT=$env:WEBVIEW2_SDK_ROOT" -DMAEN_ENABLE_UPDATER=OFF -DUSE_SANDBOX=ON
 
       - name: Build Release
         shell: pwsh
         run: cmake --build build --config Release --parallel
 
-      - name: Stamp MaenBrowser icon into sandbox bootstrap EXE
+      - name: Stamp MaenBrowser icon
         shell: pwsh
         run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico"
 
-      - name: Stage verified media runtime
+      - name: Stage runtime and WebView2 bootstrapper
         shell: pwsh
         run: |
-          $release="build\Release"
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item "$release\*" dist -Recurse -Force
-          foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
+          Copy-Item "build\Release\*" dist -Recurse -Force
+          foreach ($file in @("dist\MaenBrowser.exe","dist\MaenMediaHost.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
-          Copy-Item "$env:CEF_ROOT\MAEN_MEDIA_RUNTIME.txt" "dist\MAEN_MEDIA_RUNTIME.txt" -Force
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "dist\MicrosoftEdgeWebview2Setup.exe"
+          if ((Get-Item "dist\MicrosoftEdgeWebview2Setup.exe").Length -lt 1000000) { throw "WebView2 bootstrapper download looks invalid." }
 
       - name: Build NSIS installer
         shell: pwsh
@@ -103,22 +81,10 @@ jobs:
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
 
-      - name: Upload verified MaenBrowser Media Setup
+      - name: Upload Setup only
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Verified-Media-Setup
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
           path: installer/MaenBrowser-${{ env.MAEN_VERSION }}-Setup.exe
           if-no-files-found: error
           retention-days: 30
-
-  media-runtime-required:
-    needs: validate-source
-    if: ${{ vars.MAEN_CEF_ARCHIVE_URL == '' || vars.MAEN_CEF_ARCHIVE_SHA256 == '' }}
-    runs-on: windows-2022
-    steps:
-      - name: Media runtime not configured
-        shell: pwsh
-        run: |
-          Write-Host "::warning title=Media runtime required::Source validation passed, but the verified custom CEF media archive is not configured. No Setup is produced. Configure MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 after building the Windows x64 media CEF."
-          Write-Host "This is an intentional non-release state, not a source compilation failure."
-          exit 0
