@@ -221,6 +221,12 @@ foreach ($needle in @(
 }
 if ($start -match '<iframe') { throw "Start page must not preload third-party services in iframes." }
 
+
+# Start-page visual identity guard: embedded landscape only, no remote background request.
+foreach ($needle in @('class="shell"', 'backdrop-filter:blur', 'image/svg+xml', 'linear-gradient')) {
+  if (-not $start.Contains($needle)) { throw "Start-page visual identity missing: $needle" }
+}
+
 # Unified icon regression guards: sandbox output is copied bootstrap.exe, so
 # both final EXE stamping and direct shortcut/shell icon references are required.
 $workflow = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
@@ -257,7 +263,7 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.24 media-release CI guards: never silently ship stock CEF as a media build.
+# 1.5.26 media-release CI guards: never silently ship stock CEF as a media build.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
 foreach ($needle in @("validate-source", "build-media-release", "Require verified Maen CEF media runtime", "Download verified media-enabled CEF", "-RequireMedia", "MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Verify CEF media runtime integrity", "Upload installer")) {
   if (-not $wf.Contains($needle)) { throw "Media release CI guard missing: $needle" }
