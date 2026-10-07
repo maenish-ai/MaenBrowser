@@ -1,4 +1,4 @@
-# MaenBrowser 1.6.1 status
+# MaenBrowser 1.6.2 status
 
 - Fixes the GitHub preflight false-positive caused by a doubled backslash literal for `cef_version.h`.
 - Includes the Windows Media Foundation capability probe source and required Windows MF link libraries.

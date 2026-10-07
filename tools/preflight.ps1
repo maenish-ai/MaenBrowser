@@ -284,13 +284,13 @@ if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
   throw "Distribution regression: publish Setup only."
 }
 $router = Get-Content "src/media/webview2_media_router.cpp" -Raw
-$host = Get-Content "src/media/webview2_media_host.cpp" -Raw
+$mediaHostSource = Get-Content "src/media/webview2_media_host.cpp" -Raw
 $client = Get-Content "src/app/maen_client.cpp" -Raw
 foreach ($needle in @("web.whatsapp.com", "MaenMediaHost.exe")) {
   if (-not $router.Contains($needle)) { throw "WhatsApp media router missing: $needle" }
 }
 foreach ($needle in @("CoInitializeEx", "CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "Navigate")) {
-  if (-not $host.Contains($needle)) { throw "WebView2 media host missing: $needle" }
+  if (-not $mediaHostSource.Contains($needle)) { throw "WebView2 media host missing: $needle" }
 }
 if (-not $client.Contains("OpenInMediaHost")) { throw "CEF-to-WebView2 WhatsApp routing is missing." }
 $cmake = Get-Content "CMakeLists.txt" -Raw
@@ -299,4 +299,13 @@ $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 foreach ($needle in @("MicrosoftEdgeWebview2Setup.exe", "/silent /install")) {
   if (-not $nsi.Contains($needle)) { throw "WebView2 installer integration missing: $needle" }
 }
+
+# PowerShell automatic variables are case-insensitive. Never assign to $Host.
+if ($MyInvocation.MyCommand.Path) {
+  $selfText = Get-Content $MyInvocation.MyCommand.Path -Raw
+  if ($selfText -match '(?im)^\s*\$host\s*=') {
+    throw "Preflight regression: `$Host is a read-only PowerShell automatic variable."
+  }
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

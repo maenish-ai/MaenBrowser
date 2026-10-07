@@ -1,4 +1,4 @@
-# CI fix 1.6.1
+# CI fix 1.6.2
 
 This revision fixes the native WebView2 host integration by linking `advapi32`,
 which is required by Microsoft's static WebView2 loader, and explicitly
