@@ -4,7 +4,7 @@
 #include <wrl/event.h>
 #include <string>
 #include "WebView2.h"
-#include "src/win/resource.h"
+#include "../win/resource.h"
 
 using Microsoft::WRL::Callback;
 using Microsoft::WRL::ComPtr;

@@ -308,4 +308,22 @@ if ($MyInvocation.MyCommand.Path) {
   }
 }
 
+
+# 1.6.3 compile-regression guards for the hybrid WebView2/CEF integration.
+$clientHeader = Get-Content "src/app/maen_client.h" -Raw
+$clientSource = Get-Content "src/app/maen_client.cpp" -Raw
+if ($clientHeader.Contains("WindowOpenDisposition target_disposition") -and
+    -not $clientHeader.Contains("CefLifeSpanHandler::WindowOpenDisposition target_disposition")) {
+  throw "Compile regression: WindowOpenDisposition must be qualified after multiple CEF handler inheritance."
+}
+if ($clientSource -match '(?m)^\s*WindowOpenDisposition,\s*$') {
+  throw "Compile regression: ambiguous WindowOpenDisposition remains in maen_client.cpp."
+}
+if ($mediaHostSource.Contains('#include "src/win/resource.h"')) {
+  throw "Compile regression: WebView2 host uses a source-root-relative include without the source root include path."
+}
+if (-not $mediaHostSource.Contains('#include "../win/resource.h"')) {
+  throw "Compile regression: WebView2 host resource include is missing."
+}
+
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
