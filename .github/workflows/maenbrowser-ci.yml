@@ -1,4 +1,4 @@
-name: Build MaenBrowser Windows Media Release
+name: Build MaenBrowser Windows Setup
 
 on:
   push:
@@ -9,63 +9,70 @@ permissions:
   contents: read
 
 jobs:
-  validate-source:
+  build-windows:
     runs-on: windows-2022
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Verify version
         shell: pwsh
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z, got: $version" }
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Repository preflight
         shell: pwsh
         run: .\tools\preflight.ps1
+
       - name: Security release gate
         shell: pwsh
         run: |
           $source = (Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
-          foreach ($flag in @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")) { if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" } }
+          foreach ($flag in @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")) {
+            if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" }
+          }
           if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
 
-  build-media-release:
-    needs: validate-source
-    if: ${{ vars.MAEN_CEF_ARCHIVE_URL != '' && vars.MAEN_CEF_ARCHIVE_SHA256 != '' }}
-    runs-on: windows-2022
-    timeout-minutes: 60
-    env:
-      MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-      MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Verify version
-        shell: pwsh
-        run: |
-          $version = (Get-Content VERSION -Raw).Trim()
-          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Require verified Maen CEF media runtime
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) { throw "MAEN_CEF_ARCHIVE_URL is required for a media release." }
-          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be a 64-hex SHA256." }
       - name: Install NSIS
         shell: pwsh
         run: |
           choco install nsis -y --no-progress
           $nsis = "C:\Program Files (x86)\NSIS"
           if (Test-Path $nsis) { $nsis | Out-File -FilePath $env:GITHUB_PATH -Append }
-      - name: Download verified media-enabled CEF
+
+      - name: Verify 7-Zip
         shell: pwsh
         run: |
-          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+          $sevenZip=(Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip -and -not (Test-Path "C:\Program Files\7-Zip\7z.exe")) { throw "7-Zip is not available." }
+
+      - name: Select and verify CEF runtime
+        shell: pwsh
+        env:
+          MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
+          MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
+        run: |
+          if (-not [string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) {
+            Write-Host "Using verified custom media-enabled CEF runtime."
+            if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
+            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+            "MAEN_MEDIA_BUILD=1" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            Write-Warning "MAEN_CEF_ARCHIVE_URL is not configured. Building Setup with pinned stock CEF; proprietary H.264/AAC playback is not claimed for this artifact."
+            Remove-Item Env:MAEN_CEF_ARCHIVE_SHA256 -ErrorAction SilentlyContinue
+            $cefRoot=& .\tools\fetch-cef.ps1
+            "MAEN_MEDIA_BUILD=0" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
           if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Verify CEF media runtime integrity
+
+      - name: Verify CEF runtime integrity
         shell: pwsh
         run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT"
+
       - name: Verify Visual Studio 2022 toolchain
         shell: pwsh
         run: |
@@ -74,15 +81,19 @@ jobs:
           $vs=& $vswhere -latest -products * -version "[17.0,18.0)" -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vs) { throw "Visual Studio 2022 C++ x64 toolchain not found." }
           cmake --version
+
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$env:CEF_ROOT" -DMAEN_ENABLE_UPDATER=OFF -DUSE_SANDBOX=ON
+
       - name: Build Release
         shell: pwsh
         run: cmake --build build --config Release --parallel
+
       - name: Stamp MaenBrowser icon into sandbox bootstrap EXE
         shell: pwsh
         run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico"
+
       - name: Stage runtime
         shell: pwsh
         run: |
@@ -91,7 +102,10 @@ jobs:
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "$release\*" dist -Recurse -Force
-          foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) { if (!(Test-Path $file)) { throw "Required runtime file missing: $file" } }
+          foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
+            if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
+          }
+
       - name: Build NSIS installer
         shell: pwsh
         run: |
@@ -99,10 +113,11 @@ jobs:
           try { makensis MaenBrowser.nsi } finally { Pop-Location }
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
-      - name: Upload installer
+
+      - name: Upload MaenBrowser Setup
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Media-Setup
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
           path: installer/MaenBrowser-${{ env.MAEN_VERSION }}-Setup.exe
           if-no-files-found: error
           retention-days: 30

@@ -263,16 +263,22 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.26 media-release CI guards: never silently ship stock CEF as a media build.
+# 1.5.27 Setup-producing CI guards. The normal workflow must always produce a
+# Windows Setup artifact. If verified media CEF variables are configured it
+# uses that runtime; otherwise it builds with the exact pinned stock CEF and
+# explicitly does not claim proprietary H.264/AAC support for that artifact.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
-foreach ($needle in @("validate-source", "build-media-release", "Require verified Maen CEF media runtime", "Download verified media-enabled CEF", "-RequireMedia", "MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Verify CEF media runtime integrity", "Upload installer")) {
-  if (-not $wf.Contains($needle)) { throw "Media release CI guard missing: $needle" }
+foreach ($needle in @("build-windows", "Select and verify CEF runtime", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
+  if (-not $wf.Contains($needle)) { throw "Setup-producing CI guard missing: $needle" }
 }
+if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
+  throw "Distribution regression: publish Setup only, not Portable."
+}
+if ($wf -notmatch 'runs-on: windows-2022') { throw "CI must use windows-2022." }
+if ($wf -notmatch 'Visual Studio 17') { throw "CI must use Visual Studio 2022." }
+if ($wf -notmatch 'USE_SANDBOX=ON') { throw "Production Setup must keep CEF sandbox enabled." }
 $fetch = Get-Content "tools/fetch-cef.ps1" -Raw
 foreach ($needle in @("[switch]$RequireMedia", "stock CEF fallback is forbidden")) {
-  if (-not $fetch.Contains($needle)) { throw "Media fetch hard gate missing: $needle" }
-}
-if ($wf.Contains("Download and verify stock CEF for trial build")) {
-  throw "Media release workflow must not use stock CEF."
+  if (-not $fetch.Contains($needle)) { throw "Verified media CEF fetch guard missing: $needle" }
 }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
