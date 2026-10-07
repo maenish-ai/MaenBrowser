@@ -9,56 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  build-windows:
+  validate-source:
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
       - name: Verify version
         shell: pwsh
         run: |
-          $version = (Get-Content VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z, got: $version" }
-          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-
+          $version=(Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z" }
       - name: Repository preflight
         shell: pwsh
         run: .\tools\preflight.ps1
-
       - name: Security release gate
         shell: pwsh
         run: |
-          $source = (Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
+          $source=(Get-ChildItem src -Recurse -Include *.cpp,*.h | Get-Content -Raw) -join "`n"
           foreach ($flag in @("ignore-certificate-errors","disable-web-security","allow-running-insecure-content")) {
             if ($source.Contains($flag)) { throw "Blocked insecure setting: $flag" }
           }
           if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
 
-      - name: Select and verify CEF runtime
+  build-media-setup:
+    needs: validate-source
+    if: ${{ vars.MAEN_CEF_ARCHIVE_URL != '' && vars.MAEN_CEF_ARCHIVE_SHA256 != '' }}
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
+      MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read version
         shell: pwsh
-        env:
-          MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-          MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
         run: |
-          if (-not [string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) {
-            Write-Host "Using verified custom media-enabled CEF runtime."
-            if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
-            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
-            "MAEN_MEDIA_BUILD=1" | Out-File -FilePath $env:GITHUB_ENV -Append
-          } else {
-            Write-Warning "Custom media CEF is not configured. Building the experimental Windows Media Foundation probe Setup with pinned stock CEF; H.264/AAC HTML5 playback is not claimed for this artifact."
-            Remove-Item Env:MAEN_CEF_ARCHIVE_SHA256 -ErrorAction SilentlyContinue
-            $cefRoot=& .\tools\fetch-cef.ps1
-            "MAEN_MEDIA_BUILD=0" | Out-File -FilePath $env:GITHUB_ENV -Append
-          }
-          if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
+          $version=(Get-Content VERSION -Raw).Trim()
+          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Download and verify media-enabled CEF
+        shell: pwsh
+        run: |
+          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
+          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+          if (-not $cefRoot) { throw "Verified media CEF root was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Verify CEF runtime integrity
+      - name: Verify CEF media runtime integrity
         shell: pwsh
-        run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT"
+        run: .\tools\verify-media-runtime.ps1 -CefRoot "$env:CEF_ROOT" -RequireMedia
 
       - name: Verify Visual Studio 2022 toolchain
         shell: pwsh
@@ -81,17 +83,17 @@ jobs:
         shell: pwsh
         run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico"
 
-      - name: Stage runtime
+      - name: Stage verified media runtime
         shell: pwsh
         run: |
           $release="build\Release"
-          if (!(Test-Path "$release\MaenBrowser.exe")) { throw "MaenBrowser.exe missing." }
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "$release\*" dist -Recurse -Force
           foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
+          Copy-Item "$env:CEF_ROOT\MAEN_MEDIA_RUNTIME.txt" "dist\MAEN_MEDIA_RUNTIME.txt" -Force
 
       - name: Build NSIS installer
         shell: pwsh
@@ -101,10 +103,20 @@ jobs:
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
 
-      - name: Upload MaenBrowser Setup
+      - name: Upload verified MaenBrowser Media Setup
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Media-Setup
+          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Verified-Media-Setup
           path: installer/MaenBrowser-${{ env.MAEN_VERSION }}-Setup.exe
           if-no-files-found: error
           retention-days: 30
+
+  media-runtime-required:
+    needs: validate-source
+    if: ${{ vars.MAEN_CEF_ARCHIVE_URL == '' || vars.MAEN_CEF_ARCHIVE_SHA256 == '' }}
+    runs-on: windows-2022
+    steps:
+      - name: Stop before producing a misleading Setup
+        shell: pwsh
+        run: |
+          throw "Verified custom CEF media runtime is not configured. No Setup will be produced. Build CEF with .github/workflows/build-cef-media.yml, publish its archive, then set MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256."

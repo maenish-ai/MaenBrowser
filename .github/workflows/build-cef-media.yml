@@ -24,4 +24,4 @@ jobs:
             ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip.sha256
             ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-build-manifest.txt
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
