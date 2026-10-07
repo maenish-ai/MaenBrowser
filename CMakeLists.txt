@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.6.0 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.6.1 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")
@@ -147,7 +147,7 @@ if(WEBVIEW2_SDK_ROOT)
   target_compile_definitions(MaenMediaHost PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
   target_link_libraries(MaenMediaHost PRIVATE
     "${WEBVIEW2_STATIC_LOADER}"
-    user32 shell32 ole32 oleaut32 runtimeobject shlwapi version
+    user32 shell32 ole32 oleaut32 runtimeobject shlwapi version advapi32
   )
   set_target_properties(MaenMediaHost PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAEN_OUT_DIR}")
 else()

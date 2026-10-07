@@ -72,5 +72,5 @@ This revision corrects the 1.5.12 preflight false positive while retaining expli
 ### Media-enabled release CI (1.5.25)
 A normal push always validates the project. The Setup job is intentionally conditional on `MAEN_CEF_ARCHIVE_URL` and `MAEN_CEF_ARCHIVE_SHA256`; missing values skip the release job instead of failing the whole workflow. This prevents wasting Actions minutes while also preventing a stock-CEF Setup from being mistaken for the WhatsApp-video build.
 
-## WhatsApp media on Windows (1.6.0)
+## WhatsApp media on Windows (1.6.1)
 WhatsApp Web is routed to MaenBrowser's native `MaenMediaHost.exe`, powered by the Microsoft Edge WebView2 Evergreen Runtime. This avoids requiring a custom 100+ GB Chromium/CEF build just to obtain H.264/AAC support. Other browsing remains on the pinned CEF 152 engine.

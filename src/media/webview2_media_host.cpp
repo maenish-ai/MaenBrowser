@@ -56,6 +56,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 }  // namespace
 
 int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
+  const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  if (FAILED(com_hr) && com_hr != RPC_E_CHANGED_MODE) {
+    MessageBoxW(nullptr, L"Could not initialize the Windows COM apartment required by WebView2.",
+                L"MaenBrowser Media", MB_OK | MB_ICONERROR);
+    return 1;
+  }
+  const bool uninitialize_com = SUCCEEDED(com_hr);
+
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
   WNDCLASSEXW wc{sizeof(wc)};
@@ -124,5 +132,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
-  return static_cast<int>(msg.wParam);
+  const int exit_code = static_cast<int>(msg.wParam);
+  if (uninitialize_com) CoUninitialize();
+  return exit_code;
 }

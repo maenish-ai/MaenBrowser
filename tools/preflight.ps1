@@ -289,10 +289,12 @@ $client = Get-Content "src/app/maen_client.cpp" -Raw
 foreach ($needle in @("web.whatsapp.com", "MaenMediaHost.exe")) {
   if (-not $router.Contains($needle)) { throw "WhatsApp media router missing: $needle" }
 }
-foreach ($needle in @("CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "Navigate")) {
+foreach ($needle in @("CoInitializeEx", "CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "Navigate")) {
   if (-not $host.Contains($needle)) { throw "WebView2 media host missing: $needle" }
 }
 if (-not $client.Contains("OpenInMediaHost")) { throw "CEF-to-WebView2 WhatsApp routing is missing." }
+$cmake = Get-Content "CMakeLists.txt" -Raw
+if (-not $cmake.Contains("advapi32")) { throw "WebView2 static loader dependency advapi32 is missing." }
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 foreach ($needle in @("MicrosoftEdgeWebview2Setup.exe", "/silent /install")) {
   if (-not $nsi.Contains($needle)) { throw "WebView2 installer integration missing: $needle" }
