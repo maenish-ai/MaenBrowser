@@ -257,12 +257,16 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.23 trial-build CI guards: produce a downloadable Setup using the pinned stock CEF.
+# 1.5.24 media-release CI guards: never silently ship stock CEF as a media build.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
-foreach ($needle in @("build-windows", "Download and verify stock CEF for trial build", "Upload installer", "actions/upload-artifact@v4")) {
-  if (-not $wf.Contains($needle)) { throw "Trial Setup CI guard missing: $needle" }
+foreach ($needle in @("validate-source", "build-media-release", "Require verified Maen CEF media runtime", "Download verified media-enabled CEF", "-RequireMedia", "MAEN_CEF_ARCHIVE_URL", "MAEN_CEF_ARCHIVE_SHA256", "Verify CEF media runtime integrity", "Upload installer")) {
+  if (-not $wf.Contains($needle)) { throw "Media release CI guard missing: $needle" }
 }
-if ($wf.Contains("build-media-release") -or $wf.Contains("MAEN_CEF_ARCHIVE_URL != ''")) {
-  throw "Trial Setup CI must not be conditionally skipped behind custom-media variables."
+$fetch = Get-Content "tools/fetch-cef.ps1" -Raw
+foreach ($needle in @("[switch]$RequireMedia", "stock CEF fallback is forbidden")) {
+  if (-not $fetch.Contains($needle)) { throw "Media fetch hard gate missing: $needle" }
+}
+if ($wf.Contains("Download and verify stock CEF for trial build")) {
+  throw "Media release workflow must not use stock CEF."
 }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

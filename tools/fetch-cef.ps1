@@ -1,6 +1,7 @@
 param(
   [string]$Destination = "third_party/cef",
-  [string]$CefVersion = "152.0.6+g708dc14+chromium-152.0.7977.83"
+  [string]$CefVersion = "152.0.6+g708dc14+chromium-152.0.7977.83",
+  [switch]$RequireMedia
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,6 +12,9 @@ $ProgressPreference = "SilentlyContinue"
 # Never accept an unverified runtime archive.
 $customUrl = $env:MAEN_CEF_ARCHIVE_URL
 $customSha256 = $env:MAEN_CEF_ARCHIVE_SHA256
+if ($RequireMedia -and [string]::IsNullOrWhiteSpace($customUrl)) {
+  throw "Media release requires MAEN_CEF_ARCHIVE_URL; stock CEF fallback is forbidden."
+}
 if ($customUrl) {
   if (-not $customSha256 -or $customSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
     throw "MAEN_CEF_ARCHIVE_URL requires a 64-hex MAEN_CEF_ARCHIVE_SHA256."

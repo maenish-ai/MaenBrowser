@@ -34,3 +34,6 @@ A release is not declared media-ready solely because `canPlayType()` reports sup
 7. 4 GiB Windows machine: 1080p playback without MaenBrowser-specific background overhead; 4K is capability-dependent and is never guaranteed on unsupported hardware.
 
 If H.264/AAC playback is absent, the release remains blocked rather than silently falling back to an untrusted codec package.
+
+## 1.5.24 media-release invariant
+The production media Setup workflow refuses the stock CEF fallback. It requires a SHA-256-pinned custom CEF 152 runtime built from the pinned Chromium 152 line with `proprietary_codecs=true` and `ffmpeg_branding=Chrome`. This enables the Chromium media paths required for common MP4/H.264 + AAC playback while retaining Chromium's existing VP8/VP9/AV1, WebM, MSE, WebRTC, WebCodecs and GPU/hardware-decoder selection. Capability claims remain subject to the actual media file, OS/GPU support and runtime testing.
