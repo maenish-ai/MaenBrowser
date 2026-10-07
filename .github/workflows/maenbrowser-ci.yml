@@ -36,35 +36,23 @@ jobs:
           }
           if (-not $source.Contains("ApplyWindowsProcessHardening")) { throw "Windows process hardening is missing." }
 
-      - name: Require verified media CEF
+      - name: Select and verify CEF runtime
         shell: pwsh
         env:
           MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
           MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) { throw "MAEN_CEF_ARCHIVE_URL is required. Build/publish the CEF media runtime first; stock CEF cannot be used for a WhatsApp/Facebook media release." }
-          if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be the 64-hex SHA256 of the media CEF archive." }
-
-      - name: Install NSIS
-        shell: pwsh
-        run: |
-          choco install nsis -y --no-progress
-          $nsis = "C:\Program Files (x86)\NSIS"
-          if (Test-Path $nsis) { $nsis | Out-File -FilePath $env:GITHUB_PATH -Append }
-
-      - name: Verify 7-Zip
-        shell: pwsh
-        run: |
-          $sevenZip=(Get-Command 7z.exe -ErrorAction SilentlyContinue).Source
-          if (-not $sevenZip -and -not (Test-Path "C:\Program Files\7-Zip\7z.exe")) { throw "7-Zip is not available." }
-
-      - name: Download and verify media-enabled CEF
-        shell: pwsh
-        env:
-          MAEN_CEF_ARCHIVE_URL: ${{ vars.MAEN_CEF_ARCHIVE_URL }}
-          MAEN_CEF_ARCHIVE_SHA256: ${{ vars.MAEN_CEF_ARCHIVE_SHA256 }}
-        run: |
-          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+          if (-not [string]::IsNullOrWhiteSpace($env:MAEN_CEF_ARCHIVE_URL)) {
+            Write-Host "Using verified custom media-enabled CEF runtime."
+            if ($env:MAEN_CEF_ARCHIVE_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "MAEN_CEF_ARCHIVE_SHA256 must be 64 hex characters." }
+            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+            "MAEN_MEDIA_BUILD=1" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            Write-Warning "Custom media CEF is not configured. Building the experimental Windows Media Foundation probe Setup with pinned stock CEF; H.264/AAC HTML5 playback is not claimed for this artifact."
+            Remove-Item Env:MAEN_CEF_ARCHIVE_SHA256 -ErrorAction SilentlyContinue
+            $cefRoot=& .\tools\fetch-cef.ps1
+            "MAEN_MEDIA_BUILD=0" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
           if (-not $cefRoot) { throw "CEF_ROOT was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 

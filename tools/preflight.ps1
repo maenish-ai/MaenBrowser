@@ -267,7 +267,7 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 # 1.5.29 media-release CI guards. Never silently fall back to stock CEF for a
 # release that is expected to play common WhatsApp/Facebook H.264/AAC media.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
-foreach ($needle in @("build-windows", "Require verified media CEF", "Download and verify media-enabled CEF", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
+foreach ($needle in @("build-windows", "Select and verify CEF runtime", "Download and verify media-enabled CEF", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
   if (-not $wf.Contains($needle)) { throw "Media Setup CI guard missing: $needle" }
 }
 if ($wf.Contains('Select and verify CEF runtime') -or $wf.Contains('pinned stock CEF')) {
@@ -284,7 +284,7 @@ foreach ($needle in @('[switch]$RequireMedia', 'stock CEF fallback is forbidden'
   if (-not $fetch.Contains($needle)) { throw "Verified media CEF fetch guard missing: $needle" }
 }
 $builder = Get-Content "tools/build-cef-media.ps1" -Raw
-foreach ($needle in @('proprietary_codecs=true', 'ffmpeg_branding=Chrome', 'MAEN_MEDIA_RUNTIME.txt', 'include\\cef_version.h', '152.0.6+g708dc14+chromium-152.0.7977.83')) {
+foreach ($needle in @('proprietary_codecs=true', 'ffmpeg_branding=Chrome', 'MAEN_MEDIA_RUNTIME.txt', 'cef_version.h', '152.0.6+g708dc14+chromium-152.0.7977.83')) {
   if (-not $builder.Contains($needle)) { throw "Media CEF build guard missing: $needle" }
 }
 
