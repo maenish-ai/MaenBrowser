@@ -264,14 +264,21 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.5.29 media-release CI guards. Never silently fall back to stock CEF for a
-# release that is expected to play common WhatsApp/Facebook H.264/AAC media.
+# 1.5.31 Setup-producing CI guards. The experimental workflow must reach the
+# Windows compiler and create a Setup on every push. A verified custom media CEF
+# is preferred when configured; otherwise the exact pinned stock CEF is used for
+# compilation/testing and the artifact explicitly makes no H.264/AAC claim.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
-foreach ($needle in @("build-windows", "Select and verify CEF runtime", "Download and verify media-enabled CEF", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia")) {
-  if (-not $wf.Contains($needle)) { throw "Media Setup CI guard missing: $needle" }
+foreach ($needle in @("build-windows", "Select and verify CEF runtime", "Build Release", "Build NSIS installer", "Upload MaenBrowser Setup", "actions/upload-artifact@v4", "MAEN_CEF_ARCHIVE_URL", "-RequireMedia", "MAEN_MEDIA_BUILD=0", "MAEN_MEDIA_BUILD=1")) {
+  if (-not $wf.Contains($needle)) { throw "Setup CI guard missing: $needle" }
 }
-if ($wf.Contains('Select and verify CEF runtime') -or $wf.Contains('pinned stock CEF')) {
-  throw "Media release workflow must not fall back to stock CEF."
+# Require both branches: verified custom media CEF and an explicitly labelled
+# stock-CEF experimental fallback. Do not confuse the step name with a failure.
+if (-not $wf.Contains('Using verified custom media-enabled CEF runtime.')) {
+  throw "Custom media CEF branch is missing from CI."
+}
+if (-not $wf.Contains('H.264/AAC HTML5 playback is not claimed for this artifact.')) {
+  throw "Stock CEF experimental fallback must carry an explicit media limitation warning."
 }
 if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
   throw "Distribution regression: publish Setup only, not Portable."
