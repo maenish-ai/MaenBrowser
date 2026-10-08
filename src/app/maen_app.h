@@ -20,6 +20,7 @@ class MaenApp final : public CefApp,
   }
 
   CefRefPtr<CefClient> GetDefaultClient() override;
+  CefRefPtr<CefRequestContextHandler> GetDefaultRequestContextHandler() override;
 
   void OnBeforeCommandLineProcessing(
       const CefString& process_type,

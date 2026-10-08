@@ -10,8 +10,25 @@
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
 #include "src/media/webview2_embedded.h"
+#include "src/protection/protection.h"
+#include "include/cef_id_mappers.h"
+#include "include/cef_request_context.h"
 
 namespace maenbrowser {
+bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser>, int command_id, cef_window_open_disposition_t) {
+  if (!protection::FamilyEnabled()) return false;
+  for (const char* name : {"IDC_NEW_INCOGNITO_WINDOW", "IDC_DEV_TOOLS", "IDC_DEV_TOOLS_CONSOLE", "IDC_DEV_TOOLS_INSPECT", "IDC_MANAGE_EXTENSIONS"}) {
+    if (command_id == cef_id_for_command_id_name(name)) return true;
+  }
+  return false;
+}
+
+CefRefPtr<CefResourceRequestHandler> MaenClient::GetResourceRequestHandler(
+    CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> request,
+    bool navigation, bool download, const CefString& initiator, bool& disable) {
+  return protection::ContextHandler()->GetResourceRequestHandler(browser, frame, request, navigation, download, initiator, disable);
+}
+
 namespace {
 std::wstring Utf16(const CefString& value) { return value.ToWString(); }
 
@@ -111,6 +128,11 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if (!browser || !frame || !frame->IsMain() || !request) return false;
   const std::wstring url = request->GetURL().ToWString();
 
+  if (protection::BlockNavigation(request->GetURL().ToString())) {
+    MessageBoxW(browser->GetHost()->GetWindowHandle(), L"This address is blocked by MaenBrowser Family Protection. Open the shield to ask a parent to review it.", L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
+    return true;
+  }
+
   if (!media::IsWhatsAppWebUrl(url)) {
     // If this tab was using the on-demand WebView2 media surface, returning to
     // an ordinary URL tears it down immediately to release RAM and processes.
@@ -118,13 +140,24 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     return false;
   }
 
-  // Keep WhatsApp inside the current MaenBrowser tab. WebView2 is created only
-  // when required, so proprietary media support does not turn the whole browser
-  // into a second always-running engine. Right-click > Open link in new tab is
-  // still handled by Chrome Runtime; that new CEF tab gets its own lazy surface.
-  const HWND hwnd = browser->GetHost()->GetWindowHandle();
-  if (media::OpenEmbeddedWebView2(browser->GetIdentifier(), hwnd, url)) return true;
+  // Never attach the persistent WebView2 profile to a private CEF window.
+  // Private WhatsApp stays in the private CEF context (codec availability may differ).
+  if (browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return false;
+
+  // Let the native resource handler commit a local placeholder at this URL.
+  // OnLoadEnd then attaches WebView2 without losing Chrome's address/history.
   return false;
+}
+
+void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) {
+  if (!browser || !frame || !frame->IsMain() || status != 200 ||
+      browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
+  const auto url = frame->GetURL().ToWString();
+  if (!media::IsWhatsAppWebUrl(url) || protection::BlockNavigation(frame->GetURL().ToString())) return;
+  media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
+      [browser](const std::wstring& target) {
+        if (browser->IsValid() && browser->GetMainFrame()) browser->GetMainFrame()->LoadURL(target);
+      });
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {
@@ -173,7 +206,9 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
   // This is important for blob/service-worker generated downloads such as
   // WhatsApp Web media, where relying only on implicit Chrome Runtime handling
   // can surface as an immediate canceled transfer in embedded builds.
-  callback->Continue(CefString(), true);
+  const auto download_path = protection::DownloadPath(suggested_name.ToWString());
+  const bool ask = protection::Current()->ask_download || download_path.empty();
+  callback->Continue(download_path, ask);
   return true;
 }
 

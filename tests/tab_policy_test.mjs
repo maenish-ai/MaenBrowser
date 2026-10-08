@@ -1,0 +1,14 @@
+import {strict as assert} from 'node:assert';
+import {candidate,restorableSession,webUrl} from '../assets/companion/tab-policy.js';
+const now=200000000,base={id:1,active:false,pinned:false,audible:false,discarded:false,incognito:false,status:'complete',url:'https://example.com',lastAccessed:0};
+assert(candidate(base,now,30));
+for(const key of ['active','pinned','audible','discarded','incognito'])assert(!candidate({...base,[key]:true},now,30),key);
+assert(!candidate({...base,autoDiscardable:false},now,30));
+for(const url of ['chrome://settings','file:///tmp/a','https://web.whatsapp.com','https://call.zoom.us'])assert(!candidate({...base,url},now,30),url);
+assert(candidate({...base,url:'https://whatsapp.com.evil.test'},now,30));
+assert(!candidate({...base,url:'https://sub.example.com'},now,30,['example.com']));
+assert(!candidate({...base,lastAccessed:undefined},now,30));
+assert(!candidate({...base,lastAccessed:now-60000},now,30));
+assert(!webUrl('javascript:alert(1)'));
+assert.deepEqual(restorableSession([base,{...base,incognito:true},{...base,url:'javascript:alert(1)'}]).map(x=>x.url),['https://example.com']);
+console.log('Tab safeguards and session URL tests passed');

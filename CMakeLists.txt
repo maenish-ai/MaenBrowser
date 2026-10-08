@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.7.0 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.8.0 LANGUAGES CXX)
 
 if(NOT WIN32)
   message(FATAL_ERROR "MaenBrowser desktop build currently targets Windows.")
@@ -52,6 +52,7 @@ set(MAEN_SOURCES
   src/extensions/extension_manager.cpp
   src/storage/local_profile.cpp
   src/updater/update_manager.cpp
+  src/protection/protection.cpp
 )
 
 set(MAEN_HEADERS
@@ -138,12 +139,24 @@ target_link_libraries(MaenBrowser PRIVATE
   runtimeobject
   version
   advapi32
+  bcrypt
+  crypt32
   ${CEF_STANDARD_LIBS}
 )
 
 # Copy CEF runtime DLLs/resources beside MaenBrowser.
 COPY_FILES("MaenBrowser" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${MAEN_OUT_DIR}")
 COPY_FILES("MaenBrowser" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${MAEN_OUT_DIR}")
+
+add_custom_command(TARGET MaenBrowser POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/companion" "${MAEN_OUT_DIR}/companion"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/filters" "${MAEN_OUT_DIR}/filters"
+)
+
+enable_testing()
+add_executable(MaenDomainTests tests/domain_rules_test.cpp)
+target_include_directories(MaenDomainTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME domain_rules COMMAND MaenDomainTests)
 
 
 

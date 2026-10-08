@@ -11,6 +11,8 @@
 #include "include/cef_download_handler.h"
 #include "include/cef_life_span_handler.h"
 #include "include/cef_request_handler.h"
+#include "include/cef_command_handler.h"
+#include "include/cef_load_handler.h"
 
 namespace maenbrowser {
 
@@ -18,7 +20,9 @@ class MaenClient final : public CefClient,
                          public CefLifeSpanHandler,
                          public CefDisplayHandler,
                          public CefDownloadHandler,
-                         public CefRequestHandler {
+                         public CefRequestHandler,
+                         public CefCommandHandler,
+                         public CefLoadHandler {
  public:
   MaenClient() = default;
 
@@ -26,6 +30,15 @@ class MaenClient final : public CefClient,
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
   CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
+  CefRefPtr<CefCommandHandler> GetCommandHandler() override { return this; }
+  CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
+  void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) override;
+  bool OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id,
+                       cef_window_open_disposition_t disposition) override;
+  CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
+      CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request, bool is_navigation, bool is_download,
+      const CefString& request_initiator, bool& disable_default_handling) override;
 
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
   bool OnBeforePopup(CefRefPtr<CefBrowser> browser,

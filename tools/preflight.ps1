@@ -185,7 +185,7 @@ $beforeDownloadBody = $clientCpp.Substring($beforeStart, $updatedStart - $before
 if ($beforeDownloadBody.Contains("CloseBrowser")) {
   throw "Download regression: never close the initiating browser from OnBeforeDownload."
 }
-if (-not $beforeDownloadBody.Contains("callback->Continue(CefString(), true)")) {
+if (-not $beforeDownloadBody.Contains("callback->Continue(download_path, ask)")) {
   throw "Explicit CEF download continuation missing."
 }
 if (-not $beforeDownloadBody.Contains("return true;")) {
@@ -201,7 +201,7 @@ if ($beforeDownloadBody.Contains("CloseBrowser") -or $beforeDownloadBody.Contain
 # Do not use a naive search for every `return false;` in this function: guard
 # clauses may legitimately return before a valid callback exists. Validate the
 # actual ownership path instead: explicit Continue + terminal return true.
-if ($beforeDownloadBody -notmatch 'callback->Continue\(CefString\(\), true\);\s*return true;') {
+if ($beforeDownloadBody -notmatch 'callback->Continue\(download_path, ask\);\s*return true;') {
   throw "Download regression: explicit Continue must be followed by return true for blob/service-worker downloads."
 }
 
@@ -322,4 +322,20 @@ if ($clientSource -match '(?m)^\s*WindowOpenDisposition,\s*$') {
   throw "Compile regression: ambiguous WindowOpenDisposition remains in maen_client.cpp."
 }
 
+
+# 1.8.0 control integration and data-integrity gates.
+foreach ($file in @("assets/companion/manifest.json", "src/protection/protection.cpp", "assets/filters/manifest.json")) {
+  if (!(Test-Path $file)) { throw "Controls package missing: $file" }
+}
+$protection = Get-Content "src/protection/protection.cpp" -Raw
+foreach ($needle in @("CryptProtectData", "BCryptDeriveKeyPBKDF2", "kExtensionOrigin", "OnProtocolExecution")) {
+  if (-not $protection.Contains($needle)) { throw "Protection guard missing: $needle" }
+}
+if (-not $client.Contains("protection::DownloadPath")) { throw "Download preferences are disconnected" }
+if (-not $client.Contains("GetCachePath().empty()")) { throw "Private media profile guard missing" }
+if ($embedded -match 'args->put_State\(IsTrustedMicrophoneOrigin') { throw "Microphone must require an explicit permission decision" }
+foreach ($list in (Get-Content "assets/filters/manifest.json" -Raw | ConvertFrom-Json)) {
+  $actual = (Get-FileHash "assets/filters/$($list.name).txt" -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($actual -ne $list.sha256) { throw "Filter hash mismatch: $($list.name)" }
+}
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

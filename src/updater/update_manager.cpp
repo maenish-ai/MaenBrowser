@@ -1,4 +1,5 @@
 #include "src/updater/update_manager.h"
+#include "include/maenbrowser/version.h"
 
 #if MAEN_ENABLE_UPDATER
 #include <winsparkle.h>
@@ -13,7 +14,7 @@ void UpdateManager::Initialize() {
   win_sparkle_set_app_details(
       L"MaenBrowser",
       L"MaenBrowser",
-      L"1.1.0");
+      L"1.8.0");
   win_sparkle_set_automatic_check_for_updates(1);
   win_sparkle_set_update_check_interval(24 * 60 * 60);
   win_sparkle_init();

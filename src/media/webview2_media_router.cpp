@@ -1,5 +1,6 @@
 #include "src/media/webview2_media_router.h"
 #include <cwctype>
+#include "src/protection/protection.h"
 
 namespace maenbrowser::media {
 namespace {
@@ -10,10 +11,8 @@ std::wstring Lower(std::wstring value) {
 }
 
 bool IsWhatsAppWebUrl(const std::wstring& url) {
-  const auto lower = Lower(url);
-  return lower.rfind(L"https://web.whatsapp.com", 0) == 0 ||
-         lower.rfind(L"https://whatsapp.com", 0) == 0 ||
-         lower.rfind(L"https://www.whatsapp.com", 0) == 0 ||
-         lower.rfind(L"http://web.whatsapp.com", 0) == 0;
+  const auto parsed = protection::ParseUrl(CefString(url).ToString());
+  return parsed.scheme == "https" &&
+         (parsed.host == "web.whatsapp.com" || parsed.host == "whatsapp.com" || parsed.host == "www.whatsapp.com");
 }
 }  // namespace maenbrowser::media

@@ -1,0 +1,27 @@
+[
+  {
+    "name": "ads",
+    "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+    "retrieved": "2026-10-08",
+    "source_sha256": "b83fc7acc934248ea4995dac213aa0ebb92d6824fd8469c1c20327b445db9051",
+    "sha256": "48be314e12e7b97bf67079caaff42103552e3e3d36e55f495ec25f9de68cc718",
+    "domains": 72524
+  },
+  {
+    "name": "adult",
+    "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn-only/hosts",
+    "retrieved": "2026-10-08",
+    "source_sha256": "27bd0e3c8c83f72335a3f0314ae278ff94b4475563c9043ad8be72fb4265d904",
+    "sha256": "d47560a5210e2a9ccc9a741b02f533041c95978ad5c5cbbb95e1e08f4a377fc3",
+    "domains": 76793
+  },
+  {
+    "name": "violence",
+    "url": "https://dsi.ut-capitole.fr/blacklists/download/violence.tar.gz",
+    "retrieved": "2026-10-08",
+    "source_sha256": "90671ec5af9f5035924ae27632e67a37a1d1787cba5eda92935fdc555ad86457",
+    "sha256": "27913e1c2778efa8610fd589993b7fe0c4340f176b64f8be8292836a5392675e",
+    "domains": 359,
+    "license": "CC BY-SA 4.0"
+  }
+]
