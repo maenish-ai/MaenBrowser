@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "إعدادات معن براوزر"
+  },
+  "extensionDescription": {
+    "message": "حماية محلية وأدوات التبويبات وإعدادات التنزيل."
+  },
+  "actionTitle": {
+    "message": "حماية معن براوزر"
+  },
+  "tabsCommand": {
+    "message": "البحث في التبويبات المفتوحة"
+  }
+}

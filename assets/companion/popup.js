@@ -1,3 +1,4 @@
+import {t} from './i18n.js';
 import {api, $, host, matchesHost, message} from './api.js';
 let state, tab;
 const open = path => chrome.tabs.create({url: chrome.runtime.getURL(path)});
@@ -11,11 +12,12 @@ async function refresh(){
   $('toggle').disabled=false;
   $('exception').checked=state.exceptions.some(d=>matchesHost(domain,d));
   $('exception').disabled=!domain || !/^https?:/.test(tab?.url || '') || state.family;
-  $('count').textContent=`${state.blockedRequests} requests blocked this browser session`;
-  message($('status'),state.family?'Family Protection is ON. Changes need the parent PIN.':state.listError || 'Native protection connected.');
-  await chrome.action.setBadgeText({text:state.ads?'ON':'OFF'});
+  $('count').textContent=t('{count} requests blocked this browser session',{count:state.blockedRequests});
+  message($('status'),state.family?'Family Protection is ON. Changes need the parent PIN.':state.listError ? 'Filter files are missing or empty. Repair the installation.' : 'Native protection connected.');
+  await chrome.action.setBadgeText({text:state.ads?'✓':'—'});
 }
 $('toggle').onclick=async()=>{
+  if(!state){$('toggle').disabled=true;try{await refresh();}catch(e){connectionError(e);}return;}
   if(state.family){await open('options.html#family');return;}
   $('toggle').disabled=true;
   try{await api('save',{settings:{ads:!state.ads}});await refresh();}catch(e){message($('status'),e);$('toggle').disabled=false;}
@@ -29,4 +31,11 @@ $('settings').onclick=()=>open('options.html');$('tabs').onclick=()=>open('tabs.
 $('extensions').onclick=()=>chrome.tabs.create({url:'chrome://extensions/'});
 $('sidebar').onclick=async()=>{try{if(!chrome.sidePanel?.open)throw new Error('This runtime does not expose a sidebar. Use Tabs & sessions instead.');await chrome.sidePanel.open({windowId:tab.windowId});}catch(e){message($('status'),e);}};
 $('reader').onclick=async()=>{try{const r=await chrome.runtime.sendMessage({op:'reader',tabId:tab.id});if(!r?.ok)throw new Error(r?.error||'Reader unavailable.');}catch(e){message($('status'),e);}};
-refresh().catch(e=>{message($('status'),new Error('Could not connect to native protection. Check installation; protection status is unverified. '+e.message));});
+function connectionError(error){
+  state=null;$('state').textContent=t('Protection unavailable');
+  $('toggle').textContent=t('Retry connection');$('toggle').disabled=false;
+  $('exception').disabled=true;
+  console.warn('Native controls connection',error);
+  message($('status'),new Error('Could not connect to protection. Please retry or open Settings.'));
+}
+refresh().catch(connectionError);

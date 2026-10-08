@@ -1,8 +1,8 @@
-# MaenBrowser 1.8.0 — development source
+# MaenBrowser 1.8.1 — development source
 
-**Status: FIX-02 development source. Windows compilation and native tests passed in CI; browser integration stopped at the ad-block probe. That probe is corrected here and awaits a new Windows run. No new Setup has been built.**
+**Status: 1.8.1 source update awaiting a fresh Windows build and the expanded toolbar-popup integration test.**
 
-See [FIX-02 status and upload instructions](docs/FIX_02_STATUS.md) for the latest verified result.
+The previous 1.8.0 FIX-02 completed GitHub Actions successfully. This update addresses the toolbar popup connection shown in the user report, adds Arabic/English UI language selection and reduces unnecessary background/UI work. See [1.8.1 release notes and validation boundaries](docs/RELEASE_1.8.1.md).
 
 MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
@@ -31,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-Windows C++ compilation, native tests, extension loading and the native settings connection passed in GitHub run 37837041845. Full browser integration has not passed yet; the corrected probe in this package still requires a new Windows run.
+Version 1.8.0 completed run 37838452027 successfully. The new 1.8.1 changes and actual toolbar-popup test have not yet run on Windows. Local checks do not establish a measured performance improvement or complete third-party translation.
 
 ## Compatibility boundaries
 

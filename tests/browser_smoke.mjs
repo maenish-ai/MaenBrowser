@@ -70,6 +70,47 @@ try{
   console.log('PASS: settings persisted as Windows DPAPI-protected bytes');
   const service=await evaluate(`chrome.runtime.sendMessage({op:'settingsChanged',wasFamily:false})`);assert.equal(service.ok,true,service.error);
   console.log('PASS: companion service worker/native API integration');
+  // Reproduce the actual Chrome action-popup surface, not just an options tab.
+  await evaluate(`(async()=>{const w=await chrome.windows.getCurrent();await chrome.windows.update(w.id,{focused:true});await chrome.action.openPopup();})()`);
+  let popupTarget;
+  for(let n=0;n<40;n++){
+    const all=await(await fetch('http://127.0.0.1:9222/json/list')).json();
+    popupTarget=all.find(x=>x.url===`chrome-extension://${id}/popup.html`);
+    if(popupTarget)break;await pause(250);
+  }
+  assert(popupTarget,'Toolbar action popup was not exposed for integration testing');
+  const popupSocket=new WebSocket(popupTarget.webSocketDebuggerUrl);
+  try{
+    await new Promise((resolve,reject)=>{popupSocket.onopen=resolve;popupSocket.onerror=reject;});
+    const popupResult=await new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>reject(new Error('Action popup API timeout')),20000);
+      popupSocket.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.id===1){clearTimeout(timeout);msg.error?reject(new Error(msg.error.message)):resolve(msg.result);}};
+      popupSocket.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{awaitPromise:true,returnByValue:true,expression:`(async()=>{
+        const {api}=await import(chrome.runtime.getURL('api.js'));
+        const result=await api();
+        for(let n=0;n<30 && document.getElementById('toggle').disabled;n++)await new Promise(r=>setTimeout(r,100));
+        return {ok:result.ok,ads:result.ads,ready:!document.getElementById('toggle').disabled,state:document.getElementById('state').textContent};
+      })()`}}));
+    });
+    assert(!popupResult.exceptionDetails,JSON.stringify(popupResult.exceptionDetails));
+    assert.equal(popupResult.result.value.ok,true);
+    assert.equal(popupResult.result.value.ads,true);
+    assert.equal(popupResult.result.value.ready,true);
+    assert(['ON','مفعّل'].includes(popupResult.result.value.state),'Popup is showing a disconnected state');
+  }finally{popupSocket.close();}
+  console.log('PASS: actual toolbar popup connected to native protection');
+  await evaluate(`chrome.runtime.sendMessage({op:'nativeApi',operation:'setLanguage',extra:{language:'ar'}})`);
+  await evaluate(`chrome.storage.local.set({language:'ar'})`);
+  await pause(300);
+  assert.equal(await evaluate(`document.documentElement.lang`),'ar');
+  assert.equal(await evaluate(`document.documentElement.dir`),'rtl');
+  await evaluate(`chrome.runtime.sendMessage({op:'nativeApi',operation:'setLanguage',extra:{language:'en'}})`);
+  await evaluate(`chrome.storage.local.set({language:'en'})`);
+  await pause(300);
+  assert.equal(await evaluate(`document.documentElement.lang`),'en');
+  assert.equal(await evaluate(`document.documentElement.dir`),'ltr');
+  console.log('PASS: live Arabic/English UI language and direction');
+
   await navigate(fixtureUrl);
   const untrusted=await evaluate(`fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"op":"get"}'}).then(r=>r.status).catch(()=>0)`);
   assert([0,403,503].includes(untrusted),'Web content accessed privileged settings');

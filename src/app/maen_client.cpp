@@ -1,4 +1,5 @@
 #include "src/app/maen_client.h"
+#include "src/app/ui_language.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -129,7 +130,7 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   const std::wstring url = request->GetURL().ToWString();
 
   if (protection::BlockNavigation(request->GetURL().ToString())) {
-    MessageBoxW(browser->GetHost()->GetWindowHandle(), L"This address is blocked by MaenBrowser Family Protection. Open the shield to ask a parent to review it.", L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(browser->GetHost()->GetWindowHandle(), ui::Text(L"This address is blocked by MaenBrowser Family Protection. Open the shield to ask a parent to review it.", L"هذا العنوان محجوب بحماية الأسرة. افتح الحماية ليتمكن الوالدان من مراجعته."), L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
     return true;
   }
 
@@ -274,9 +275,9 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
 
 void MaenClient::ShowDownloadComplete(const DownloadState& state,
                                       const std::wstring& file_name) {
-  std::wstring message = L"Download complete:\n" + file_name +
-                         L"\n\nYes = Open file\nNo = Show in folder\nCancel = Close";
-  const int result = MessageBoxW(nullptr, message.c_str(), L"MaenBrowser Downloads",
+  std::wstring message = std::wstring(ui::Text(L"Download complete:\n", L"اكتمل التنزيل:\n")) + file_name +
+                         ui::Text(L"\n\nYes = Open file\nNo = Show in folder\nCancel = Close", L"\n\nنعم = فتح الملف\nلا = عرضه في المجلد\nإلغاء = إغلاق");
+  const int result = MessageBoxW(nullptr, message.c_str(), ui::Text(L"MaenBrowser Downloads", L"تنزيلات معن براوزر"),
                                  MB_YESNOCANCEL | MB_ICONINFORMATION | MB_TOPMOST);
   if (result == IDYES) OpenPath(state.path);
   else if (result == IDNO) ShowInFolder(state.path);

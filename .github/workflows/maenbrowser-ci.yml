@@ -26,6 +26,10 @@ jobs:
       - name: JavaScript safeguards and package verification
         shell: pwsh
         run: |
+          node tests/localization_test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/companion_api_test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/tab_policy_test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/verify-package.py

@@ -8,6 +8,7 @@
 
 #include "include/maenbrowser/version.h"
 #include "src/app/maen_client.h"
+#include "src/app/ui_language.h"
 #include "src/app/resource_mode.h"
 #include "src/app/browser_preferences.h"
 #include "src/app/start_page.h"
@@ -39,6 +40,7 @@ void MaenApp::OnBeforeCommandLineProcessing(
   // Resource policy is conservative: old PCs get Lite Mode without
   // weakening Chromium sandbox/site isolation.
   resource::ApplyResourcePolicy(command_line, resource::DetectResourceProfile());
+  command_line->AppendSwitchWithValue("lang", ui::Locale());
   const auto companion = protection::InstallDirectory() / L"companion";
   if (std::filesystem::exists(companion / L"manifest.json")) {
     auto paths = command_line->GetSwitchValue("load-extension").ToWString();

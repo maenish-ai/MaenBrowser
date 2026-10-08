@@ -5,6 +5,7 @@
 #include "include/cef_version_info.h"
 
 #include "src/app/maen_app.h"
+#include "src/app/ui_language.h"
 #include "src/storage/local_profile.h"
 #include "src/updater/update_manager.h"
 
@@ -35,6 +36,7 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
   }
 
   CefSettings settings;
+  CefString(&settings.locale) = maenbrowser::ui::Locale();
   settings.persist_session_cookies = true;
   settings.log_severity = LOGSEVERITY_WARNING;
 
@@ -51,7 +53,7 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
 
   if (!CefInitialize(main_args, settings, app, sandbox_info)) {
     MessageBoxW(nullptr,
-                L"MaenBrowser could not initialize Chromium.",
+                maenbrowser::ui::Text(L"MaenBrowser could not initialize Chromium.", L"تعذر بدء محرك المتصفح."),
                 L"MaenBrowser",
                 MB_ICONERROR | MB_OK);
     return CefGetExitCode();

@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "MaenBrowser Controls"
+  },
+  "extensionDescription": {
+    "message": "Local protection, tab tools and download settings."
+  },
+  "actionTitle": {
+    "message": "MaenBrowser protection"
+  },
+  "tabsCommand": {
+    "message": "Search open tabs"
+  }
+}

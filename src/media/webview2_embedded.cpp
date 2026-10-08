@@ -1,4 +1,5 @@
 #include "src/media/webview2_embedded.h"
+#include "src/app/ui_language.h"
 
 #include <windows.h>
 #include <commctrl.h>
@@ -14,6 +15,7 @@
 #include <vector>
 
 #include "WebView2.h"
+#include "WebView2EnvironmentOptions.h"
 #include "include/cef_task.h"
 #include "src/protection/protection.h"
 #include "src/media/webview2_media_router.h"
@@ -196,9 +198,9 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             bool allow = false;
             if (current && IsTrustedMicrophoneOrigin(uri) && !protection::FamilyEnabled()) {
               const wchar_t* question = kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE
-                  ? L"Allow WhatsApp Web to use your microphone for this request?"
-                  : L"Allow WhatsApp Web to use your camera for this request?";
-              allow = MessageBoxW(current->cef_window, question, L"MaenBrowser permission", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
+                  ? ui::Text(L"Allow WhatsApp Web to use your microphone for this request?", L"هل تسمح لواتساب باستخدام الميكروفون لهذا الطلب؟")
+                  : ui::Text(L"Allow WhatsApp Web to use your camera for this request?", L"هل تسمح لواتساب باستخدام الكاميرا لهذا الطلب؟");
+              allow = MessageBoxW(current->cef_window, question, ui::Text(L"MaenBrowser permission", L"إذن المتصفح"), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
             }
             args->put_State(allow ? COREWEBVIEW2_PERMISSION_STATE_ALLOW : COREWEBVIEW2_PERMISSION_STATE_DENY);
             return S_OK;
@@ -229,7 +231,7 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             std::wstring uri(raw); CoTaskMemFree(raw);
             if (protection::BlockNavigation(CefString(uri).ToString())) {
               args->put_Cancel(TRUE);
-              MessageBoxW(current->cef_window, L"This address is blocked by Family Protection.", L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
+              MessageBoxW(current->cef_window, ui::Text(L"This address is blocked by Family Protection.", L"هذا العنوان محجوب بحماية الأسرة."), L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
             } else if (!IsWhatsAppWebUrl(uri)) {
               args->put_Cancel(TRUE);
               if (current->navigate) current->navigate(uri);
@@ -344,7 +346,7 @@ void StartEnvironmentIfNeeded() {
   if (!com_checked) {
     const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(com_hr)) {
-      MessageBoxW(nullptr, L"Could not initialize the Windows COM apartment required by WebView2.",
+      MessageBoxW(nullptr, ui::Text(L"Could not initialize the Windows COM apartment required by WebView2.", L"تعذر بدء خدمة ويندوز اللازمة لمحرك الوسائط."),
                   L"MaenBrowser", MB_OK | MB_ICONERROR);
       return;
     }
@@ -353,14 +355,16 @@ void StartEnvironmentIfNeeded() {
 
   g_environment_pending = true;
   const std::wstring data_folder = WebView2UserDataFolder();
+  auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
+  options->put_Language(ui::Arabic()?L"ar":L"en-US");
   const HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(
-      nullptr, data_folder.c_str(), nullptr,
+      nullptr, data_folder.c_str(), options.Get(),
       Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
           [](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
             g_environment_pending = false;
             if (FAILED(result) || !environment) {
               MessageBoxW(nullptr,
-                          L"Microsoft Edge WebView2 Runtime could not start. Re-run MaenBrowser Setup to repair the media engine.",
+                          ui::Text(L"Microsoft Edge WebView2 Runtime could not start. Re-run MaenBrowser Setup to repair the media engine.", L"تعذر بدء محرك الوسائط. شغّل تثبيت المتصفح لإصلاحه."),
                           L"MaenBrowser", MB_OK | MB_ICONERROR);
               return result;
             }
@@ -377,7 +381,7 @@ void StartEnvironmentIfNeeded() {
   if (FAILED(hr)) {
     g_environment_pending = false;
     MessageBoxW(nullptr,
-                L"Microsoft Edge WebView2 Runtime could not be initialized.",
+                ui::Text(L"Microsoft Edge WebView2 Runtime could not be initialized.", L"تعذر بدء محرك الوسائط."),
                 L"MaenBrowser", MB_OK | MB_ICONERROR);
   }
 }

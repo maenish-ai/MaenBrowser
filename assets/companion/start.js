@@ -1,3 +1,4 @@
+import {t} from './i18n.js';
 
 const engines={
  google:q=>"https://www.google.com/search?q="+encodeURIComponent(q),
@@ -24,9 +25,9 @@ document.getElementById("mediaCheck").addEventListener("click",()=>{
   ["MP3",a.canPlayType('audio/mpeg')]
  ];
  let webgl=false;try{webgl=!!document.createElement("canvas").getContext("webgl2")}catch(e){}
- const lines=tests.map(x=>x[0]+": "+(x[1]||"not reported"));
- lines.push("WebGL2: "+(webgl?"available":"unavailable"));
- lines.push("CPU threads reported: "+(navigator.hardwareConcurrency||"unknown"));
+ const lines=tests.map(x=>x[0]+": "+t(x[1]||"not reported"));
+ lines.push("WebGL2: "+t(webgl?"available":"unavailable"));
+ lines.push(t('CPU threads reported: {count}',{count:navigator.hardwareConcurrency||t('unknown')}));
  const out=document.getElementById("mediaResult");out.textContent=lines.join("\n");out.style.display="block";
 });
 paint();

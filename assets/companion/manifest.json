@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "MaenBrowser Controls",
-  "version": "1.8.0",
-  "description": "Local protection controls, tab tools and download settings for MaenBrowser.",
+  "name": "__MSG_extensionName__",
+  "version": "1.8.1",
+  "description": "__MSG_extensionDescription__",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjpa6T2Foqv97dGzZv+WbADpz5pOHb3/8FAJzk31AYu89XROBtWIaxZgMlViCY4CtsmWvndm11+tgEudGoCAxvxmozFzUjyG7RVmIT1uXewV5OJ0ss40249EjrDRBJbgGbZzEkD9bE0GY7obsdbxgvbu/lccZENLytiv9EErL07YrOyNdW1Gr2olsVCuPon0TOmm2FmT79vrSNFpark98dUi7V8FOtwQ8PuwaXEfxnU5Q6WnFfgY8zBw+hmZNLOVJgSDapU3DHikySd29O7FbFpmQx05PZrROJf5pG+aMIbWNvCT/v3XDFyCm0oLZTdh7/nchvw3it558wyywsXwBOwIDAQAB",
   "permissions": [
     "storage",
@@ -26,7 +26,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "MaenBrowser protection",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icon16.png",
       "32": "icon32.png"
@@ -49,10 +49,11 @@
       "suggested_key": {
         "default": "Ctrl+Shift+Space"
       },
-      "description": "Search open tabs"
+      "description": "__MSG_tabsCommand__"
     }
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://maen.browser"
-  }
+  },
+  "default_locale": "en"
 }

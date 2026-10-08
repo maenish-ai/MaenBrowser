@@ -1,4 +1,4 @@
-import {api,webUrl} from './api.js';
+import {nativeApi as api,webUrl} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
 async function updateAlarm(){
   const {sleepEnabled=true}=await chrome.storage.local.get('sleepEnabled');
@@ -7,7 +7,7 @@ async function updateAlarm(){
 }
 async function initialize(){
   await updateAlarm();
-  try{const s=await api();await chrome.action.setBadgeText({text:s.ads?'ON':'OFF'});if(s.family)await enforceFamily(true,false);}catch{await chrome.action.setBadgeText({text:'?'});}
+  try{const s=await api();await chrome.action.setBadgeText({text:s.ads?'✓':'—'});if(s.family)await enforceFamily(true,false);}catch{await chrome.action.setBadgeText({text:'?'});}
 }
 chrome.runtime.onInstalled.addListener(()=>initialize());
 chrome.runtime.onStartup.addListener(()=>initialize());
@@ -41,8 +41,14 @@ chrome.alarms.onAlarm.addListener(async alarm=>{
   try{
     const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});if(!p.sleepEnabled)return;
     if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return;
-    const tabs=await chrome.tabs.query({});let released=0;
-    for(const tab of tabs){if(released>=3)break;if(candidate(tab,Date.now(),p.sleepMinutes,p.keepAwake)){const r=await releaseTab(tab.id);if(r.ok)released++;}}
+    const tabs=await chrome.tabs.query({});if(!tabs.length)return;
+    const {scanOffset=0}=await chrome.storage.session.get('scanOffset');
+    let inspected=0,visited=0;
+    for(;visited<tabs.length&&inspected<3;visited++){
+      const tab=tabs[(scanOffset+visited)%tabs.length];
+      if(candidate(tab,Date.now(),p.sleepMinutes,p.keepAwake)){inspected++;await releaseTab(tab.id);}
+    }
+    await chrome.storage.session.set({scanOffset:(scanOffset+visited)%tabs.length});
   }catch{/* Best effort: inspection errors must never cause a discard. */}
 });
 async function enforceFamily(enabled,closeTabs){
@@ -65,6 +71,10 @@ async function reader(tabId){
 chrome.runtime.onMessage.addListener((request,sender,respond)=>{
   if(sender.id!==chrome.runtime.id||!sender.url?.startsWith(chrome.runtime.getURL('')))return false;
   (async()=>{
+    if(request.op==='nativeApi'){
+      if(!['get','save','setLanguage'].includes(request.operation))return {ok:false,error:'Unknown operation'};
+      return {ok:true,data:await api(request.operation,request.extra||{})};
+    }
     if(request.op==='release')return releaseTab(request.tabId,true);
     if(request.op==='reader')return reader(request.tabId);
     if(request.op==='settingsChanged'){
@@ -79,3 +89,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
   })().then(respond).catch(e=>respond({ok:false,error:e.message}));return true;
 });
 chrome.commands.onCommand.addListener(command=>{if(command==='open-tabs')chrome.tabs.create({url:chrome.runtime.getURL('tabs.html')});});
+
+chrome.storage.onChanged.addListener((changes,area)=>{
+  if(area==='local'&&changes.language)chrome.action.setTitle({title:changes.language.newValue==='ar'?'حماية معن براوزر':'MaenBrowser protection'});
+});

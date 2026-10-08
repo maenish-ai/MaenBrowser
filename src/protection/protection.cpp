@@ -1,4 +1,5 @@
 #include "src/protection/protection.h"
+#include "src/app/ui_language.h"
 #include <windows.h>
 #include <bcrypt.h>
 #include <wincrypt.h>
@@ -93,6 +94,7 @@ bool ReadRules(CefRefPtr<CefDictionaryValue> d, const char* key, DomainRules& ou
 CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
   auto d = CefDictionaryValue::Create();
   d->SetInt("schema", 1);
+  d->SetString("language", ui::Arabic()?"ar":"en");
   d->SetBool("ads", s.ads); d->SetBool("family", s.family);
   d->SetBool("allowOnly", s.allow_only); d->SetBool("adult", s.adult);
   d->SetBool("violence", s.violence); d->SetBool("safeSearch", s.safe_search);
@@ -108,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.0");
+    d->SetString("version", "1.8.1");
   }
   return d;
 }
@@ -189,7 +191,11 @@ class Response final : public CefResourceHandler {
   std::string data_, mime_; int status_; bool api_, cors_; size_t offset_ = 0;
   IMPLEMENT_REFCOUNTING(Response);
 };
-const char kBlockedPage[] = "<!doctype html><meta charset=utf-8><title>MaenBrowser protection</title><style>body{font:18px system-ui;background:#f5f7fb;color:#172236;max-width:660px;margin:15vh auto;padding:24px}h1{color:#3557a0}</style><h1>MaenBrowser protection</h1><p>This address is blocked by your protection settings.</p><p>Open the MaenBrowser shield in the toolbar to review settings. Family restrictions require the parent PIN.</p><p dir=rtl>تم حجب هذا العنوان وفق إعدادات الحماية. تغيير إعدادات العائلة يحتاج رمز ولي الأمر.</p>";
+std::string BlockedPage() {
+  return ui::Arabic()
+    ? "<!doctype html><html lang=ar dir=rtl><meta charset=utf-8><title>حماية المتصفح</title><h1>حماية معن براوزر</h1><p>تم حجب هذا العنوان وفق إعدادات الحماية. افتح إعدادات الحماية لمراجعته. تغيير إعدادات الأسرة يحتاج رمز الوالدين.</p></html>"
+    : "<!doctype html><html lang=en><meta charset=utf-8><title>Browser protection</title><h1>MaenBrowser protection</h1><p>This address is blocked by your protection settings. Open protection settings to review it. Family changes need the parent PIN.</p></html>";
+}
 
 class Resource final : public CefResourceRequestHandler {
  public:
@@ -219,10 +225,10 @@ class Resource final : public CefResourceRequestHandler {
       }
       return new Response(body, "application/json", 200, true, true);
     }
-    if (denied_) return new Response(kBlockedPage, "text/html", 403);
+    if (denied_) return new Response(BlockedPage(), "text/html", 403);
     // Commit a lightweight CEF document at the real WhatsApp URL. This gives
     // Chrome's address bar/back stack the correct URL before attaching WebView2.
-    if (media_) return new Response("<!doctype html><meta charset=utf-8><title>WhatsApp — MaenBrowser</title><p>Starting the embedded media engine…</p>", "text/html");
+    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>واتساب</title><p dir=rtl>جارٍ فتح واتساب…</p>":"<!doctype html><meta charset=utf-8><title>WhatsApp</title><p>Opening WhatsApp…</p>", "text/html");
     return nullptr;
   }
   void OnProtocolExecution(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>, bool& allow) override { allow = false; }
@@ -313,7 +319,9 @@ bool BlockNavigation(const std::string& url) {
   return Block(url, "", true);
 }
 bool Block(const std::string& url, const std::string& source, bool document) {
-  const auto s = Current(); const auto u = ParseUrl(url);
+  const auto s = Current();
+  if (!s->family && !s->ads) return false;
+  const auto u = ParseUrl(url);
   if (Own(u)) return false;
   bool denied = false;
   if (s->family) {
@@ -325,13 +333,17 @@ bool Block(const std::string& url, const std::string& source, bool document) {
     }
     if (!g_list_error.empty() && !s->allow_only && document) denied = true;
   }
-  if (!denied && s->ads && !s->exceptions.Contains(u.host) && !s->exceptions.Contains(ParseUrl(source).host))
-    denied = g_ads.Contains(u.host);
+  // Most resources are not advertising domains. Avoid parsing the source URL
+  // or searching exceptions unless the ad list actually matches.
+  if (!denied && s->ads && g_ads.Contains(u.host) && !s->exceptions.Contains(u.host))
+    denied = s->exceptions.Size() == 0 || !s->exceptions.Contains(ParseUrl(source).host);
   if (denied) ++g_blocked;
   return denied;
 }
 std::string Rewrite(const std::string& url) {
-  const auto s = Current(); auto u = ParseUrl(url); std::string target = url;
+  const auto s = Current();
+  if (!s->https_only && !(s->family && s->safe_search)) return url;
+  auto u = ParseUrl(url); std::string target = url;
   if (s->https_only && u.scheme == "http") target.replace(0, 4, "https");
   if (!(s->family && s->safe_search) || (u.scheme != "http" && u.scheme != "https")) return target;
   std::string key, val;
@@ -358,6 +370,11 @@ std::string Api(const std::string& body) {
   auto d = Dictionary(body); if (!d) return Error("Invalid JSON");
   const auto op = d->GetString("op").ToString();
   if (op == "get") {
+    auto out = Export(*Current(), false); out->SetBool("ok", true); return Json(out);
+  }
+  if (op == "setLanguage") {
+    std::lock_guard<std::mutex> lock(g_write);
+    if (!ui::SaveLanguage(d->GetString("language").ToString())) return Error("Could not save language.");
     auto out = Export(*Current(), false); out->SetBool("ok", true); return Json(out);
   }
   if (op != "save") return Error("Unknown operation");

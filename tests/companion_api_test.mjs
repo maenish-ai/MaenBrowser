@@ -1,0 +1,11 @@
+import {strict as assert} from 'node:assert';
+const sent=[];
+globalThis.chrome={runtime:{sendMessage:async request=>{sent.push(request);return {ok:true,data:{ok:true,ads:true,language:'ar'}};}},storage:{local:{set:async()=>{}}}};
+globalThis.fetch=()=>{throw new Error('A popup must not fetch the native endpoint directly');};
+const {api}=await import('../assets/companion/api.js');
+assert.equal((await api()).ads,true);
+await api('save',{settings:{ads:false},pin:'test-pin'});
+assert.deepEqual(sent[1],{op:'nativeApi',operation:'save',extra:{settings:{ads:false},pin:'test-pin'}});
+chrome.runtime.sendMessage=async()=>({ok:false,error:'Incorrect parent PIN.'});
+await assert.rejects(api('save'),/Incorrect parent PIN/);
+console.log('Popup API routes through worker and preserves settings errors');
