@@ -9,6 +9,7 @@
 #include "include/cef_app.h"
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
+#include "src/media/webview2_embedded.h"
 
 namespace maenbrowser {
 namespace {
@@ -91,8 +92,9 @@ bool MaenClient::DoClose(CefRefPtr<CefBrowser>) {
 void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
   if (browser) {
-    std::lock_guard<std::mutex> lock(downloads_mutex_);
     const int id = browser->GetIdentifier();
+    media::CloseEmbeddedWebView2(id);
+    std::lock_guard<std::mutex> lock(downloads_mutex_);
     popup_browser_ids_.erase(id);
     popup_browsers_.erase(id);
   }
@@ -100,21 +102,28 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
     CefQuitMessageLoop();
 }
 
-bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser>,
+bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,
                                 bool user_gesture,
                                 bool) {
   CEF_REQUIRE_UI_THREAD();
-  if (!frame || !frame->IsMain() || !request) return false;
+  if (!browser || !frame || !frame->IsMain() || !request) return false;
   const std::wstring url = request->GetURL().ToWString();
-  if (!media::IsWhatsAppWebUrl(url)) return false;
 
-  // WhatsApp is routed to Microsoft's supported Edge/WebView2 runtime.
-  // This avoids relying on proprietary H.264/AAC codecs that are absent from
-  // the stock CEF distribution while keeping the rest of MaenBrowser on CEF.
-  // Redirects are also routed so a typed whatsapp.com URL cannot fall back to CEF.
-  if (media::OpenInMediaHost(url)) return true;
+  if (!media::IsWhatsAppWebUrl(url)) {
+    // If this tab was using the on-demand WebView2 media surface, returning to
+    // an ordinary URL tears it down immediately to release RAM and processes.
+    media::CloseEmbeddedWebView2(browser->GetIdentifier());
+    return false;
+  }
+
+  // Keep WhatsApp inside the current MaenBrowser tab. WebView2 is created only
+  // when required, so proprietary media support does not turn the whole browser
+  // into a second always-running engine. Right-click > Open link in new tab is
+  // still handled by Chrome Runtime; that new CEF tab gets its own lazy surface.
+  const HWND hwnd = browser->GetHost()->GetWindowHandle();
+  if (media::OpenEmbeddedWebView2(browser->GetIdentifier(), hwnd, url)) return true;
   return false;
 }
 

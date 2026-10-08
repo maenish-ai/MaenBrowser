@@ -1,4 +1,4 @@
-# MaenBrowser 1.6.9 status
+# MaenBrowser 1.7.0 status
 
 - Fixes the GitHub preflight false-positive caused by a doubled backslash literal for `cef_version.h`.
 - Includes the Windows Media Foundation capability probe source and required Windows MF link libraries.
@@ -7,5 +7,5 @@
 - Production sandbox, security hardening, adaptive resource policy, icon stamping, clean upgrades, and Setup-only distribution remain enabled.
 
 
-## 1.6.9 final merge
-The full CEF browser is preserved. WhatsApp Web is routed to the bundled MaenMediaHost WebView2 surface so media playback does not depend on stock CEF proprietary-codec support. See `docs/FINAL_MERGE_1.6.9.md`.
+## 1.7.0 final merge
+The full CEF browser is preserved. WhatsApp Web is routed to the bundled MaenMediaHost WebView2 surface so media playback does not depend on stock CEF proprietary-codec support. See `docs/FINAL_MERGE_1.7.0.md`.

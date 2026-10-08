@@ -264,37 +264,39 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 
-# 1.6.0 hybrid media release gate.
-# Main browsing remains CEF 152. WhatsApp Web is deliberately routed to a
-# Microsoft WebView2 host so H.264/AAC playback does not depend on a custom CEF.
+# 1.7.0 embedded WebView2 media release gate.
+# Main browsing remains the full CEF 152 Chrome Runtime. WhatsApp Web is routed
+# to an on-demand WebView2 child surface inside the current MaenBrowser tab.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
 foreach ($needle in @(
   "WEBVIEW2_SDK_VERSION",
   "Microsoft.Web.WebView2",
   "WebView2LoaderStatic.lib",
   "MicrosoftEdgeWebview2Setup.exe",
-  "MaenMediaHost.exe",
   "fetch-cef.ps1",
   "-DUSE_SANDBOX=ON",
   "Upload Setup only"
 )) {
-  if (-not $wf.Contains($needle)) { throw "Hybrid media CI guard missing: $needle" }
+  if (-not $wf.Contains($needle)) { throw "Embedded media CI guard missing: $needle" }
 }
 if ($wf -match '(?i)Package portable|Upload portable|Windows-x64-Portable') {
   throw "Distribution regression: publish Setup only."
 }
 $router = Get-Content "src/media/webview2_media_router.cpp" -Raw
-$mediaHostSource = Get-Content "src/media/webview2_media_host.cpp" -Raw
+$embedded = Get-Content "src/media/webview2_embedded.cpp" -Raw
 $client = Get-Content "src/app/maen_client.cpp" -Raw
-foreach ($needle in @("web.whatsapp.com", "MaenMediaHost.exe")) {
+foreach ($needle in @("web.whatsapp.com")) {
   if (-not $router.Contains($needle)) { throw "WhatsApp media router missing: $needle" }
 }
-foreach ($needle in @("CoInitializeEx", "CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "Navigate")) {
-  if (-not $mediaHostSource.Contains($needle)) { throw "WebView2 media host missing: $needle" }
+foreach ($needle in @("CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "PermissionRequested", "COREWEBVIEW2_PERMISSION_KIND_MICROPHONE")) {
+  if (-not $embedded.Contains($needle)) { throw "Embedded WebView2 media layer missing: $needle" }
 }
-if (-not $client.Contains("OpenInMediaHost")) { throw "CEF-to-WebView2 WhatsApp routing is missing." }
+if (-not $client.Contains("OpenEmbeddedWebView2")) { throw "CEF-to-embedded-WebView2 routing is missing." }
+if ($client.Contains("OpenInMediaHost")) { throw "Regression: external media-host routing must not be used." }
 $cmake = Get-Content "CMakeLists.txt" -Raw
-if (-not $cmake.Contains("advapi32")) { throw "WebView2 static loader dependency advapi32 is missing." }
+foreach ($needle in @("webview2_embedded.cpp", "WebView2LoaderStatic.lib", "advapi32")) {
+  if (-not $cmake.Contains($needle)) { throw "Embedded WebView2 CMake integration missing: $needle" }
+}
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
 foreach ($needle in @("MicrosoftEdgeWebview2Setup.exe", "/silent /install")) {
   if (-not $nsi.Contains($needle)) { throw "WebView2 installer integration missing: $needle" }
@@ -309,7 +311,7 @@ if ($MyInvocation.MyCommand.Path) {
 }
 
 
-# 1.6.9 compile-regression guards for the hybrid WebView2/CEF integration.
+# 1.7.0 compile-regression guards for the embedded WebView2/CEF integration.
 $clientHeader = Get-Content "src/app/maen_client.h" -Raw
 $clientSource = Get-Content "src/app/maen_client.cpp" -Raw
 if ($clientHeader.Contains("WindowOpenDisposition target_disposition") -and
@@ -318,12 +320,6 @@ if ($clientHeader.Contains("WindowOpenDisposition target_disposition") -and
 }
 if ($clientSource -match '(?m)^\s*WindowOpenDisposition,\s*$') {
   throw "Compile regression: ambiguous WindowOpenDisposition remains in maen_client.cpp."
-}
-if ($mediaHostSource.Contains('#include "src/win/resource.h"')) {
-  throw "Compile regression: WebView2 host uses a source-root-relative include without the source root include path."
-}
-if (-not $mediaHostSource.Contains('#include "../win/resource.h"')) {
-  throw "Compile regression: WebView2 host resource include is missing."
 }
 
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

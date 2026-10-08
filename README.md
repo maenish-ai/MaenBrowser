@@ -76,5 +76,9 @@ A normal push always validates the project. The Setup job is intentionally condi
 WhatsApp Web is routed to MaenBrowser's native `MaenMediaHost.exe`, powered by the Microsoft Edge WebView2 Evergreen Runtime. This avoids requiring a custom 100+ GB Chromium/CEF build just to obtain H.264/AAC support. Other browsing remains on the pinned CEF 152 engine.
 
 
-## 1.6.9 full-browser WebView2 media merge
-This release keeps the original full CEF 152 MaenBrowser and integrates the WebView2-based `MaenMediaHost.exe` for WhatsApp Web media. The simplified WebView2-only browser prototype is not the main application in this package. See `docs/FINAL_MERGE_1.6.9.md`.
+## 1.7.0 full-browser WebView2 media merge
+This release keeps the original full CEF 152 MaenBrowser and integrates the WebView2-based `MaenMediaHost.exe` for WhatsApp Web media. The simplified WebView2-only browser prototype is not the main application in this package. See `docs/FINAL_MERGE_1.7.0.md`.
+
+
+## 1.7.0 embedded media integration
+WhatsApp Web now uses a lazy WebView2 child surface inside the current MaenBrowser tab instead of launching a separate media application. The WebView2 surface follows Windows audio output devices and grants WhatsApp microphone access subject to Windows privacy controls. It is destroyed when the tab leaves WhatsApp to keep memory usage low. See `docs/FINAL_MERGE_1.7.0.md`.

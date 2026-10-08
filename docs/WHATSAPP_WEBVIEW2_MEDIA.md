@@ -1,12 +1,7 @@
-# WhatsApp media path (1.6.0)
+# WhatsApp Web media in MaenBrowser 1.7.0
 
-MaenBrowser 1.6.0 uses a hybrid Windows media architecture:
+WhatsApp Web remains inside the MaenBrowser window. The normal browser is the full CEF 152 Chrome Runtime; when a tab navigates to WhatsApp Web, MaenBrowser lazily creates a WebView2 child surface inside that tab's native content host. This provides the Microsoft Edge media stack without opening a second top-level application.
 
-- The normal browser remains native C++ with pinned CEF 152 and the existing CEF sandbox/security/resource policy.
-- Navigation to `web.whatsapp.com` is routed to `MaenMediaHost.exe`, a native Win32 WebView2 host branded as MaenBrowser.
-- The host uses Microsoft's Evergreen WebView2 Runtime (Edge/Chromium web platform), avoiding the proprietary-codec limitation of stock CEF.
-- Setup carries Microsoft's small Evergreen bootstrapper and runs it silently. Windows 11 and most eligible Windows 10 systems already have the runtime; Microsoft services it independently.
-- WhatsApp WebView2 profile data is local at `%LOCALAPPDATA%\MaenBrowser\WebView2 Media` and is removed by full MaenBrowser uninstall because the existing uninstall removes `%LOCALAPPDATA%\MaenBrowser`.
-- No custom codec DLL, codec pack, external player, TLS bypass, GPU disable, or sandbox weakening is used.
+The WebView2 environment is shared and created only on first use. A tab-specific controller is destroyed when that tab leaves WhatsApp or closes. Audio output follows devices exposed by Windows. WhatsApp microphone requests are allowed by the WebView2 permission handler, while Windows privacy controls remain authoritative.
 
-This architecture is specifically intended to restore modern WhatsApp HTML5 media compatibility without requiring the project to build a proprietary-codec CEF/Chromium distribution. Runtime acceptance still requires testing the user's actual WhatsApp video after installing the generated Setup.
+The installer bundles the Microsoft WebView2 Evergreen bootstrapper. GitHub Actions still builds and publishes Setup only.

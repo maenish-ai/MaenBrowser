@@ -39,9 +39,11 @@ void ApplyResourcePolicy(CefRefPtr<CefCommandLine> cmd,
   // PCs that often moves expensive work back to the CPU and makes media/3D worse.
   cmd->AppendSwitch("disable-background-mode");
   cmd->AppendSwitch("disable-sync");
+  cmd->AppendSwitch("disable-default-apps");
 
   if (p.mode == Mode::Lite) {
-    cmd->AppendSwitchWithValue("disable-features", "Prerender2,BackForwardCache");
+    cmd->AppendSwitchWithValue("disable-features",
+                               "Prerender2,BackForwardCache,OptimizationHints,MediaRouter");
 
     // 4 GiB-class systems need tighter caches than 6 GiB systems. These are
     // cache ceilings, not hard limits on a page/game renderer.
