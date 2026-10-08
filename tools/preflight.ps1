@@ -309,7 +309,7 @@ if ($MyInvocation.MyCommand.Path) {
 }
 
 
-# 1.6.5 compile-regression guards for the hybrid WebView2/CEF integration.
+# 1.6.9 compile-regression guards for the hybrid WebView2/CEF integration.
 $clientHeader = Get-Content "src/app/maen_client.h" -Raw
 $clientSource = Get-Content "src/app/maen_client.cpp" -Raw
 if ($clientHeader.Contains("WindowOpenDisposition target_disposition") -and

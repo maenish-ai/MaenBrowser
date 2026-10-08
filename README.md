@@ -72,9 +72,9 @@ This revision corrects the 1.5.12 preflight false positive while retaining expli
 ### Media-enabled release CI (1.5.25)
 A normal push always validates the project. The Setup job is intentionally conditional on `MAEN_CEF_ARCHIVE_URL` and `MAEN_CEF_ARCHIVE_SHA256`; missing values skip the release job instead of failing the whole workflow. This prevents wasting Actions minutes while also preventing a stock-CEF Setup from being mistaken for the WhatsApp-video build.
 
-## WhatsApp media on Windows (1.6.5)
+## WhatsApp media on Windows (1.6.3)
 WhatsApp Web is routed to MaenBrowser's native `MaenMediaHost.exe`, powered by the Microsoft Edge WebView2 Evergreen Runtime. This avoids requiring a custom 100+ GB Chromium/CEF build just to obtain H.264/AAC support. Other browsing remains on the pinned CEF 152 engine.
 
 
-## 1.6.8 merged original start page
-The original branded start-page HTML from the CEF-based 1.6.3 project is bundled as `assets/maen_start.html` and opened by the WebView2 host using a local file URL. The original CEF-specific native handlers cannot be directly loaded into WebView2; this is a UI/asset migration, not full feature parity. WebView2 remains the only browsing engine.
+## 1.6.9 full-browser WebView2 media merge
+This release keeps the original full CEF 152 MaenBrowser and integrates the WebView2-based `MaenMediaHost.exe` for WhatsApp Web media. The simplified WebView2-only browser prototype is not the main application in this package. See `docs/FINAL_MERGE_1.6.9.md`.

@@ -19,10 +19,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set version
+      - name: Verify source and security
         shell: pwsh
         run: |
-          "MAEN_VERSION=$((Get-Content VERSION -Raw).Trim())" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $version=(Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must be semantic x.y.z" }
+          "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          .\tools\preflight.ps1
+
+      - name: Fetch pinned stock CEF 152
+        shell: pwsh
+        run: |
+          $cefRoot=& .\tools\fetch-cef.ps1
+          if (-not $cefRoot) { throw "CEF root was not returned." }
+          "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Fetch Microsoft WebView2 SDK
         shell: pwsh
@@ -39,18 +49,9 @@ jobs:
           }
           "WEBVIEW2_SDK_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Source regression checks
-        shell: pwsh
-        run: |
-          $source=Get-Content src/webview2_browser/main.cpp -Raw
-          if (!$source.Contains('#include <windowsx.h>')) { throw 'Missing GET_X_LPARAM header' }
-          if (!$source.Contains('put_NewWindow(tab->view.Get())')) { throw 'Popup tab wiring missing' }
-          if (!(Test-Path 'src/win/resource.h')) { throw 'Resource header missing' }
-          if (!(Test-Path 'assets/maenbrowser.ico')) { throw 'Icon missing' }
-
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DWEBVIEW2_SDK_ROOT=$env:WEBVIEW2_SDK_ROOT"
+        run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DCEF_ROOT=$env:CEF_ROOT" "-DWEBVIEW2_SDK_ROOT=$env:WEBVIEW2_SDK_ROOT" -DMAEN_ENABLE_UPDATER=OFF -DUSE_SANDBOX=ON
 
       - name: Build Release
         shell: pwsh
@@ -66,8 +67,7 @@ jobs:
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "build\Release\*" dist -Recurse -Force
-          Copy-Item "assets" "dist\assets" -Recurse -Force
-          foreach ($file in @("dist\MaenBrowser.exe")) {
+          foreach ($file in @("dist\MaenBrowser.exe","dist\MaenMediaHost.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
           Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "dist\MicrosoftEdgeWebview2Setup.exe"
