@@ -47,18 +47,19 @@ void SwitchTo(int index) {
 }
 void NavigateText(){wchar_t buf[4096]{};GetWindowTextW(address,buf,4096);std::wstring u=buf;if(u.empty()||active<0||active>=static_cast<int>(tabs.size())||!tabs[active]->view)return;
  if(u.find(L"://")==std::wstring::npos){if(u.find(L'.')!=std::wstring::npos&&u.find(L' ')==std::wstring::npos)u=L"https://"+u;else {std::wstring q;for(wchar_t c:u){if(c==L' ')q+=L"%20";else q+=c;}u=L"https://www.google.com/search?q="+q;}}
+ if(u.rfind(L"https://",0)!=0 && u.rfind(L"http://",0)!=0 && u.rfind(L"file://",0)!=0)return;
  tabs[active]->view->Navigate(u.c_str());}
 void AddTab(const std::wstring& initial=HomeUrl(), ICoreWebView2NewWindowRequestedEventArgs* popup=nullptr) {
  if(!environment)return;
- auto tab=std::make_shared<Tab>();tabs.push_back(tab);const int index=static_cast<int>(tabs.size())-1;
+ auto tab=std::make_shared<Tab>();tabs.push_back(tab);
  ComPtr<ICoreWebView2Deferral> deferral;
  if(popup && FAILED(popup->GetDeferral(&deferral))) { popup->put_Handled(TRUE); tabs.pop_back(); return; }
  ComPtr<ICoreWebView2NewWindowRequestedEventArgs> popupArgs=popup;
  environment->CreateCoreWebView2Controller(windowHandle,Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
- [tab,index,initial,popupArgs,deferral](HRESULT hr,ICoreWebView2Controller* controller)->HRESULT{
+ [tab,initial,popupArgs,deferral](HRESULT hr,ICoreWebView2Controller* controller)->HRESULT{
  if(FAILED(hr)||!controller){if(popupArgs)popupArgs->put_Handled(TRUE);if(deferral)deferral->Complete();tabs.erase(std::remove(tabs.begin(),tabs.end(),tab),tabs.end());return S_OK;}
  tab->controller=controller;controller->get_CoreWebView2(&tab->view);
- if(!tab->view){if(popupArgs)popupArgs->put_Handled(TRUE);if(deferral)deferral->Complete();return S_OK;}
+ if(!tab->view){if(popupArgs)popupArgs->put_Handled(TRUE);if(deferral)deferral->Complete();controller->Close();tabs.erase(std::remove(tabs.begin(),tabs.end(),tab),tabs.end());return S_OK;}
  tab->view->add_NewWindowRequested(Callback<ICoreWebView2NewWindowRequestedEventHandler>(
  [](ICoreWebView2*,ICoreWebView2NewWindowRequestedEventArgs* args)->HRESULT{
    AddTab(L"",args);return S_OK;

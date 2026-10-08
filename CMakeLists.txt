@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.6.7 LANGUAGES CXX RC)
+project(MaenBrowser VERSION 1.6.8 LANGUAGES CXX RC)
 if(NOT WIN32)
  message(FATAL_ERROR "Windows only")
 endif()

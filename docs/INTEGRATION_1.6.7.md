@@ -1,4 +1,4 @@
-# 1.6.7 integration notes
+# 1.6.8 integration notes
 WebView2 remains the active engine (including WhatsApp video support).
 Modernized native tab strip, close-tab control, Segoe UI toolbar, Home navigation, external HTTP(S) launch.
 Legacy CEF sources remain in the repository for reference; they are not linked into the WebView2 executable.

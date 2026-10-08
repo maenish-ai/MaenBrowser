@@ -76,5 +76,5 @@ A normal push always validates the project. The Setup job is intentionally condi
 WhatsApp Web is routed to MaenBrowser's native `MaenMediaHost.exe`, powered by the Microsoft Edge WebView2 Evergreen Runtime. This avoids requiring a custom 100+ GB Chromium/CEF build just to obtain H.264/AAC support. Other browsing remains on the pinned CEF 152 engine.
 
 
-## 1.6.7 merged original start page
+## 1.6.8 merged original start page
 The original branded start-page HTML from the CEF-based 1.6.3 project is bundled as `assets/maen_start.html` and opened by the WebView2 host using a local file URL. The original CEF-specific native handlers cannot be directly loaded into WebView2; this is a UI/asset migration, not full feature parity. WebView2 remains the only browsing engine.
