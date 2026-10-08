@@ -2,6 +2,7 @@
 #include <shellapi.h>
 #include <windowsx.h>
 #include <cwctype>
+#include <filesystem>
 #include <wrl.h>
 #include <wrl/event.h>
 #include <WebView2.h>
@@ -14,13 +15,23 @@ using Microsoft::WRL::ComPtr;
 using Microsoft::WRL::Callback;
 namespace {
 constexpr int kBar=46, kTab=32;
-constexpr int kAddress=100, kBack=101, kForward=102, kReload=103, kNew=104;
+constexpr int kAddress=100, kBack=101, kForward=102, kReload=103, kNew=104, kHome=105;
 struct Tab { ComPtr<ICoreWebView2Controller> controller; ComPtr<ICoreWebView2> view; std::wstring title=L"New tab"; };
 HWND windowHandle=nullptr, address=nullptr, tabsBar=nullptr;
 std::vector<std::shared_ptr<Tab>> tabs;
 int active=-1;
 ComPtr<ICoreWebView2Environment> environment;
 std::wstring userData;
+std::wstring HomeUrl(){
+ wchar_t path[MAX_PATH]{};
+ if(!GetModuleFileNameW(nullptr,path,MAX_PATH))return L"https://www.google.com/";
+ std::filesystem::path home=std::filesystem::path(path).parent_path()/L"assets"/L"maen_start.html";
+ if(!std::filesystem::exists(home))return L"https://www.google.com/";
+ std::wstring uri=L"file:///"+home.wstring();
+ std::replace(uri.begin(),uri.end(),L'\\',L'/');
+ return uri;
+}
+
 void Layout();
 void SwitchTo(int index) {
  if(index<0||index>=static_cast<int>(tabs.size()))return;
@@ -33,7 +44,7 @@ void SwitchTo(int index) {
 void NavigateText(){wchar_t buf[4096]{};GetWindowTextW(address,buf,4096);std::wstring u=buf;if(u.empty()||active<0||active>=static_cast<int>(tabs.size())||!tabs[active]->view)return;
  if(u.find(L"://")==std::wstring::npos){if(u.find(L'.')!=std::wstring::npos&&u.find(L' ')==std::wstring::npos)u=L"https://"+u;else {std::wstring q;for(wchar_t c:u){if(c==L' ')q+=L"%20";else q+=c;}u=L"https://www.google.com/search?q="+q;}}
  tabs[active]->view->Navigate(u.c_str());}
-void AddTab(const std::wstring& initial=L"https://www.google.com/", ICoreWebView2NewWindowRequestedEventArgs* popup=nullptr) {
+void AddTab(const std::wstring& initial=HomeUrl(), ICoreWebView2NewWindowRequestedEventArgs* popup=nullptr) {
  if(!environment)return;
  auto tab=std::make_shared<Tab>();tabs.push_back(tab);const int index=static_cast<int>(tabs.size())-1;
  ComPtr<ICoreWebView2Deferral> deferral;
@@ -67,7 +78,8 @@ void Layout(){if(!windowHandle)return;RECT r{};GetClientRect(windowHandle,&r);in
  b=GetDlgItem(windowHandle,kForward);if(b)MoveWindow(b,43,top,34,32,TRUE);
  b=GetDlgItem(windowHandle,kReload);if(b)MoveWindow(b,81,top,38,32,TRUE);
  b=GetDlgItem(windowHandle,kNew);if(b)MoveWindow(b,w-42,top,36,32,TRUE);
- if(address)MoveWindow(address,124,top,std::max(80,w-174),32,TRUE);
+ b=GetDlgItem(windowHandle,kHome);if(b)MoveWindow(b,124,top,56,32,TRUE);
+ if(address)MoveWindow(address,184,top,std::max(80,w-234),32,TRUE);
  RECT area{0,kTab+kBar,w,h};for(auto& tab:tabs)if(tab->controller)tab->controller->put_Bounds(area);
 }
 LRESULT CALLBACK TabsProc(HWND h,UINT msg,WPARAM wp,LPARAM lp){
@@ -81,7 +93,7 @@ LRESULT CALLBACK WindowProc(HWND h,UINT msg,WPARAM wp,LPARAM lp){switch(msg){
  case WM_SETFOCUS:if(address)SetFocus(address);return 0;
  case WM_COMMAND:{int id=LOWORD(wp);if(id==kAddress&&HIWORD(wp)==EN_MAXTEXT)return 0;
  if(id==kNew){AddTab();return 0;}if(active<0||active>=static_cast<int>(tabs.size())||!tabs[active]->view)return 0;
- auto v=tabs[active]->view;if(id==kBack){BOOL can=FALSE;if(SUCCEEDED(v->get_CanGoBack(&can))&&can)v->GoBack();}else if(id==kForward){BOOL can=FALSE;if(SUCCEEDED(v->get_CanGoForward(&can))&&can)v->GoForward();}else if(id==kReload)v->Reload();return 0;}
+ auto v=tabs[active]->view;if(id==kBack){BOOL can=FALSE;if(SUCCEEDED(v->get_CanGoBack(&can))&&can)v->GoBack();}else if(id==kForward){BOOL can=FALSE;if(SUCCEEDED(v->get_CanGoForward(&can))&&can)v->GoForward();}else if(id==kReload)v->Reload();else if(id==kHome)v->Navigate(HomeUrl().c_str());return 0;}
  case WM_KEYDOWN:if(wp==VK_F5&&active>=0&&active<static_cast<int>(tabs.size())&&tabs[active]->view){tabs[active]->view->Reload();return 0;}break;
  case WM_DESTROY:for(auto& t:tabs){if(t->controller)t->controller->Close();t->view.Reset();t->controller.Reset();}tabs.clear();environment.Reset();PostQuitMessage(0);return 0;
  }return DefWindowProcW(h,msg,wp,lp);}
@@ -93,7 +105,7 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,LPWSTR,int show){HRESULT init=CoIni
  windowHandle=CreateWindowW(wc.lpszClassName,L"MaenBrowser",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,1200,800,nullptr,nullptr,inst,nullptr);
  tabsBar=CreateWindowW(tc.lpszClassName,L"",WS_CHILD|WS_VISIBLE,0,0,100,kTab,windowHandle,nullptr,inst,nullptr);
  auto button=[&](const wchar_t* text,int id){CreateWindowW(L"BUTTON",text,WS_CHILD|WS_VISIBLE,0,0,40,30,windowHandle,(HMENU)(INT_PTR)id,inst,nullptr);};
- button(L"<",kBack);button(L">",kForward);button(L"R",kReload);button(L"+",kNew);
+ button(L"<",kBack);button(L">",kForward);button(L"R",kReload);button(L"Home",kHome);button(L"+",kNew);
  address=CreateWindowExW(WS_EX_CLIENTEDGE,L"EDIT",L"",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,0,0,100,32,windowHandle,(HMENU)(INT_PTR)kAddress,inst,nullptr);
  SetPropW(address,L"MaenOldProc",(HANDLE)SetWindowLongPtrW(address,GWLP_WNDPROC,(LONG_PTR)AddressProc));
  ShowWindow(windowHandle,show);UpdateWindow(windowHandle);Layout();

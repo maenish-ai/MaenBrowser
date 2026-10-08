@@ -66,6 +66,7 @@ jobs:
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "build\Release\*" dist -Recurse -Force
+          Copy-Item "assets" "dist\assets" -Recurse -Force
           foreach ($file in @("dist\MaenBrowser.exe")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
