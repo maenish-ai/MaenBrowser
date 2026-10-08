@@ -27,7 +27,11 @@ jobs:
         shell: pwsh
         run: |
           node tests/tab_policy_test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/verify-package.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/package_encoding_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify source and security
         shell: pwsh
