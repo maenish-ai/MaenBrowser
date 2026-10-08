@@ -1,6 +1,8 @@
 # MaenBrowser 1.8.0 — development source
 
-**Status: implementation checkpoint, not a tested Windows release. No new Setup has been built.**
+**Status: FIX-02 development source. Windows compilation and native tests passed in CI; browser integration stopped at the ad-block probe. That probe is corrected here and awaits a new Windows run. No new Setup has been built.**
+
+See [FIX-02 status and upload instructions](docs/FIX_02_STATUS.md) for the latest verified result.
 
 MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
@@ -29,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-A passing package check does not prove that Windows C++ compiles or that the controls work inside CEF. Those checks remain pending. The new browser integration test is included but has not run successfully here.
+Windows C++ compilation, native tests, extension loading and the native settings connection passed in GitHub run 37837041845. Full browser integration has not passed yet; the corrected probe in this package still requires a new Windows run.
 
 ## Compatibility boundaries
 
