@@ -1,4 +1,4 @@
-# MaenBrowser 1.6.6 merge notes
+# MaenBrowser 1.6.7 merge notes
 
 - Main browser: WebView2, retained from working 1.6.5.
 - Restored original branded CEF-era start page as static HTML asset.
