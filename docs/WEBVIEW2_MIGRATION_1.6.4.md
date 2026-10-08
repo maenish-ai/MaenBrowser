@@ -1,4 +1,4 @@
-# WebView2 native browser experimental build 1.6.4
+# WebView2 native browser experimental build 1.6.5
 
 This is a Windows-only architectural migration candidate. CEF is no longer linked into the executable. WebView2 Runtime supplies web rendering and media decoding. No codec DLLs are redistributed.
 

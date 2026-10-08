@@ -39,6 +39,15 @@ jobs:
           }
           "WEBVIEW2_SDK_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Source regression checks
+        shell: pwsh
+        run: |
+          $source=Get-Content src/webview2_browser/main.cpp -Raw
+          if (!$source.Contains('#include <windowsx.h>')) { throw 'Missing GET_X_LPARAM header' }
+          if (!$source.Contains('put_NewWindow(tab->view.Get())')) { throw 'Popup tab wiring missing' }
+          if (!(Test-Path 'src/win/resource.h')) { throw 'Resource header missing' }
+          if (!(Test-Path 'assets/maenbrowser.ico')) { throw 'Icon missing' }
+
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -G "Visual Studio 17" -A x64 "-DWEBVIEW2_SDK_ROOT=$env:WEBVIEW2_SDK_ROOT"
