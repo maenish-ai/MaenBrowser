@@ -1,10 +1,10 @@
-# MaenBrowser 1.8.1 — development source
+# MaenBrowser 1.8.2 — development source
 
-**Status: 1.8.1 source update awaiting a fresh Windows build and the expanded toolbar-popup integration test.**
+**Status: 1.8.2 source update; Windows build and actual WebView2 playback validation pending.**
 
-The previous 1.8.0 FIX-02 completed GitHub Actions successfully. This update addresses the toolbar popup connection shown in the user report, adds Arabic/English UI language selection and reduces unnecessary background/UI work. See [1.8.1 release notes and validation boundaries](docs/RELEASE_1.8.1.md).
+Version 1.8.1 passed [Windows CI run 37845006690](https://github.com/maenish-ai/MaenBrowser/actions/runs/37845006690). This update routes direct HTTPS MP4/M4V/M4A/AAC navigation through the existing on-demand Windows media engine and adds a user-invoked video-controls button. See [1.8.2 changes and test boundaries](docs/RELEASE_1.8.2.md).
 
-MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
+MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp and direct media files. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
 ## Changes in this source
 
@@ -31,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-Version 1.8.0 completed run 37838452027 successfully. The new 1.8.1 changes and actual toolbar-popup test have not yet run on Windows. Local checks do not establish a measured performance improvement or complete third-party translation.
+Version 1.8.1 completed run 37845006690 successfully. The new 1.8.2 changes have not yet run on Windows. Local checks do not establish a measured performance improvement or complete third-party translation.
 
 ## Compatibility boundaries
 

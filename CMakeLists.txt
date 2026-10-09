@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.8.1 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.8.2 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -161,9 +161,12 @@ enable_testing()
 add_executable(MaenDomainTests tests/domain_rules_test.cpp)
 target_include_directories(MaenDomainTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME domain_rules COMMAND MaenDomainTests)
+add_executable(MaenMediaTests tests/media_policy_test.cpp)
+target_include_directories(MaenMediaTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME media_policy COMMAND MaenMediaTests)
 
 
 
 # WebView2 is linked into the main browser as a lazy embedded surface. It is
-# instantiated only for routed media sites (currently WhatsApp Web), preserving
+# instantiated only for routed media sites (WhatsApp Web and direct HTTPS MP4/M4V/M4A/AAC files), preserving
 # the full CEF Chrome Runtime UI while avoiding a second top-level application.

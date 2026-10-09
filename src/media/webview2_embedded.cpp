@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cwctype>
 #include <map>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -47,7 +49,7 @@ struct Surface {
   ComPtr<ICoreWebView2> webview;
   EventRegistrationToken permission_token{};
   EventRegistrationToken new_window_token{};
-  EventRegistrationToken navigation_token{}, resource_token{}, download_token{};
+  EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{};
   std::function<void(const std::wstring&)> navigate;
   bool parent_hook = false;
 };
@@ -63,6 +65,12 @@ bool StartsWithInsensitive(const std::wstring& value, const std::wstring& prefix
     if (std::towlower(value[i]) != std::towlower(prefix[i])) return false;
   }
   return true;
+}
+
+bool IsWebNavigation(const std::wstring& uri) {
+  const auto parsed = protection::ParseUrl(CefString(uri).ToString());
+  return parsed.valid && !parsed.host.empty() &&
+      (parsed.scheme == "https" || parsed.scheme == "http");
 }
 
 bool IsTrustedMicrophoneOrigin(const std::wstring& uri) {
@@ -176,7 +184,7 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
   if (SUCCEEDED(surface->webview->get_Settings(&settings)) && settings) {
     settings->put_IsScriptEnabled(TRUE);
     settings->put_AreDefaultScriptDialogsEnabled(TRUE);
-    settings->put_IsWebMessageEnabled(TRUE);
+    settings->put_IsWebMessageEnabled(FALSE);
     settings->put_AreDevToolsEnabled(FALSE);
   }
 
@@ -186,6 +194,11 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             if (!args) return E_INVALIDARG;
             COREWEBVIEW2_PERMISSION_KIND kind{};
             if (FAILED(args->get_PermissionKind(&kind))) return S_OK;
+            auto current = weak.lock();
+            if (!current || !IsWhatsAppWebUrl(current->pending_url)) {
+              args->put_State(COREWEBVIEW2_PERMISSION_STATE_DENY);
+              return S_OK;
+            }
             if (kind != COREWEBVIEW2_PERMISSION_KIND_MICROPHONE && kind != COREWEBVIEW2_PERMISSION_KIND_CAMERA) return S_OK;
 
             LPWSTR raw_uri = nullptr;
@@ -194,7 +207,6 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
               uri = raw_uri;
               CoTaskMemFree(raw_uri);
             }
-            auto current = weak.lock();
             bool allow = false;
             if (current && IsTrustedMicrophoneOrigin(uri) && !protection::FamilyEnabled()) {
               const wchar_t* question = kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE
@@ -215,7 +227,7 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             if (!current || !current->webview || !args) return S_OK;
             LPWSTR raw_uri = nullptr;
             if (SUCCEEDED(args->get_Uri(&raw_uri)) && raw_uri) {
-              if (!protection::BlockNavigation(CefString(raw_uri).ToString()) && current->navigate) current->navigate(raw_uri);
+              if (IsWebNavigation(raw_uri) && !protection::BlockNavigation(CefString(raw_uri).ToString()) && current->navigate) current->navigate(raw_uri);
               CoTaskMemFree(raw_uri);
               args->put_Handled(TRUE);
             }
@@ -229,15 +241,40 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             auto current = weak.lock(); if (!current || !args) return S_OK;
             LPWSTR raw = nullptr; args->get_Uri(&raw); if (!raw) return S_OK;
             std::wstring uri(raw); CoTaskMemFree(raw);
-            if (protection::BlockNavigation(CefString(uri).ToString())) {
+            if (!IsWebNavigation(uri)) {
+              args->put_Cancel(TRUE);
+            } else if (protection::BlockNavigation(CefString(uri).ToString())) {
               args->put_Cancel(TRUE);
               MessageBoxW(current->cef_window, ui::Text(L"This address is blocked by Family Protection.", L"هذا العنوان محجوب بحماية الأسرة."), L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
-            } else if (!IsWhatsAppWebUrl(uri)) {
+            } else if (!(IsWhatsAppWebUrl(current->pending_url) && IsWhatsAppWebUrl(uri)) &&
+                       uri != current->pending_url) {
+              // All changed URLs (including redirects) go back through CEF so
+              // the visible address, history and family checks stay truthful.
               args->put_Cancel(TRUE);
               if (current->navigate) current->navigate(uri);
             }
             return S_OK;
           }).Get(), &surface->navigation_token);
+
+  surface->webview->add_NavigationCompleted(
+      Callback<ICoreWebView2NavigationCompletedEventHandler>(
+          [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2NavigationCompletedEventArgs* args) -> HRESULT {
+            auto current = weak.lock();
+            if (!current || !args || !IsDirectMediaUrl(current->pending_url)) return S_OK;
+            BOOL success = FALSE;
+            args->get_IsSuccess(&success);
+            if (!success) {
+              // No TLS or HTTP error suppression: the runtime error page remains.
+              return S_OK;
+            }
+            std::ifstream input(protection::InstallDirectory() / L"companion" / L"direct-player.js", std::ios::binary);
+            if (!input) return S_OK;
+            const std::string script((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+            std::wstring code = ui::Arabic() ? L"document.documentElement.lang='ar';" : L"document.documentElement.lang='en';";
+            code += CefString(script).ToWString();
+            current->webview->ExecuteScript(code.c_str(), nullptr);
+            return S_OK;
+          }).Get(), &surface->completed_token);
 
   surface->webview->AddWebResourceRequestedFilter(L"*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
   surface->webview->add_WebResourceRequested(
@@ -321,9 +358,15 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
           [weak = std::weak_ptr<Surface>(surface)](
               HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
             auto current = weak.lock();
-            if (!current || FAILED(result) || !controller || !current->child ||
-                !IsWindow(current->child))
-              return result;
+            if (!current) return S_OK;
+            if (FAILED(result) || !controller || !current->child || !IsWindow(current->child)) {
+              CloseEmbeddedWebView2(current->browser_id);
+              MessageBoxW(current->cef_window,
+                  ui::Text(L"The media player could not start. Reload or run Setup to repair the media engine.",
+                           L"تعذر بدء مشغّل الوسائط. أعد التحميل أو شغّل التثبيت لإصلاح محرك الوسائط."),
+                  L"MaenBrowser", MB_OK | MB_ICONERROR);
+              return S_OK;
+            }
 
             current->controller = controller;
             current->controller->get_CoreWebView2(&current->webview);
@@ -331,7 +374,7 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
             ConfigureWebView(current);
             if (current->webview && !current->pending_url.empty())
               current->webview->Navigate(current->pending_url.c_str());
-            SetFocus(current->child);
+            if (IsWindowVisible(current->child)) SetFocus(current->child);
             return S_OK;
           }).Get());
 }
@@ -346,6 +389,7 @@ void StartEnvironmentIfNeeded() {
   if (!com_checked) {
     const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(com_hr)) {
+      while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
       MessageBoxW(nullptr, ui::Text(L"Could not initialize the Windows COM apartment required by WebView2.", L"تعذر بدء خدمة ويندوز اللازمة لمحرك الوسائط."),
                   L"MaenBrowser", MB_OK | MB_ICONERROR);
       return;
@@ -363,6 +407,7 @@ void StartEnvironmentIfNeeded() {
           [](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
             g_environment_pending = false;
             if (FAILED(result) || !environment) {
+              while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
               MessageBoxW(nullptr,
                           ui::Text(L"Microsoft Edge WebView2 Runtime could not start. Re-run MaenBrowser Setup to repair the media engine.", L"تعذر بدء محرك الوسائط. شغّل تثبيت المتصفح لإصلاحه."),
                           L"MaenBrowser", MB_OK | MB_ICONERROR);
@@ -380,6 +425,7 @@ void StartEnvironmentIfNeeded() {
           }).Get());
   if (FAILED(hr)) {
     g_environment_pending = false;
+    while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
     MessageBoxW(nullptr,
                 ui::Text(L"Microsoft Edge WebView2 Runtime could not be initialized.", L"تعذر بدء محرك الوسائط."),
                 L"MaenBrowser", MB_OK | MB_ICONERROR);
@@ -402,7 +448,7 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
     if (surface->child) {
       ShowWindow(surface->child, SW_SHOW);
       ResizeSurface(surface);
-      SetFocus(surface->child);
+      if (IsWindowVisible(surface->child)) SetFocus(surface->child);
     }
     return true;
   }
@@ -444,6 +490,7 @@ void CloseEmbeddedWebView2(int browser_id) {
     surface->webview->remove_PermissionRequested(surface->permission_token);
     surface->webview->remove_NewWindowRequested(surface->new_window_token);
     surface->webview->remove_NavigationStarting(surface->navigation_token);
+    surface->webview->remove_NavigationCompleted(surface->completed_token);
     surface->webview->remove_WebResourceRequested(surface->resource_token);
     ComPtr<ICoreWebView2_4> downloads;
     if (SUCCEEDED(surface->webview.As(&downloads))) downloads->remove_DownloadStarting(surface->download_token);

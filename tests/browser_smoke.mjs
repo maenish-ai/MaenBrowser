@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createServer} from 'node:http';
 import {strict as assert} from 'node:assert';
+import {revealVideoControls} from '../assets/companion/video-controls.js';
 const exe=path.resolve(process.argv[2]);
 const id=fs.readFileSync('src/protection/identity.h','utf8').match(/kExtensionId\[\] = "([a-p]+)"/)[1];
 const processHandle=spawn(exe,['--remote-debugging-port=9222','--no-first-run','--no-default-browser-check'],{cwd:path.dirname(exe),stdio:'ignore'});
@@ -51,6 +52,13 @@ try{
   const controlUrl=target.url;
   const before=Number(result.data.blockedRequests);
   await navigate(fixtureUrl);
+  const controls = await evaluate(`(() => {
+    const video=document.createElement('video'); document.body.append(video);
+    const count=(${revealVideoControls.toString()})();
+    return {count,controls:video.controls,paused:video.paused};
+  })()`);
+  assert.equal(controls.count,1); assert(controls.controls); assert(controls.paused);
+  console.log('PASS: HTML5 controls enabled in a real CEF webpage without autoplay');
   const probe=await evaluate(`fetch('https://doubleclick.net/maen-smoke?run='+Date.now(), {
     mode:'no-cors', cache:'no-store', signal:AbortSignal.timeout(5000)
   }).then(r=>({resolved:true,status:r.status})).catch(e=>({resolved:false,error:e.name,message:e.message}))`);

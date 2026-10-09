@@ -1,3 +1,5 @@
+> Current status: see [1.8.2 notes](RELEASE_1.8.2.md). The stock CEF runtime is unchanged. Direct HTTPS MP4/M4V/M4A/AAC routing uses on-demand WebView2; actual Windows playback validation is pending. Historical custom-CEF gates below are not proof that proprietary codecs are included in stock CEF.
+
 # MaenBrowser media compatibility policy
 
 MaenBrowser treats modern media playback as a release-blocking compatibility surface.

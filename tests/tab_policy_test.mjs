@@ -11,4 +11,6 @@ assert(!candidate({...base,lastAccessed:undefined},now,30));
 assert(!candidate({...base,lastAccessed:now-60000},now,30));
 assert(!webUrl('javascript:alert(1)'));
 assert.deepEqual(restorableSession([base,{...base,incognito:true},{...base,url:'javascript:alert(1)'}]).map(x=>x.url),['https://example.com']);
+for(const path of ['movie.mp4','MOVIE.M4V','audio.m4a','audio.aac'])assert(!candidate({...base,url:'https://cdn.example/'+path+'?token=test'},now,30));
+assert(candidate({...base,url:'https://example.com/watch?file=movie.mp4'},now,30));
 console.log('Tab safeguards and session URL tests passed');

@@ -30,6 +30,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/companion_api_test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/video_controls_test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/tab_policy_test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/verify-package.py
@@ -93,6 +95,7 @@ jobs:
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "build\Release\*" dist -Recurse -Force
+          Remove-Item "dist\MaenMediaTests.exe" -ErrorAction SilentlyContinue
           Remove-Item "dist\MaenDomainTests.exe" -ErrorAction SilentlyContinue
           foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }

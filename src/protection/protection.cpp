@@ -110,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.1");
+    d->SetString("version", "1.8.2");
   }
   return d;
 }
@@ -226,9 +226,9 @@ class Resource final : public CefResourceRequestHandler {
       return new Response(body, "application/json", 200, true, true);
     }
     if (denied_) return new Response(BlockedPage(), "text/html", 403);
-    // Commit a lightweight CEF document at the real WhatsApp URL. This gives
+    // Commit a lightweight CEF document at the real media URL. This gives
     // Chrome's address bar/back stack the correct URL before attaching WebView2.
-    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>واتساب</title><p dir=rtl>جارٍ فتح واتساب…</p>":"<!doctype html><meta charset=utf-8><title>WhatsApp</title><p>Opening WhatsApp…</p>", "text/html");
+    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>الوسائط</title><p dir=rtl>جارٍ فتح محرك الوسائط… إذا تعذر الفتح، أعد تحميل الصفحة أو شغّل التثبيت لإصلاح محرك الوسائط.</p>":"<!doctype html><meta charset=utf-8><title>Media</title><p>Opening the media engine… If it does not open, reload the page or run Setup to repair the media engine.</p>", "text/html");
     return nullptr;
   }
   void OnProtocolExecution(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>, bool& allow) override { allow = false; }
@@ -239,7 +239,7 @@ class Resource final : public CefResourceRequestHandler {
 class Context final : public CefRequestContextHandler {
  public:
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(CefRefPtr<CefBrowser> browser,
-      CefRefPtr<CefFrame>, CefRefPtr<CefRequest> r, bool navigation, bool,
+      CefRefPtr<CefFrame>, CefRefPtr<CefRequest> r, bool navigation, bool download,
       const CefString& initiator, bool& disable) override {
     const auto u = ParseUrl(r->GetURL().ToString());
     const bool internal = u.host == "maen.browser";
@@ -248,9 +248,10 @@ class Context final : public CefRequestContextHandler {
     const bool trusted = source == kExtensionOrigin;
     if (browser && browser->GetMainFrame()) source = browser->GetMainFrame()->GetURL().ToString();
     const bool document = navigation || r->GetResourceType() == RT_MAIN_FRAME || r->GetResourceType() == RT_SUB_FRAME;
-    const bool media = browser && r->GetResourceType() == RT_MAIN_FRAME &&
+    const bool media = browser && !download && r->GetMethod() == "GET" &&
+        r->GetResourceType() == RT_MAIN_FRAME &&
         !browser->GetHost()->GetRequestContext()->GetCachePath().empty() &&
-        media::IsWhatsAppWebUrl(r->GetURL().ToWString());
+        media::UsesEmbeddedMedia(r->GetURL().ToWString());
     return new Resource(source, document, internal, trusted, media);
   }
   IMPLEMENT_REFCOUNTING(Context);

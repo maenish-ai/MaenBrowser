@@ -112,6 +112,7 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   if (browser) {
     const int id = browser->GetIdentifier();
     media::CloseEmbeddedWebView2(id);
+    media_navigations_.erase(id);
     std::lock_guard<std::mutex> lock(downloads_mutex_);
     popup_browser_ids_.erase(id);
     popup_browsers_.erase(id);
@@ -134,27 +135,32 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     return true;
   }
 
-  if (!media::IsWhatsAppWebUrl(url)) {
+  media::CloseEmbeddedWebView2(browser->GetIdentifier());
+  media_navigations_.erase(browser->GetIdentifier());
+  if (request->GetMethod() != "GET" || !media::UsesEmbeddedMedia(url)) {
     // If this tab was using the on-demand WebView2 media surface, returning to
     // an ordinary URL tears it down immediately to release RAM and processes.
-    media::CloseEmbeddedWebView2(browser->GetIdentifier());
     return false;
   }
 
   // Never attach the persistent WebView2 profile to a private CEF window.
-  // Private WhatsApp stays in the private CEF context (codec availability may differ).
+  // Private media stays in the private CEF context (codec availability may differ).
   if (browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return false;
 
+  media_navigations_[browser->GetIdentifier()] = url;
   // Let the native resource handler commit a local placeholder at this URL.
   // OnLoadEnd then attaches WebView2 without losing Chrome's address/history.
   return false;
 }
 
 void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) {
+  CEF_REQUIRE_UI_THREAD();
   if (!browser || !frame || !frame->IsMain() || status != 200 ||
       browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
   const auto url = frame->GetURL().ToWString();
-  if (!media::IsWhatsAppWebUrl(url) || protection::BlockNavigation(frame->GetURL().ToString())) return;
+  const auto pending = media_navigations_.find(browser->GetIdentifier());
+  if (pending == media_navigations_.end() || pending->second != url ||
+      protection::BlockNavigation(frame->GetURL().ToString())) return;
   media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
       [browser](const std::wstring& target) {
         if (browser->IsValid() && browser->GetMainFrame()) browser->GetMainFrame()->LoadURL(target);

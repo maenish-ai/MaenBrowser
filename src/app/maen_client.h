@@ -84,6 +84,8 @@ class MaenClient final : public CefClient,
 
   void ShowDownloadComplete(const DownloadState& state, const std::wstring& file_name);
 
+  // UI-thread-only: only GET navigations intercepted by the media router.
+  std::map<int, std::wstring> media_navigations_;
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;

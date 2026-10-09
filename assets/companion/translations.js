@@ -507,9 +507,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.8.1 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.8.1 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.8.1 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.8.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.8.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.8.2 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",
@@ -870,5 +870,17 @@ export const translations = {
   "Native settings saved. {reason}": [
     "Native settings saved. {reason}",
     "تم حفظ الإعدادات. {reason}"
+  ],
+  "Show video controls": [
+    "Show video controls",
+    "إظهار أدوات الفيديو"
+  ],
+  "Controls enabled for {count} videos. Play the video on the page.": [
+    "Controls enabled for {count} videos. Play the video on the page.",
+    "تم إظهار أدوات التحكم في {count} فيديو. شغّل الفيديو من الصفحة."
+  ],
+  "No accessible video found. Start the site player and try again.": [
+    "No accessible video found. Start the site player and try again.",
+    "لم يُعثر على فيديو يمكن التحكم به. افتح مشغّل الموقع ثم حاول مجددًا."
   ]
 };

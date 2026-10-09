@@ -1,3 +1,4 @@
+import {revealVideoControls} from './video-controls.js';
 import {t} from './i18n.js';
 import {api, $, host, matchesHost, message} from './api.js';
 let state, tab;
@@ -39,3 +40,13 @@ function connectionError(error){
   message($('status'),new Error('Could not connect to protection. Please retry or open Settings.'));
 }
 refresh().catch(connectionError);
+
+$('videoControls').onclick=async()=>{
+  try {
+    const [current] = await chrome.tabs.query({active:true,currentWindow:true});
+    if(!/^https?:/.test(current?.url||''))throw new Error('Open a normal webpage first.');
+    const results=await chrome.scripting.executeScript({target:{tabId:current.id,allFrames:true},func:revealVideoControls});
+    const count=results.reduce((total,item)=>total+(Number(item.result)||0),0);
+    message($('status'),count?t('Controls enabled for {count} videos. Play the video on the page.',{count}):'No accessible video found. Start the site player and try again.');
+  } catch(e) { message($('status'),e); }
+};
