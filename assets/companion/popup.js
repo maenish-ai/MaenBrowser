@@ -1,5 +1,6 @@
 import {revealVideoControls} from './video-controls.js';
 import {t} from './i18n.js';
+import {diagnosticCode,describeError,diagnosticReport} from './diagnostics.js';
 import {api, $, host, matchesHost, message} from './api.js';
 let state, tab;
 const open = path => chrome.tabs.create({url: chrome.runtime.getURL(path)});
@@ -16,7 +17,7 @@ async function refresh(){
   $('exception').checked=state.exceptions.some(d=>matchesHost(domain,d));
   $('exception').disabled=!domain || !/^https?:/.test(tab?.url || '') || state.family;
   $('count').textContent=t('{count} requests blocked this browser session',{count:state.blockedRequests});
-  message($('status'),state.family?'Family Protection is ON. Changes need the parent PIN.':state.listError ? 'Filter files are missing or empty. Repair the installation.' : 'Native protection connected.');
+  message($('status'),state.listError ? new Error('Filter files are missing or empty. Repair the installation.') : state.family?'Family Protection is ON. Changes need the parent PIN.':'Native protection connected.');
   try{await chrome.action.setBadgeText({text:state.ads?'✓':'—'});}catch{/* A badge failure must not disable working protection controls. */}
 }
 $('toggle').onclick=async()=>{
@@ -38,14 +39,12 @@ function connectionError(error){
   state=null;$('state').textContent=t('Protection unavailable');
   $('toggle').textContent=t('Retry connection');$('toggle').disabled=false;
   $('exception').disabled=true;
-  const code=/^PROTECTION_[A-Z0-9_]+$/.test(error?.code||'')?error.code:'PROTECTION_UNKNOWN';
+  const code=diagnosticCode(error);
   $('connectionDetail').textContent=t('Panel {panel} · Error {code}',{panel:chrome.runtime.getManifest().version,code});
   chrome.action.setBadgeText({text:'?'}).catch(()=>{});
-  const detail=String(error?.message||error||'').slice(0,180);
-  $('connectionDetail').textContent+=' · '+detail;
-  console.warn('Native controls connection',code,detail);
-  message($('status'),new Error('Could not connect to protection. Please retry or open Settings.'));
+  $('status').textContent=describeError(error);$('status').classList.add('error');
 }
+$('diagnosticReport').onclick=()=>{$('report').hidden=false;$('report').value=diagnosticReport();$('report').select();};
 refresh().catch(connectionError);
 
 $('videoControls').onclick=async()=>{

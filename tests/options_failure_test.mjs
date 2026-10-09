@@ -8,7 +8,7 @@ async function run({storageFails=false,locked=false,nativeFails=false}={}){
   const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:id==='fields',checked:false});return nodes.get(id);};
   let unavailable=nativeFails;
   const native={ads:true,family:false,lockedFile:locked,exceptions:[],allowed:[],blocked:[],language:'en'};
-  const context=vm.createContext({$,console,Error,currentLanguage:()=> 'en',t:s=>s,errorText:String,
+  const context=vm.createContext({$,console,Error,diagnosticCode:e=>e.message,diagnosticReport:()=>'',currentLanguage:()=> 'en',t:s=>s,errorText:String,
     message:(node,text)=>node.textContent=String(text),
     api:async()=>{if(unavailable)throw new Error('PROTECTION_NETWORK');return native;},
     chrome:{storage:{local:{get:async()=>{if(storageFails)throw new Error('Storage unavailable');return {keepAwake:'malformed old preference',sleepMinutes:'bad'};}}}}});

@@ -1,5 +1,6 @@
 import {t,currentLanguage,errorText} from './i18n.js';
 import {api,$,message} from './api.js';
+import {diagnosticCode,diagnosticReport} from './diagnostics.js';
 let state;
 let performanceReady=false;
 const booleans=['ads','adult','violence','safeSearch','askDownload','httpsOnly'];
@@ -20,7 +21,7 @@ async function load(){
   $('details').textContent='';
   }catch(error){
     state=undefined;message($('status'),error);
-    $('details').textContent=String(error.code||error.message||'PROTECTION_UNKNOWN').slice(0,180);
+    $('details').textContent=diagnosticCode(error);
   }finally{$('retry').disabled=false;}
 }
 // Optional extension preferences must never lock the native protection controls.
@@ -36,6 +37,7 @@ async function loadPerformance(){
   }catch(error){message($('performanceStatus'),new Error('Performance preferences could not be loaded. Other settings remain available.'));}
 }
 $('retry').onclick=()=>{load();if(!performanceReady)loadPerformance();};
+$('diagnosticReport').onclick=()=>{$('report').hidden=false;$('report').value=diagnosticReport();$('report').select();};
 $('form').onsubmit=async e=>{
   e.preventDefault();$('save').disabled=true;
   try{

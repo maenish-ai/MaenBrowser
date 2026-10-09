@@ -1,4 +1,5 @@
 import {t,errorText} from './i18n.js';
+import {diagnosticCode,describeError,recordDiagnostic} from './diagnostics.js';
 export class NativeConnectionError extends Error {
   constructor(code){super(code);this.code=code;}
 }
@@ -13,28 +14,20 @@ export async function nativeApi(op = 'get', extra = {}) {
   if(!response.ok)throw new NativeConnectionError('PROTECTION_HTTP_'+response.status);
   try{data=await response.json();}catch{throw new NativeConnectionError('PROTECTION_RESPONSE');}
   if(!data||typeof data.ok!=='boolean')throw new NativeConnectionError('PROTECTION_RESPONSE');
-  if(!data.ok)throw new Error(data.error||'Could not apply settings.');
+  if(!data.ok){const error=new Error(data.error||'Could not apply settings.');error.code=diagnosticCode(error);throw error;}
   return data;
 }
 export async function api(op = 'get', extra = {}) {
-  let result,timer;
-  try{result=await Promise.race([
-    chrome.runtime.sendMessage({op:'nativeApi',operation:op,extra}),
-    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new NativeConnectionError('PROTECTION_WORKER')),10000);})
-  ]);}
-  catch{result={ok:false,code:'PROTECTION_WORKER'};}
-  finally{clearTimeout(timer);}
-  if(!result)result={ok:false,code:'PROTECTION_WORKER'};
   let data;
-  if(result.ok)data=result.data;
-  else if(result.code){
-    // Reading state is safe to repeat through the current extension frame.
-    // Never replay a settings write: it might already have been applied.
-    if(op!=='get')throw new NativeConnectionError(result.code);
-    data=await nativeApi('get');
-  }else throw new Error(result.error||'Could not connect to protection. Please retry or open Settings.');
+  try{
+  // Privileged extension pages use the origin-checked local endpoint directly.
+  // A cached worker from an older installation cannot reject panel commands.
+  // Every write is sent exactly once; no retry or transport replay.
+  data=await nativeApi(op,extra);
   if(!data||data.ok!==true||typeof data.ads!=='boolean'||typeof data.family!=='boolean'||!Array.isArray(data.exceptions))
     throw new NativeConnectionError('PROTECTION_RESPONSE');
+  recordDiagnostic(op,null,data);
+  }catch(error){recordDiagnostic(op,error);throw error;}
   // Language persistence is optional UI housekeeping, not a protection failure.
   if(op==='get'&&['en','ar'].includes(data.language)){
     // A stalled optional storage write must not stall the protection response.
@@ -44,7 +37,7 @@ export async function api(op = 'get', extra = {}) {
   return data;
 }
 export function message(element, error) {
-  element.textContent = error instanceof Error ? errorText(error) : t(String(error));
+  element.textContent = error instanceof Error ? (error.code||diagnosticCode(error)!=='E199'?describeError(error):errorText(error)) : t(String(error));
   element.classList.toggle('error', error instanceof Error);
 }
 export function host(url) { try { return new URL(url).hostname.toLowerCase().replace(/\.+$/, ''); } catch { return ''; } }

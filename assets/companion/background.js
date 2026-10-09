@@ -72,7 +72,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
   if(sender.id!==chrome.runtime.id||!sender.url?.startsWith(chrome.runtime.getURL('')))return false;
   (async()=>{
     if(request.op==='nativeApi'){
-      if(!['get','save','setLanguage'].includes(request.operation))return {ok:false,error:'Unknown operation'};
+      if(!['get','save','setLanguage'].includes(request.operation))return {ok:false,error:'Unknown operation',code:'E106'};
       return {ok:true,data:await api(request.operation,request.extra||{})};
     }
     if(request.op==='release')return releaseTab(request.tabId,true);
@@ -85,7 +85,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
       const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(tabs)};
       await chrome.storage.local.set({sessions:[saved,...sessions].slice(0,20)});return {ok:true};
     }
-    return {ok:false,error:'Unknown action'};
+    return {ok:false,error:'Unknown action',code:'E101'};
   })().then(respond).catch(e=>respond({ok:false,error:e.message,...(e instanceof NativeConnectionError?{code:e.code}:{})}));return true;
 });
 chrome.commands.onCommand.addListener(command=>{if(command==='open-tabs')chrome.tabs.create({url:chrome.runtime.getURL('tabs.html')});});
