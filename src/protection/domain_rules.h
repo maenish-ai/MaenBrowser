@@ -30,7 +30,9 @@ class DomainRules {
  public:
   void Assign(std::vector<std::string> values) {
     values.erase(std::remove_if(values.begin(), values.end(), [](const auto& s) { return !ValidDomain(s); }), values.end());
-    std::sort(values.begin(), values.end());
+    // Bundled snapshots are already sorted; custom rules may not be.
+    if (!std::is_sorted(values.begin(), values.end()))
+      std::sort(values.begin(), values.end());
     values.erase(std::unique(values.begin(), values.end()), values.end());
     values_ = std::move(values);
   }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "__MSG_extensionDescription__",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjpa6T2Foqv97dGzZv+WbADpz5pOHb3/8FAJzk31AYu89XROBtWIaxZgMlViCY4CtsmWvndm11+tgEudGoCAxvxmozFzUjyG7RVmIT1uXewV5OJ0ss40249EjrDRBJbgGbZzEkD9bE0GY7obsdbxgvbu/lccZENLytiv9EErL07YrOyNdW1Gr2olsVCuPon0TOmm2FmT79vrSNFpark98dUi7V8FOtwQ8PuwaXEfxnU5Q6WnFfgY8zBw+hmZNLOVJgSDapU3DHikySd29O7FbFpmQx05PZrROJf5pG+aMIbWNvCT/v3XDFyCm0oLZTdh7/nchvw3it558wyywsXwBOwIDAQAB",
   "permissions": [

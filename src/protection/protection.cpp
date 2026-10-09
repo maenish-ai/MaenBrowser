@@ -110,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.2");
+    d->SetString("version", "1.8.3");
   }
   return d;
 }
@@ -246,7 +246,13 @@ class Context final : public CefRequestContextHandler {
     if (internal) disable = true;  // Never send control traffic to the public network.
     std::string source = initiator.ToString();
     const bool trusted = source == kExtensionOrigin;
-    if (browser && browser->GetMainFrame()) source = browser->GetMainFrame()->GetURL().ToString();
+    // Only site ad exceptions need the top-level URL. Avoid frame lookups on
+    // every image/script/download request for the normal empty-exception case.
+    const auto settings = Current();
+    if (settings->ads && settings->exceptions.Size() && browser) {
+      const auto main_frame = browser->GetMainFrame();
+      if (main_frame) source = main_frame->GetURL().ToString();
+    }
     const bool document = navigation || r->GetResourceType() == RT_MAIN_FRAME || r->GetResourceType() == RT_SUB_FRAME;
     const bool media = browser && !download && r->GetMethod() == "GET" &&
         r->GetResourceType() == RT_MAIN_FRAME &&

@@ -51,7 +51,11 @@ struct Surface {
   EventRegistrationToken new_window_token{};
   EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{};
   std::function<void(const std::wstring&)> navigate;
-  bool parent_hook = false;
+  bool parent_hook = false, root_hook = false, refresh_queued = false;
+  HWND root_window = nullptr;
+  int visible = -1;
+  RECT last_bounds{};
+  bool bounds_known = false;
 };
 
 ComPtr<ICoreWebView2Environment> g_environment;
@@ -106,27 +110,52 @@ HWND FindContentHost(HWND cef_window) {
   return best.hwnd ? best.hwnd : cef_window;
 }
 
+constexpr UINT kRefreshSurface = WM_APP + 31;
+
+void UpdateBounds(const std::shared_ptr<Surface>& surface) {
+  if (!surface || !surface->controller) return;
+  RECT bounds{};
+  if (!GetClientRect(surface->child, &bounds)) return;
+  if (!surface->bounds_known || !EqualRect(&bounds, &surface->last_bounds)) {
+    if (SUCCEEDED(surface->controller->put_Bounds(bounds))) {
+      surface->last_bounds = bounds;
+      surface->bounds_known = true;
+    }
+  }
+}
+
 void ResizeSurface(const std::shared_ptr<Surface>& surface) {
   if (!surface || !surface->child || !IsWindow(surface->child)) return;
   HWND parent = GetParent(surface->child);
   if (!parent || !IsWindow(parent)) return;
-  RECT r{};
-  GetClientRect(parent, &r);
-  SetWindowPos(surface->child, HWND_TOP, 0, 0,
-               std::max<LONG>(1, r.right - r.left),
-               std::max<LONG>(1, r.bottom - r.top),
-               SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  RECT r{}, child{};
+  if (!GetClientRect(parent, &r) || !GetClientRect(surface->child, &child)) return;
+  const LONG width = std::max<LONG>(1, r.right - r.left);
+  const LONG height = std::max<LONG>(1, r.bottom - r.top);
+  if (child.right != width || child.bottom != height)
+    SetWindowPos(surface->child, nullptr, 0, 0, width, height,
+                 SWP_NOACTIVATE | SWP_NOZORDER);
+  UpdateBounds(surface);
   if (surface->controller) {
-    RECT bounds{};
-    GetClientRect(surface->child, &bounds);
-    surface->controller->put_Bounds(bounds);
+    const bool visible = IsWindowVisible(parent) && !IsIconic(surface->root_window);
+    if (surface->visible != static_cast<int>(visible) &&
+        SUCCEEDED(surface->controller->put_IsVisible(visible ? TRUE : FALSE)))
+      surface->visible = visible;
+    // Hiding the controller lets WebView2 throttle rendering. Do not force
+    // memory to disk or suspend WhatsApp messages, calls or active downloads.
   }
 }
 
 LRESULT CALLBACK ParentProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp,
                             UINT_PTR id, DWORD_PTR) {
   auto it = g_surfaces.find(static_cast<int>(id));
-  if (it != g_surfaces.end() && (msg == WM_SIZE || msg == WM_WINDOWPOSCHANGED)) ResizeSurface(it->second);
+  if (it != g_surfaces.end() &&
+      (msg == WM_SIZE || msg == WM_WINDOWPOSCHANGED || msg == WM_SHOWWINDOW)) {
+    auto surface = it->second;
+    // Defer until Windows has applied show/hide and coalesce resize bursts.
+    if (!surface->refresh_queued && surface->child)
+      surface->refresh_queued = PostMessageW(surface->child, kRefreshSurface, 0, 0) != FALSE;
+  }
   if (msg == WM_NCDESTROY) RemoveWindowSubclass(hwnd, ParentProc, id);
   return DefSubclassProc(hwnd, msg, wp, lp);
 }
@@ -139,12 +168,11 @@ LRESULT CALLBACK SurfaceProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_TIMER:
       if (wp == 1 && surface) ResizeSurface(surface);
       return 0;
+    case kRefreshSurface:
+      if (surface) { surface->refresh_queued = false; ResizeSurface(surface); }
+      return 0;
     case WM_SIZE:
-      if (surface && surface->controller) {
-        RECT bounds{};
-        GetClientRect(hwnd, &bounds);
-        surface->controller->put_Bounds(bounds);
-      }
+      UpdateBounds(surface);
       return 0;
     case WM_SETFOCUS:
       if (surface && surface->controller)
@@ -460,6 +488,7 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
   surface->browser_id = browser_id;
   surface->cef_window = cef_window;
   surface->content_host = content_host;
+  surface->root_window = GetAncestor(cef_window, GA_ROOT);
   surface->pending_url = url;
   surface->navigate = std::move(navigate);
   surface->child = CreateWindowExW(
@@ -470,9 +499,12 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
   SetWindowLongPtrW(surface->child, GWLP_USERDATA, static_cast<LONG_PTR>(browser_id));
   g_surfaces[browser_id] = surface;
   surface->parent_hook = SetWindowSubclass(content_host, ParentProc, static_cast<UINT_PTR>(browser_id), 0) != FALSE;
+  if (surface->root_window && surface->root_window != content_host)
+    surface->root_hook = SetWindowSubclass(surface->root_window, ParentProc,
+        static_cast<UINT_PTR>(browser_id), 0) != FALSE;
   // Event-driven resize normally has no idle wakeups. Fall back only when the
   // native host cannot be subclassed on this CEF build.
-  if (!surface->parent_hook) SetTimer(surface->child, 1, 2000, nullptr);
+  if (!surface->parent_hook || (surface->root_window != content_host && !surface->root_hook)) SetTimer(surface->child, 1, 2000, nullptr);
   ResizeSurface(surface);
 
   if (g_environment) CreateControllerForSurface(surface);
@@ -500,6 +532,8 @@ void CloseEmbeddedWebView2(int browser_id) {
   surface->controller.Reset();
   if (surface->parent_hook && IsWindow(surface->content_host))
     RemoveWindowSubclass(surface->content_host, ParentProc, static_cast<UINT_PTR>(browser_id));
+  if (surface->root_hook && IsWindow(surface->root_window))
+    RemoveWindowSubclass(surface->root_window, ParentProc, static_cast<UINT_PTR>(browser_id));
   if (surface->child && IsWindow(surface->child)) DestroyWindow(surface->child);
   surface->child = nullptr;
   if (g_surfaces.empty()) g_environment.Reset();

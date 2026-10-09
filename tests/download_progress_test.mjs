@@ -1,0 +1,15 @@
+import {strict as assert} from 'node:assert';
+import {sampleProgress,formatBytes} from '../assets/companion/download-progress.js';
+const item={state:'in_progress',paused:false,bytesReceived:1024,totalBytes:8192};
+const first=sampleProgress(item,null,1000);assert.equal(first.rate,null);
+const next=sampleProgress({...item,bytesReceived:3072},first.sample,2000);
+assert.equal(next.rate,2048);assert.equal(next.seconds,2.5);assert.equal(next.percent,37.5);
+const stopped=sampleProgress({...item,paused:true},next.sample,3000);assert.equal(stopped.rate,null);
+assert.equal(sampleProgress(item,stopped.sample,4000).rate,null,'resume starts a fresh sample');
+assert.equal(sampleProgress({...item,bytesReceived:0},first.sample,2000).rate,null,'restart cannot produce negative speed');
+assert.equal(sampleProgress(item,first.sample,1000).rate,null,'zero time cannot divide');
+assert.equal(sampleProgress(item,first.sample,2000).rate,0,'stalled transfer shows zero');
+assert.equal(sampleProgress({...item,totalBytes:-1},first.sample,2000).percent,null);
+assert.equal(sampleProgress({...item,state:'complete'},first.sample,2000).rate,null);
+assert.equal(formatBytes(2048),'2.0 KiB');assert.equal(formatBytes(1048576),'1.0 MiB');
+console.log('Download speed, pause/resume, stalls and unknown-size tests passed');

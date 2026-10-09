@@ -19,7 +19,7 @@ ResourceProfile DetectResourceProfile() {
   p.constrained_hardware =
       (p.physical_mb > 0 && p.physical_mb <= 6144) || p.logical_processors <= 4;
 
-  if (p.physical_mb > 0 && p.physical_mb <= 6144) {
+  if (p.constrained_hardware) {
     p.mode = Mode::Lite;
     p.lite = true;
   } else if (p.physical_mb >= 16384 && p.logical_processors >= 8) {

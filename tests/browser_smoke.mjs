@@ -44,6 +44,12 @@ try{
   // Exercise ad interception from an ordinary page, not a privileged extension
   // document whose CSP would reject this request before native filtering.
   fixture=createServer((request,response)=>{
+    if(request.url==='/download'){
+      const chunk=Buffer.alloc(65536,0x6d);let count=0;
+      response.writeHead(200,{'Content-Type':'text/plain','Content-Disposition':'attachment; filename="maen-download-test.txt"','Content-Length':String(chunk.length*32),'Cache-Control':'no-store'});
+      const timer=setInterval(()=>{response.write(chunk);if(++count===32){clearInterval(timer);response.end();}},100);
+      response.on('close',()=>clearInterval(timer));return;
+    }
     response.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
     response.end('<!doctype html><meta charset="utf-8"><title>MaenBrowser request test</title>');
   });
@@ -118,6 +124,28 @@ try{
   assert.equal(await evaluate(`document.documentElement.lang`),'en');
   assert.equal(await evaluate(`document.documentElement.dir`),'ltr');
   console.log('PASS: live Arabic/English UI language and direction');
+
+  // A real loopback download verifies continuation, progress UI and that a
+  // completion dialog no longer stalls the browser's UI thread.
+  result=await call({op:'save',settings:{askDownload:false}});assert(result.data.ok);
+  const downloadId=await evaluate(`chrome.downloads.download({url:${JSON.stringify(fixtureUrl+'download')},saveAs:false})`);
+  await navigate(`chrome-extension://${id}/downloads.html`);
+  let download,displayedRate=false;
+  for(let n=0;n<100;n++){
+    download=await evaluate(`chrome.downloads.search({id:${downloadId}}).then(items=>items[0])`);
+    const details=await evaluate(`document.getElementById('items').textContent`);
+    if(/(?:KiB|MiB|GiB)\/s/.test(details))displayedRate=true;
+    if(download?.state==='complete')break;
+    assert(download?.state!=='interrupted','Fixture download interrupted');
+    await pause(150);
+  }
+  assert.equal(download?.state,'complete');assert.equal(download.bytesReceived,2097152);
+  assert(displayedRate,'Visible downloads page never displayed a sampled speed');
+  assert.equal(fs.statSync(download.filename).size,2097152);
+  fs.unlinkSync(download.filename);
+  await navigate(controlUrl);
+  result=await call({op:'save',settings:{askDownload:true}});assert(result.data.ok);
+  console.log('PASS: real download, visible speed, completion and responsive UI');
 
   await navigate(fixtureUrl);
   const untrusted=await evaluate(`fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"op":"get"}'}).then(r=>r.status).catch(()=>0)`);

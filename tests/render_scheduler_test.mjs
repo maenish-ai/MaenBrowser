@@ -1,0 +1,16 @@
+import {strict as assert} from 'node:assert';
+import {scheduleRender} from '../assets/companion/render-scheduler.js';
+const events={},timers=new Map();let serial=0,renders=0;
+globalThis.document={hidden:true,addEventListener:(name,fn)=>events[name]=fn};
+globalThis.window={addEventListener:(name,fn)=>events[name]=fn};
+globalThis.setTimeout=fn=>{timers.set(++serial,fn);return serial;};
+globalThis.clearTimeout=id=>timers.delete(id);
+const schedule=scheduleRender(async()=>{renders++;},error=>{throw error;});
+for(let i=0;i<100;i++)schedule();assert.equal(timers.size,0,'hidden UI does not schedule');
+document.hidden=false;events.visibilitychange();assert.equal(timers.size,1);
+for(let i=0;i<100;i++)schedule();assert.equal(timers.size,1,'bursts coalesce');
+const [id,fn]=[...timers][0];timers.delete(id);await fn();assert.equal(renders,1);
+assert.equal(timers.size,0,'idle UI does not poll');
+schedule();events.pagehide();assert.equal(timers.size,0);
+events.pageshow();assert.equal(timers.size,1,'restored page resumes pending work');
+console.log('Hidden-page, event burst and idle scheduling tests passed');

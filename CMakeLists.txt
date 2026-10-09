@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.8.2 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.8.3 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)

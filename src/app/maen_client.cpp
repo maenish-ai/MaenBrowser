@@ -33,21 +33,6 @@ CefRefPtr<CefResourceRequestHandler> MaenClient::GetResourceRequestHandler(
 namespace {
 std::wstring Utf16(const CefString& value) { return value.ToWString(); }
 
-std::wstring FileNameFromPath(const std::wstring& path) {
-  if (path.empty()) return L"download";
-  return std::filesystem::path(path).filename().wstring();
-}
-
-void OpenPath(const std::wstring& path) {
-  if (!path.empty()) ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-}
-
-void ShowInFolder(const std::wstring& path) {
-  if (path.empty()) return;
-  std::wstring args = L"/select,\"" + path + L"\"";
-  ShellExecuteW(nullptr, L"open", L"explorer.exe", args.c_str(), nullptr, SW_SHOWNORMAL);
-}
-
 void ApplyMaenWindowIcon(HWND hwnd) {
   if (!hwnd) return;
   // The final CEF bootstrap EXE is stamped by CI with the canonical Maen icon
@@ -226,11 +211,9 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
   if (!item) return;
 
   const uint32_t id = item->GetId();
-  DownloadState snapshot;
   CefRefPtr<CefBrowser> popup;
   bool hide_popup = false;
   bool close_popup = false;
-  bool notify = false;
 
   {
     std::lock_guard<std::mutex> lock(downloads_mutex_);
@@ -255,7 +238,6 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
 
     if (item->IsComplete() && !state.completed_notified) {
       state.completed_notified = true;
-      notify = true;
       close_popup = state.popup_browser_id != 0;
     } else if (item->IsCanceled() || item->IsInterrupted()) {
       // Never hide an error from the user forever; close only a transient popup
@@ -263,7 +245,6 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
       close_popup = state.popup_browser_id != 0 && state.popup_hidden;
     }
 
-    snapshot = state;
     if (item->IsComplete() || item->IsCanceled() || item->IsInterrupted())
       downloads_.erase(id);
   }
@@ -276,17 +257,8 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
   // Closing is deliberately terminal-only. Never close at download start.
   if (close_popup && popup) popup->GetHost()->CloseBrowser(false);
 
-  if (notify) ShowDownloadComplete(snapshot, FileNameFromPath(snapshot.path));
-}
-
-void MaenClient::ShowDownloadComplete(const DownloadState& state,
-                                      const std::wstring& file_name) {
-  std::wstring message = std::wstring(ui::Text(L"Download complete:\n", L"اكتمل التنزيل:\n")) + file_name +
-                         ui::Text(L"\n\nYes = Open file\nNo = Show in folder\nCancel = Close", L"\n\nنعم = فتح الملف\nلا = عرضه في المجلد\nإلغاء = إغلاق");
-  const int result = MessageBoxW(nullptr, message.c_str(), ui::Text(L"MaenBrowser Downloads", L"تنزيلات معن براوزر"),
-                                 MB_YESNOCANCEL | MB_ICONINFORMATION | MB_TOPMOST);
-  if (result == IDYES) OpenPath(state.path);
-  else if (result == IDNO) ShowInFolder(state.path);
+  // Chrome Runtime owns non-modal download UI. Do not block its UI thread
+  // with a completion MessageBox or automatically open downloaded files.
 }
 
 }  // namespace maenbrowser

@@ -10,6 +10,7 @@ export function scheduleRender(render,onError){
   };
   const queue=()=>{dirty=true;if(!timer&&!document.hidden&&!running)timer=setTimeout(flush,150);};
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dirty)queue();});
-  window.addEventListener('pagehide',()=>{clearTimeout(timer);});
+  window.addEventListener('pagehide',()=>{clearTimeout(timer);timer=undefined;dirty=true;});
+  window.addEventListener('pageshow',()=>{if(dirty)queue();});
   return queue;
 }

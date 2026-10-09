@@ -56,8 +56,9 @@ $beforeBody = $clientCpp.Substring($beforeStart, $updatedStart - $beforeStart)
 if ($beforeBody.Contains("CloseBrowser") -or $beforeBody.Contains("SW_HIDE")) {
   throw "Download regression: popup must not be hidden/closed in OnBeforeDownload."
 }
-$updatedEnd = $clientCpp.IndexOf("void MaenClient::ShowDownloadComplete", $updatedStart)
+$updatedEnd = $clientCpp.IndexOf("}  // namespace maenbrowser", $updatedStart)
 $updatedBody = $clientCpp.Substring($updatedStart, $updatedEnd - $updatedStart)
+if ($updatedBody.Contains("MessageBoxW(")) { throw "Download completion must not block the browser UI." }
 foreach ($needle in @("IsInProgress()", "GetReceivedBytes()", "SW_HIDE", "CloseBrowser(false)")) {
   if (-not $updatedBody.Contains($needle)) { throw "Safe background-download lifecycle guard missing: $needle" }
 }
