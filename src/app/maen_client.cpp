@@ -98,6 +98,7 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
     const int id = browser->GetIdentifier();
     media::CloseEmbeddedWebView2(id);
     media_navigations_.erase(id);
+    media_fallbacks_.erase(id);
     std::lock_guard<std::mutex> lock(downloads_mutex_);
     popup_browser_ids_.erase(id);
     popup_browsers_.erase(id);
@@ -121,8 +122,11 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   }
 
   media::CloseEmbeddedWebView2(browser->GetIdentifier());
-  media_navigations_.erase(browser->GetIdentifier());
-  if (request->GetMethod() != "GET" || !media::UsesEmbeddedMedia(url)) {
+  const int browser_id = browser->GetIdentifier();
+  const bool fallback = media_fallbacks_.find(browser_id) != media_fallbacks_.end() &&
+                        media_fallbacks_[browser_id] == url;
+  media_navigations_.erase(browser_id);
+  if (request->GetMethod() != "GET" || (!media::UsesEmbeddedMedia(url) && !fallback)) {
     // If this tab was using the on-demand WebView2 media surface, returning to
     // an ordinary URL tears it down immediately to release RAM and processes.
     return false;
@@ -132,7 +136,8 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   // Private media stays in the private CEF context (codec availability may differ).
   if (browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return false;
 
-  media_navigations_[browser->GetIdentifier()] = url;
+  media_navigations_[browser_id] = url;
+  media_fallbacks_.erase(browser_id);
   // Let the native resource handler commit a local placeholder at this URL.
   // OnLoadEnd then attaches WebView2 without losing Chrome's address/history.
   return false;
@@ -143,6 +148,21 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
   if (!browser || !frame || !frame->IsMain() || status != 200 ||
       browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
   const auto url = frame->GetURL().ToWString();
+
+  // Probe only ordinary pages.  CEF can expose a page successfully while an
+  // embedded HTML5 player later fails with MEDIA_ERR_SRC_NOT_SUPPORTED.  The
+  // marker is intentionally opaque and contains no page data; OnConsoleMessage
+  // uses it to perform a one-time WebView2 fallback for that tab.
+  if (!media::UsesEmbeddedMedia(url)) {
+    frame->ExecuteJavaScript(
+        "(()=>{if(window.__maenMediaProbe)return;window.__maenMediaProbe=1;"
+        "const report=()=>{for(const e of document.querySelectorAll('video,audio'))"
+        "if(e.error&&e.error.code===4){console.warn('MAEN_MEDIA_UNSUPPORTED');return true}return false};"
+        "document.addEventListener('error',e=>{const t=e.target;"
+        "if((t instanceof HTMLMediaElement)&&t.error&&t.error.code===4)console.warn('MAEN_MEDIA_UNSUPPORTED')},true);"
+        "setTimeout(report,1200)})();",
+        frame->GetURL(), 0);
+  }
   const auto pending = media_navigations_.find(browser->GetIdentifier());
   if (pending == media_navigations_.end() || pending->second != url ||
       protection::BlockNavigation(frame->GetURL().ToString())) return;
@@ -154,6 +174,29 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
       ui::Arabic() ? "document.body.textContent='تعذر فتح الصفحة. أعد التحميل للمحاولة.';"
                    : "document.body.textContent='Could not open this page. Reload to retry.';",
       frame->GetURL(), 0);
+}
+
+bool MaenClient::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                                  cef_log_severity_t,
+                                  const CefString& message,
+                                  const CefString&,
+                                  int) {
+  CEF_REQUIRE_UI_THREAD();
+  // The probe is deliberately local and emits no URL, title, cookie or media
+  // data.  It only asks the native browser to retry the same page in the
+  // on-demand WebView2 media engine when CEF reports MEDIA_ERR_SRC_NOT_SUPPORTED.
+  if (!browser || message.ToString() != "MAEN_MEDIA_UNSUPPORTED") return false;
+  const int id = browser->GetIdentifier();
+  if (browser->GetHost()->GetRequestContext()->GetCachePath().empty() ||
+      media_fallbacks_.find(id) != media_fallbacks_.end()) return false;
+  const auto frame = browser->GetMainFrame();
+  if (!frame) return false;
+  const std::wstring url = frame->GetURL().ToWString();
+  if (!media::IsWhatsAppWebUrl(url) && !media::IsDirectMediaUrl(url)) {
+    media_fallbacks_[id] = url;
+    frame->LoadURL(url);
+  }
+  return false;
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {

@@ -58,6 +58,11 @@ class MaenClient final : public CefClient,
   void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
 
   void OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) override;
+  bool OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                        cef_log_severity_t level,
+                        const CefString& message,
+                        const CefString& source,
+                        int line) override;
 
   bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
@@ -85,6 +90,9 @@ class MaenClient final : public CefClient,
 
   // UI-thread-only: only GET navigations intercepted by the media router.
   std::map<int, std::wstring> media_navigations_;
+  // Main-frame URLs whose CEF page reported an unsupported HTML5 media
+  // source.  They are retried once in the on-demand WebView2 surface.
+  std::map<int, std::wstring> media_fallbacks_;
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;

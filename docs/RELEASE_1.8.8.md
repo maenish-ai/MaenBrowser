@@ -1,5 +1,22 @@
 # 1.8.8 — protection connection and numbered diagnostics
 
+## Media fallback patch
+
+- Ordinary pages now receive a small local HTML5 media probe. It records only
+  the generic `MEDIA_ERR_SRC_NOT_SUPPORTED` condition; it does not collect
+  URLs, cookies, titles or media data.
+- When that condition is detected, the same tab retries once through the
+  on-demand WebView2 media surface. Normal pages still use CEF, so WebView2 is
+  not started at browser launch and low-memory devices do not pay the media
+  engine cost unless a page actually needs the fallback.
+- If WebView2 also cannot play the source, the existing loading/error surface
+  remains visible instead of silently looping between engines.
+
+This addresses embedded H.264/AAC pages that the stock CEF runtime cannot
+decode. It cannot overcome DRM restrictions, a dead/expired media URL, or a
+site that deliberately blocks the browser. Windows playback on the affected
+site remains the final acceptance test.
+
 The user screenshot shows panel 1.8.7 reporting `PROTECTION_UNKNOWN · Unknown action`, despite the successful Windows run https://github.com/maenish-ai/MaenBrowser/actions/runs/37968620382 . In source, `Unknown action` is the extension worker's command-dispatch fallback; the native C++ API instead says `Unknown operation`. This points to an unrecognized worker request, plausibly stale worker code after upgrade. The exact installed worker bytes were not available to confirm the cache hypothesis.
 
 ## Fix
