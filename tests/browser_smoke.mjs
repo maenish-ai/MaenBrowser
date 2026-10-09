@@ -142,7 +142,8 @@ try{
     if(await evaluate(`!document.getElementById('save').disabled`))break;
     await pause(100);
   }
-  assert.equal(await evaluate(`import('./api.js').then(m=>m.api()).then(s=>s.ads)`),false,'Checkbox save did not reach native protection');
+  assert.equal(await evaluate(`import('./api.js').then(m=>m.api()).then(s=>s.ads)`),false,
+    'Checkbox save did not reach native protection: '+await evaluate(`document.getElementById('status').textContent`));
   await evaluate(`document.getElementById('ads').click();document.getElementById('save').click()`);
   for(let n=0;n<100;n++){
     if(await evaluate(`!document.getElementById('save').disabled`))break;

@@ -515,9 +515,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.8.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.8.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.8.6 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.8.7 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.8.7 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.8.7 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",

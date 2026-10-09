@@ -47,6 +47,11 @@ $('form').onsubmit=async e=>{
     const keepAwake=domains('keepAwake');
     if(keepAwake.some(x=>!/^([a-z0-9-]+\.)+[a-z0-9-]+$/.test(x)))throw new Error('Keep-awake entries must be domain names, not full URLs.');
     if(settings.family&&!state.family&&!confirm(t('Enabling Family Protection closes existing web tabs and disables other extensions. Save your work first. Continue?')))return;
+    // Presence of `family` is a privileged operation when a PIN exists, even
+    // while family mode is off. Do not turn an ordinary ad/download save into
+    // a family-mode write. Native enforcement still requires the PIN for every
+    // setting while family mode is active and for real family transitions.
+    if(settings.family===state.family)delete settings.family;
     const extra={settings,pin:$('pin').value};if($('newPin').value)extra.newPin=$('newPin').value;
     const result=await api('save',extra);
     const wasFamily=state.family;

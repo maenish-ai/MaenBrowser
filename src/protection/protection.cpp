@@ -110,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.6");
+    d->SetString("version", "1.8.7");
   }
   return d;
 }
