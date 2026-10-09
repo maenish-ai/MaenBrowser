@@ -4,8 +4,9 @@ import {api, $, host, matchesHost, message} from './api.js';
 let state, tab;
 const open = path => chrome.tabs.create({url: chrome.runtime.getURL(path)});
 async function refresh(){
-  [tab] = await chrome.tabs.query({active:true,currentWindow:true});
+  // Only a native state-read failure means the protection connection failed.
   state = await api();
+  try{[tab]=await chrome.tabs.query({active:true,currentWindow:true});}catch{tab=null;}
   $('connectionDetail').textContent=t('Panel {panel} · Browser {browser}',{panel:chrome.runtime.getManifest().version,browser:state.version});
   const domain=host(tab?.url);
   $('site').textContent=domain || 'Browser page';
@@ -16,7 +17,7 @@ async function refresh(){
   $('exception').disabled=!domain || !/^https?:/.test(tab?.url || '') || state.family;
   $('count').textContent=t('{count} requests blocked this browser session',{count:state.blockedRequests});
   message($('status'),state.family?'Family Protection is ON. Changes need the parent PIN.':state.listError ? 'Filter files are missing or empty. Repair the installation.' : 'Native protection connected.');
-  await chrome.action.setBadgeText({text:state.ads?'✓':'—'});
+  try{await chrome.action.setBadgeText({text:state.ads?'✓':'—'});}catch{/* A badge failure must not disable working protection controls. */}
 }
 $('toggle').onclick=async()=>{
   if(!state){$('toggle').disabled=true;try{await refresh();}catch(e){connectionError(e);}return;}
@@ -40,7 +41,9 @@ function connectionError(error){
   const code=/^PROTECTION_[A-Z0-9_]+$/.test(error?.code||'')?error.code:'PROTECTION_UNKNOWN';
   $('connectionDetail').textContent=t('Panel {panel} · Error {code}',{panel:chrome.runtime.getManifest().version,code});
   chrome.action.setBadgeText({text:'?'}).catch(()=>{});
-  console.warn('Native controls connection',code);
+  const detail=String(error?.message||error||'').slice(0,180);
+  $('connectionDetail').textContent+=' · '+detail;
+  console.warn('Native controls connection',code,detail);
   message($('status'),new Error('Could not connect to protection. Please retry or open Settings.'));
 }
 refresh().catch(connectionError);

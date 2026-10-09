@@ -29,7 +29,12 @@ export async function api(op = 'get', extra = {}) {
     if(op!=='get')throw new NativeConnectionError(result.code);
     data=await nativeApi('get');
   }else throw new Error(result.error||'Could not connect to protection. Please retry or open Settings.');
-  if(op==='get'&&['en','ar'].includes(data.language))await chrome.storage.local.set({language:data.language});
+  if(!data||data.ok!==true||typeof data.ads!=='boolean'||typeof data.family!=='boolean'||!Array.isArray(data.exceptions))
+    throw new NativeConnectionError('PROTECTION_RESPONSE');
+  // Language persistence is optional UI housekeeping, not a protection failure.
+  if(op==='get'&&['en','ar'].includes(data.language)){
+    try{await chrome.storage.local.set({language:data.language});}catch(error){console.warn('Language preference could not be saved',error.name);}
+  }
   return data;
 }
 export function message(element, error) {

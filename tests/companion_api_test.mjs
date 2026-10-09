@@ -1,6 +1,6 @@
 import {strict as assert} from 'node:assert';
 const sent=[];
-globalThis.chrome={runtime:{sendMessage:async request=>{sent.push(request);return {ok:true,data:{ok:true,ads:true,language:'ar'}};}},storage:{local:{set:async()=>{}}}};
+globalThis.chrome={runtime:{sendMessage:async request=>{sent.push(request);return {ok:true,data:{ok:true,ads:true,family:false,exceptions:[],language:'ar'}};}},storage:{local:{set:async()=>{}}}};
 globalThis.fetch=()=>{throw new Error('A popup must not fetch the native endpoint directly');};
 const {api}=await import('../assets/companion/api.js');
 assert.equal((await api()).ads,true);
@@ -10,7 +10,7 @@ chrome.runtime.sendMessage=async()=>({ok:false,error:'Incorrect parent PIN.'});
 await assert.rejects(api('save'),/Incorrect parent PIN/);
 console.log('Popup API routes through worker and preserves settings errors');
 let fetches=0;
-globalThis.fetch=async()=>{fetches++;return {ok:true,json:async()=>({ok:true,ads:false,language:'en'})};};
+globalThis.fetch=async()=>{fetches++;return {ok:true,json:async()=>({ok:true,ads:false,family:false,exceptions:[],language:'en'})};};
 chrome.runtime.sendMessage=async()=>{throw new Error('Worker unavailable');};
 assert.equal((await api()).ads,false);assert.equal(fetches,1);
 await assert.rejects(api('save',{settings:{ads:true}}),/PROTECTION_WORKER/);
@@ -21,3 +21,9 @@ chrome.runtime.sendMessage=async()=>({ok:false,code:'PROTECTION_NETWORK'});
 globalThis.fetch=async()=>({ok:false,status:403});
 await assert.rejects(api(),/PROTECTION_HTTP_403/);
 console.log('Read fallback, no write replay and diagnostic codes passed');
+
+chrome.runtime.sendMessage=async()=>({ok:true,data:{ok:true,ads:true,family:false,exceptions:[],language:'ar'}});
+chrome.storage.local.set=async()=>{throw new Error('Storage unavailable');};
+assert.equal((await api()).ads,true,'storage failure must not lose native state');
+chrome.runtime.sendMessage=async()=>({ok:true,data:{ok:true}});
+await assert.rejects(api(),/PROTECTION_RESPONSE/);
