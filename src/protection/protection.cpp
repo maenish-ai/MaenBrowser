@@ -197,6 +197,18 @@ std::string BlockedPage() {
     : "<!doctype html><html lang=en><meta charset=utf-8><title>Browser protection</title><h1>MaenBrowser protection</h1><p>This address is blocked by your protection settings. Open protection settings to review it. Family changes need the parent PIN.</p></html>";
 }
 
+std::string MediaLoadingPage(const std::string& url) {
+  const bool whatsapp = media::IsWhatsAppWebUrl(CefString(url).ToWString());
+  if (ui::Arabic()) {
+    return whatsapp
+      ? "<!doctype html><html lang=ar dir=rtl><meta charset=utf-8><title>WhatsApp Web</title><style>html,body{height:100%;margin:0;background:#f7faf9;font-family:Segoe UI,Arial,sans-serif}main{height:100%;display:grid;place-items:center;color:#4b6359;text-align:center}section{padding:34px 48px;border-radius:18px;background:#fff;box-shadow:0 8px 30px #163f2a18}.spin{width:30px;height:30px;margin:0 auto 18px;border:3px solid #d7e9df;border-top-color:#25d366;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{margin:0;color:#708078;font-size:13px}</style><main><section><div class=spin></div><h1>جارٍ فتح WhatsApp Web</h1><p>لحظات قليلة، سيتم عرض الصفحة داخل التبويب.</p></section></main></html>"
+      : "<!doctype html><html lang=ar dir=rtl><meta charset=utf-8><title>MaenBrowser</title><style>html,body{height:100%;margin:0;background:#f7faf9;font-family:Segoe UI,Arial,sans-serif}main{height:100%;display:grid;place-items:center;color:#4b6359;text-align:center}section{padding:34px 48px;border-radius:18px;background:#fff;box-shadow:0 8px 30px #163f2a18}.spin{width:30px;height:30px;margin:0 auto 18px;border:3px solid #d7e9df;border-top-color:#25d366;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{margin:0;color:#708078;font-size:13px}</style><main><section><div class=spin></div><h1>جارٍ تجهيز الوسائط</h1><p>لحظات قليلة، سيتم عرض المحتوى داخل التبويب.</p></section></main></html>";
+  }
+  return whatsapp
+    ? "<!doctype html><html lang=en><meta charset=utf-8><title>WhatsApp Web</title><style>html,body{height:100%;margin:0;background:#f7faf9;font-family:Segoe UI,Arial,sans-serif}main{height:100%;display:grid;place-items:center;color:#4b6359;text-align:center}section{padding:34px 48px;border-radius:18px;background:#fff;box-shadow:0 8px 30px #163f2a18}.spin{width:30px;height:30px;margin:0 auto 18px;border:3px solid #d7e9df;border-top-color:#25d366;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{margin:0;color:#708078;font-size:13px}</style><main><section><div class=spin></div><h1>Opening WhatsApp Web</h1><p>The page will appear in this tab in a moment.</p></section></main></html>"
+    : "<!doctype html><html lang=en><meta charset=utf-8><title>MaenBrowser</title><style>html,body{height:100%;margin:0;background:#f7faf9;font-family:Segoe UI,Arial,sans-serif}main{height:100%;display:grid;place-items:center;color:#4b6359;text-align:center}section{padding:34px 48px;border-radius:18px;background:#fff;box-shadow:0 8px 30px #163f2a18}.spin{width:30px;height:30px;margin:0 auto 18px;border:3px solid #d7e9df;border-top-color:#25d366;border-radius:50%;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{margin:0;color:#708078;font-size:13px}</style><main><section><div class=spin></div><h1>Preparing media</h1><p>The content will appear in this tab in a moment.</p></section></main></html>";
+}
+
 class Resource final : public CefResourceRequestHandler {
  public:
   Resource(std::string source, bool document, bool internal, bool trusted, bool media)
@@ -228,7 +240,7 @@ class Resource final : public CefResourceRequestHandler {
     if (denied_) return new Response(BlockedPage(), "text/html", 403);
     // Commit a lightweight CEF document at the real media URL. This gives
     // Chrome's address bar/back stack the correct URL before attaching WebView2.
-    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>الوسائط</title><p dir=rtl>جارٍ التحميل…</p>":"<!doctype html><meta charset=utf-8><title>Media</title><p>Loading…</p>", "text/html");
+    if (media_) return new Response(MediaLoadingPage(r->GetURL().ToString()), "text/html");
     return nullptr;
   }
   void OnProtocolExecution(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>, bool& allow) override { allow = false; }

@@ -204,6 +204,9 @@ void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& t
   HWND hwnd = browser ? browser->GetHost()->GetWindowHandle() : nullptr;
   if (hwnd) {
     std::wstring page_title = Utf16(title);
+    auto main_frame = browser ? browser->GetMainFrame() : nullptr;
+    if (main_frame && media::IsWhatsAppWebUrl(main_frame->GetURL().ToWString()))
+      page_title = L"WhatsApp Web";
     if (page_title.empty() || page_title == L"MaenBrowser") SetWindowTextW(hwnd, L"MaenBrowser");
     else SetWindowTextW(hwnd, (page_title + L" — MaenBrowser").c_str());
   }
