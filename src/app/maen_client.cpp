@@ -146,10 +146,14 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
   const auto pending = media_navigations_.find(browser->GetIdentifier());
   if (pending == media_navigations_.end() || pending->second != url ||
       protection::BlockNavigation(frame->GetURL().ToString())) return;
-  media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
+  const bool opened = media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
       [browser](const std::wstring& target) {
         if (browser->IsValid() && browser->GetMainFrame()) browser->GetMainFrame()->LoadURL(target);
       });
+  if (!opened) frame->ExecuteJavaScript(
+      ui::Arabic() ? "document.body.textContent='تعذر فتح الصفحة. أعد التحميل للمحاولة.';"
+                   : "document.body.textContent='Could not open this page. Reload to retry.';",
+      frame->GetURL(), 0);
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {

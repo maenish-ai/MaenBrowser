@@ -1,5 +1,6 @@
 #include "src/media/webview2_embedded.h"
 #include "src/app/ui_language.h"
+#include "src/app/resource_mode.h"
 
 #include <windows.h>
 #include <commctrl.h>
@@ -49,13 +50,14 @@ struct Surface {
   ComPtr<ICoreWebView2> webview;
   EventRegistrationToken permission_token{};
   EventRegistrationToken new_window_token{};
-  EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{};
+  EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{}, failed_token{};
   std::function<void(const std::wstring&)> navigate;
   bool parent_hook = false, root_hook = false, refresh_queued = false;
   HWND root_window = nullptr;
   int visible = -1;
   RECT last_bounds{};
   bool bounds_known = false;
+  bool starting = true, failed = false;
 };
 
 ComPtr<ICoreWebView2Environment> g_environment;
@@ -112,6 +114,15 @@ HWND FindContentHost(HWND cef_window) {
 
 constexpr UINT kRefreshSurface = WM_APP + 31;
 
+void FailSurface(const std::shared_ptr<Surface>& surface) {
+  if (!surface) return;
+  surface->starting = false;
+  surface->failed = true;
+  KillTimer(surface->child, 2);
+  if (surface->controller && SUCCEEDED(surface->controller->put_IsVisible(FALSE))) surface->visible = 0;
+  InvalidateRect(surface->child, nullptr, TRUE);
+}
+
 void UpdateBounds(const std::shared_ptr<Surface>& surface) {
   if (!surface || !surface->controller) return;
   RECT bounds{};
@@ -137,7 +148,7 @@ void ResizeSurface(const std::shared_ptr<Surface>& surface) {
                  SWP_NOACTIVATE | SWP_NOZORDER);
   UpdateBounds(surface);
   if (surface->controller) {
-    const bool visible = IsWindowVisible(parent) && !IsIconic(surface->root_window);
+    const bool visible = !surface->starting && !surface->failed && IsWindowVisible(parent) && !IsIconic(surface->root_window);
     if (surface->visible != static_cast<int>(visible) &&
         SUCCEEDED(surface->controller->put_IsVisible(visible ? TRUE : FALSE)))
       surface->visible = visible;
@@ -167,7 +178,22 @@ LRESULT CALLBACK SurfaceProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
     case WM_TIMER:
       if (wp == 1 && surface) ResizeSurface(surface);
+      if (wp == 2 && surface && surface->starting) FailSurface(surface);
       return 0;
+    case WM_PAINT: {
+      PAINTSTRUCT paint{};
+      HDC dc = BeginPaint(hwnd, &paint);
+      if (surface && (surface->starting || surface->failed)) {
+        RECT rect{}; GetClientRect(hwnd, &rect); InflateRect(&rect, -24, -24);
+        SetBkMode(dc, TRANSPARENT);
+        const wchar_t* text = surface->failed
+            ? ui::Text(L"Could not open this page. Reload to retry, or return to the site for a new video link.",
+                       L"تعذر فتح الصفحة. أعد التحميل للمحاولة، أو ارجع للموقع للحصول على رابط فيديو جديد.")
+            : ui::Text(L"Loading…", L"جارٍ التحميل…");
+        DrawTextW(dc, text, -1, &rect, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
+      }
+      EndPaint(hwnd, &paint); return 0;
+    }
     case kRefreshSurface:
       if (surface) { surface->refresh_queued = false; ResizeSurface(surface); }
       return 0;
@@ -180,6 +206,7 @@ LRESULT CALLBACK SurfaceProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
       return 0;
     case WM_NCDESTROY:
       KillTimer(hwnd, 1);
+      KillTimer(hwnd, 2);
       return DefWindowProcW(hwnd, msg, wp, lp);
   }
   return DefWindowProcW(hwnd, msg, wp, lp);
@@ -207,6 +234,17 @@ std::wstring WebView2UserDataFolder() {
 
 void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
   if (!surface || !surface->webview) return;
+
+  surface->webview->add_ProcessFailed(
+      Callback<ICoreWebView2ProcessFailedEventHandler>(
+          [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2ProcessFailedEventArgs* args) -> HRESULT {
+            COREWEBVIEW2_PROCESS_FAILED_KIND kind{};
+            if (args && SUCCEEDED(args->get_ProcessFailedKind(&kind)) &&
+                (kind == COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED ||
+                 kind == COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED))
+              FailSurface(weak.lock());
+            return S_OK;
+          }).Get(), &surface->failed_token);
 
   ComPtr<ICoreWebView2Settings> settings;
   if (SUCCEEDED(surface->webview->get_Settings(&settings)) && settings) {
@@ -288,13 +326,18 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
       Callback<ICoreWebView2NavigationCompletedEventHandler>(
           [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2NavigationCompletedEventArgs* args) -> HRESULT {
             auto current = weak.lock();
-            if (!current || !args || !IsDirectMediaUrl(current->pending_url)) return S_OK;
+            if (!current || !args) return S_OK;
             BOOL success = FALSE;
             args->get_IsSuccess(&success);
             if (!success) {
-              // No TLS or HTTP error suppression: the runtime error page remains.
+              // Do not ignore TLS/HTTP failures or leave an opaque empty child.
+              FailSurface(current);
               return S_OK;
             }
+            current->starting = false; current->failed = false;
+            KillTimer(current->child, 2);
+            ResizeSurface(current);
+            if (!IsDirectMediaUrl(current->pending_url)) return S_OK;
             std::ifstream input(protection::InstallDirectory() / L"companion" / L"direct-player.js", std::ios::binary);
             if (!input) return S_OK;
             const std::string script((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
@@ -380,7 +423,7 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
       !IsWindow(surface->child))
     return;
 
-  g_environment->CreateCoreWebView2Controller(
+  const HRESULT started = g_environment->CreateCoreWebView2Controller(
       surface->child,
       Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
           [weak = std::weak_ptr<Surface>(surface)](
@@ -388,23 +431,22 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
             auto current = weak.lock();
             if (!current) return S_OK;
             if (FAILED(result) || !controller || !current->child || !IsWindow(current->child)) {
-              CloseEmbeddedWebView2(current->browser_id);
-              MessageBoxW(current->cef_window,
-                  ui::Text(L"The media player could not start. Reload or run Setup to repair the media engine.",
-                           L"تعذر بدء مشغّل الوسائط. أعد التحميل أو شغّل التثبيت لإصلاح محرك الوسائط."),
-                  L"MaenBrowser", MB_OK | MB_ICONERROR);
+              FailSurface(current);
               return S_OK;
             }
 
             current->controller = controller;
-            current->controller->get_CoreWebView2(&current->webview);
+            if (FAILED(current->controller->get_CoreWebView2(&current->webview)) || !current->webview) {
+              FailSurface(current); return S_OK;
+            }
             ResizeSurface(current);
             ConfigureWebView(current);
-            if (current->webview && !current->pending_url.empty())
-              current->webview->Navigate(current->pending_url.c_str());
+            if (!current->pending_url.empty() && FAILED(current->webview->Navigate(current->pending_url.c_str())))
+              FailSurface(current);
             if (IsWindowVisible(current->child)) SetFocus(current->child);
             return S_OK;
           }).Get());
+  if (FAILED(started)) FailSurface(surface);
 }
 
 void StartEnvironmentIfNeeded() {
@@ -417,9 +459,7 @@ void StartEnvironmentIfNeeded() {
   if (!com_checked) {
     const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(com_hr)) {
-      while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
-      MessageBoxW(nullptr, ui::Text(L"Could not initialize the Windows COM apartment required by WebView2.", L"تعذر بدء خدمة ويندوز اللازمة لمحرك الوسائط."),
-                  L"MaenBrowser", MB_OK | MB_ICONERROR);
+      for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
       return;
     }
     com_checked = true;
@@ -429,16 +469,19 @@ void StartEnvironmentIfNeeded() {
   const std::wstring data_folder = WebView2UserDataFolder();
   auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
   options->put_Language(ui::Arabic()?L"ar":L"en-US");
+  // The second engine previously ignored Lite mode entirely. Keep its optional
+  // preloading/caches bounded too; retain GPU decoding and all security defaults.
+  if (resource::DetectResourceProfile().lite)
+    options->put_AdditionalBrowserArguments(
+        L"--disable-features=Prerender2,BackForwardCache,OptimizationHints "
+        L"--disk-cache-size=67108864 --media-cache-size=33554432");
   const HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(
       nullptr, data_folder.c_str(), options.Get(),
       Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
           [](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
             g_environment_pending = false;
             if (FAILED(result) || !environment) {
-              while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
-              MessageBoxW(nullptr,
-                          ui::Text(L"Microsoft Edge WebView2 Runtime could not start. Re-run MaenBrowser Setup to repair the media engine.", L"تعذر بدء محرك الوسائط. شغّل تثبيت المتصفح لإصلاحه."),
-                          L"MaenBrowser", MB_OK | MB_ICONERROR);
+              for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
               return result;
             }
             if (g_surfaces.empty()) return S_OK;
@@ -453,10 +496,7 @@ void StartEnvironmentIfNeeded() {
           }).Get());
   if (FAILED(hr)) {
     g_environment_pending = false;
-    while (!g_surfaces.empty()) CloseEmbeddedWebView2(g_surfaces.begin()->first);
-    MessageBoxW(nullptr,
-                ui::Text(L"Microsoft Edge WebView2 Runtime could not be initialized.", L"تعذر بدء محرك الوسائط."),
-                L"MaenBrowser", MB_OK | MB_ICONERROR);
+    for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
   }
 }
 
@@ -498,6 +538,8 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
 
   SetWindowLongPtrW(surface->child, GWLP_USERDATA, static_cast<LONG_PTR>(browser_id));
   g_surfaces[browser_id] = surface;
+  // Startup watchdog only: no permanent polling after navigation completes.
+  SetTimer(surface->child, 2, 45000, nullptr);
   surface->parent_hook = SetWindowSubclass(content_host, ParentProc, static_cast<UINT_PTR>(browser_id), 0) != FALSE;
   if (surface->root_window && surface->root_window != content_host)
     surface->root_hook = SetWindowSubclass(surface->root_window, ParentProc,
@@ -519,6 +561,7 @@ void CloseEmbeddedWebView2(int browser_id) {
   g_surfaces.erase(it);
   if (!surface) return;
   if (surface->webview) {
+    surface->webview->remove_ProcessFailed(surface->failed_token);
     surface->webview->remove_PermissionRequested(surface->permission_token);
     surface->webview->remove_NewWindowRequested(surface->new_window_token);
     surface->webview->remove_NavigationStarting(surface->navigation_token);

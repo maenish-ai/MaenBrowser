@@ -17,9 +17,13 @@ export async function nativeApi(op = 'get', extra = {}) {
   return data;
 }
 export async function api(op = 'get', extra = {}) {
-  let result;
-  try{result=await chrome.runtime.sendMessage({op:'nativeApi',operation:op,extra});}
+  let result,timer;
+  try{result=await Promise.race([
+    chrome.runtime.sendMessage({op:'nativeApi',operation:op,extra}),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new NativeConnectionError('PROTECTION_WORKER')),10000);})
+  ]);}
   catch{result={ok:false,code:'PROTECTION_WORKER'};}
+  finally{clearTimeout(timer);}
   if(!result)result={ok:false,code:'PROTECTION_WORKER'};
   let data;
   if(result.ok)data=result.data;
@@ -33,7 +37,9 @@ export async function api(op = 'get', extra = {}) {
     throw new NativeConnectionError('PROTECTION_RESPONSE');
   // Language persistence is optional UI housekeeping, not a protection failure.
   if(op==='get'&&['en','ar'].includes(data.language)){
-    try{await chrome.storage.local.set({language:data.language});}catch(error){console.warn('Language preference could not be saved',error.name);}
+    // A stalled optional storage write must not stall the protection response.
+    try{Promise.resolve(chrome.storage.local.set({language:data.language})).catch(error=>console.warn('Language preference could not be saved',error.name));}
+    catch(error){console.warn('Language preference could not be saved',error.name);}
   }
   return data;
 }

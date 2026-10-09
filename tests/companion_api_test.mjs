@@ -27,3 +27,16 @@ chrome.storage.local.set=async()=>{throw new Error('Storage unavailable');};
 assert.equal((await api()).ads,true,'storage failure must not lose native state');
 chrome.runtime.sendMessage=async()=>({ok:true,data:{ok:true}});
 await assert.rejects(api(),/PROTECTION_RESPONSE/);
+
+chrome.runtime.sendMessage=async()=>({ok:true,data:{ok:true,ads:true,family:false,exceptions:[],language:'en'}});
+chrome.storage.local.set=()=>new Promise(()=>{});
+assert.equal((await api()).ads,true,'Pending optional storage must not stall protection');
+const realSetTimeout=globalThis.setTimeout;
+try{
+  globalThis.setTimeout=(fn)=>realSetTimeout(fn,0);
+  chrome.runtime.sendMessage=()=>new Promise(()=>{});
+  globalThis.fetch=async()=>({ok:true,json:async()=>({ok:true,ads:false,family:false,exceptions:[]})});
+  assert.equal((await api()).ads,false,'Unresponsive worker must permit read-only fallback');
+  await assert.rejects(api('save',{settings:{ads:true}}),/PROTECTION_WORKER/);
+}finally{globalThis.setTimeout=realSetTimeout;}
+console.log('Unresponsive worker and pending optional storage do not leave controls waiting indefinitely');

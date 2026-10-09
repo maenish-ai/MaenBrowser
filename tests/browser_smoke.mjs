@@ -128,6 +128,31 @@ try{
   assert.equal(await evaluate(`document.documentElement.dir`),'ltr');
   console.log('PASS: live Arabic/English UI language and direction');
 
+  // Exercise actual settings controls, not just their native API. Old profiles
+  // can contain malformed optional preferences after upgrades.
+  await evaluate(`chrome.storage.local.set({keepAwake:'legacy-invalid-value'})`);
+  await navigate(`chrome-extension://${id}/options.html`);
+  for(let n=0;n<100;n++){
+    if(await evaluate(`!document.getElementById('fields').disabled`))break;
+    await pause(100);
+  }
+  assert.equal(await evaluate(`document.getElementById('fields').disabled`),false,'Settings remained disabled');
+  await evaluate(`document.getElementById('ads').click();document.getElementById('save').click()`);
+  for(let n=0;n<100;n++){
+    if(await evaluate(`!document.getElementById('save').disabled`))break;
+    await pause(100);
+  }
+  assert.equal(await evaluate(`import('./api.js').then(m=>m.api()).then(s=>s.ads)`),false,'Checkbox save did not reach native protection');
+  await evaluate(`document.getElementById('ads').click();document.getElementById('save').click()`);
+  for(let n=0;n<100;n++){
+    if(await evaluate(`!document.getElementById('save').disabled`))break;
+    await pause(100);
+  }
+  assert.equal(await evaluate(`import('./api.js').then(m=>m.api()).then(s=>s.ads)`),true);
+  await evaluate(`chrome.storage.local.set({keepAwake:[]})`);
+  await navigate(controlUrl);
+  console.log('PASS: real settings checkboxes, save and malformed upgraded preferences');
+
   // A real loopback download verifies continuation, progress UI and that a
   // completion dialog no longer stalls the browser's UI thread.
   result=await call({op:'save',settings:{askDownload:false}});assert(result.data.ok);

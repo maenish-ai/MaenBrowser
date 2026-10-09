@@ -1,23 +1,45 @@
 import {t,currentLanguage,errorText} from './i18n.js';
 import {api,$,message} from './api.js';
 let state;
+let performanceReady=false;
 const booleans=['ads','adult','violence','safeSearch','askDownload','httpsOnly'];
 const domains=id=>[...new Set($(id).value.split(/\s+/).map(s=>s.trim().toLowerCase().replace(/\.+$/,'')).filter(Boolean))];
 async function load(){
+  $('retry').disabled=true;$('fields').disabled=true;
+  try{
   state=await api();$('language').value=state.language||currentLanguage();
+  if(!['exceptions','allowed','blocked'].every(k=>Array.isArray(state[k]))||typeof state.lockedFile!=='boolean')
+    throw new Error('PROTECTION_RESPONSE');
   for(const k of booleans)$(k).checked=state[k];
   $('familyEnabled').checked=state.family;$('allowOnly').value=String(state.allowOnly);
   $('downloadDirectory').value=state.downloadDirectory;
   for(const k of ['exceptions','allowed','blocked'])$(k).value=state[k].join('\n');
-  const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});
-  $('sleepEnabled').checked=p.sleepEnabled;$('sleepMinutes').value=String(p.sleepMinutes);$('keepAwake').value=p.keepAwake.join('\n');
   $('lists').textContent=t('Local lists: {ads} ad/tracker domains, {adult} adult domains, {violence} violence domains.',{ads:state.adDomains,adult:state.adultDomains,violence:state.violenceDomains});
   $('fields').disabled=state.lockedFile;
   message($('status'),state.lockedFile?new Error('Protected settings could not be read. Family browsing remains restricted. Restore the profile backup or reinstall with a new profile.'):state.listError?new Error('Filter files are missing or empty. Repair the installation.'):'Native settings loaded.');
+  $('details').textContent='';
+  }catch(error){
+    state=undefined;message($('status'),error);
+    $('details').textContent=String(error.code||error.message||'PROTECTION_UNKNOWN').slice(0,180);
+  }finally{$('retry').disabled=false;}
 }
+// Optional extension preferences must never lock the native protection controls.
+async function loadPerformance(){
+  const controls=['sleepEnabled','sleepMinutes','keepAwake'];
+  controls.forEach(k=>$(k).disabled=true);
+  try{
+    const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});
+    $('sleepEnabled').checked=p.sleepEnabled!==false;
+    $('sleepMinutes').value=String([15,30,60,120].includes(Number(p.sleepMinutes))?Number(p.sleepMinutes):30);
+    $('keepAwake').value=Array.isArray(p.keepAwake)?p.keepAwake.filter(x=>typeof x==='string').join('\n'):'';
+    performanceReady=true;controls.forEach(k=>$(k).disabled=false);
+  }catch(error){message($('performanceStatus'),new Error('Performance preferences could not be loaded. Other settings remain available.'));}
+}
+$('retry').onclick=()=>{load();if(!performanceReady)loadPerformance();};
 $('form').onsubmit=async e=>{
   e.preventDefault();$('save').disabled=true;
   try{
+    if(!state||state.lockedFile)throw new Error('Could not connect to protection. Please retry or open Settings.');
     if($('newPin').value!==$('confirmPin').value)throw new Error('New PIN confirmation does not match.');
     const settings={family:$('familyEnabled').checked,allowOnly:$('allowOnly').value==='true',downloadDirectory:$('downloadDirectory').value.trim()};
     for(const k of booleans)settings[k]=$(k).checked;
@@ -27,14 +49,19 @@ $('form').onsubmit=async e=>{
     if(settings.family&&!state.family&&!confirm(t('Enabling Family Protection closes existing web tabs and disables other extensions. Save your work first. Continue?')))return;
     const extra={settings,pin:$('pin').value};if($('newPin').value)extra.newPin=$('newPin').value;
     const result=await api('save',extra);
-    await chrome.storage.local.set({sleepEnabled:$('sleepEnabled').checked,sleepMinutes:Number($('sleepMinutes').value),keepAwake});
-    const changed=await chrome.runtime.sendMessage({op:'settingsChanged',family:result.family,wasFamily:state.family});
+    const wasFamily=state.family;
     state=result;$('pin').value='';$('newPin').value='';$('confirmPin').value='';
+    // Enforce a family-mode transition before optional UI preference writes.
+    const changed=await chrome.runtime.sendMessage({op:'settingsChanged',family:result.family,wasFamily});
+    if(!changed?.ok)throw new Error(changed?.error||'Could not apply settings.');
+    if(performanceReady){try{
+      await chrome.storage.local.set({sleepEnabled:$('sleepEnabled').checked,sleepMinutes:Number($('sleepMinutes').value),keepAwake});
+    }catch(error){message($('performanceStatus'),new Error('Performance preferences could not be saved. Native settings were saved.'));}}
     message($('status'),changed?.error?new Error(t('Native settings saved. {reason}',{reason:errorText(changed.error)})):'Settings saved. Reload open sites for ad-block changes.');
-    await chrome.action.setBadgeText({text:state.ads?'✓':'—'});
+    try{await chrome.action.setBadgeText({text:state.ads?'✓':'—'});}catch{}
   }catch(err){message($('status'),err);}finally{$('save').disabled=false;}
 };
-load().catch(e=>message($('status'),e));
+load();loadPerformance();
 
 $('language').value=currentLanguage();
 $('language').onchange=async()=>{

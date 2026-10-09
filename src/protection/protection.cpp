@@ -110,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.5");
+    d->SetString("version", "1.8.6");
   }
   return d;
 }
@@ -228,7 +228,7 @@ class Resource final : public CefResourceRequestHandler {
     if (denied_) return new Response(BlockedPage(), "text/html", 403);
     // Commit a lightweight CEF document at the real media URL. This gives
     // Chrome's address bar/back stack the correct URL before attaching WebView2.
-    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>الوسائط</title><p dir=rtl>جارٍ فتح محرك الوسائط… إذا تعذر الفتح، أعد تحميل الصفحة أو شغّل التثبيت لإصلاح محرك الوسائط.</p>":"<!doctype html><meta charset=utf-8><title>Media</title><p>Opening the media engine… If it does not open, reload the page or run Setup to repair the media engine.</p>", "text/html");
+    if (media_) return new Response(ui::Arabic()?"<!doctype html><meta charset=utf-8><title>الوسائط</title><p dir=rtl>جارٍ التحميل…</p>":"<!doctype html><meta charset=utf-8><title>Media</title><p>Loading…</p>", "text/html");
     return nullptr;
   }
   void OnProtocolExecution(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>, bool& allow) override { allow = false; }
