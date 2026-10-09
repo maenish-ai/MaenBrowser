@@ -84,7 +84,9 @@ try{
   console.log('PASS: settings persisted as Windows DPAPI-protected bytes');
   const service=await evaluate(`chrome.runtime.sendMessage({op:'settingsChanged',wasFamily:false})`);assert.equal(service.ok,true,service.error);
   console.log('PASS: companion service worker/native API integration');
-  // Reproduce the actual Chrome action-popup surface, not just an options tab.
+  // Open the toolbar over a normal web tab, matching the reported scenario.
+  const normalTab=await evaluate(`chrome.tabs.create({url:${JSON.stringify(fixtureUrl)},active:true})`);
+  await pause(400);
   await evaluate(`(async()=>{const w=await chrome.windows.getCurrent();await chrome.windows.update(w.id,{focused:true});await chrome.action.openPopup();})()`);
   let popupTarget;
   for(let n=0;n<40;n++){
@@ -112,7 +114,8 @@ try{
     assert.equal(popupResult.result.value.ready,true);
     assert(['ON','مفعّل'].includes(popupResult.result.value.state),'Popup is showing a disconnected state');
   }finally{popupSocket.close();}
-  console.log('PASS: actual toolbar popup connected to native protection');
+  await evaluate(`chrome.tabs.remove(${normalTab.id})`);
+  console.log('PASS: actual toolbar popup over a normal web tab connected to native protection');
   await evaluate(`chrome.runtime.sendMessage({op:'nativeApi',operation:'setLanguage',extra:{language:'ar'}})`);
   await evaluate(`chrome.storage.local.set({language:'ar'})`);
   await pause(300);

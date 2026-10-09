@@ -6,6 +6,7 @@ const open = path => chrome.tabs.create({url: chrome.runtime.getURL(path)});
 async function refresh(){
   [tab] = await chrome.tabs.query({active:true,currentWindow:true});
   state = await api();
+  $('connectionDetail').textContent=t('Panel {panel} · Browser {browser}',{panel:chrome.runtime.getManifest().version,browser:state.version});
   const domain=host(tab?.url);
   $('site').textContent=domain || 'Browser page';
   $('state').textContent=state.ads?'ON':'OFF';
@@ -36,7 +37,10 @@ function connectionError(error){
   state=null;$('state').textContent=t('Protection unavailable');
   $('toggle').textContent=t('Retry connection');$('toggle').disabled=false;
   $('exception').disabled=true;
-  console.warn('Native controls connection',error);
+  const code=/^PROTECTION_[A-Z0-9_]+$/.test(error?.code||'')?error.code:'PROTECTION_UNKNOWN';
+  $('connectionDetail').textContent=t('Panel {panel} · Error {code}',{panel:chrome.runtime.getManifest().version,code});
+  chrome.action.setBadgeText({text:'?'}).catch(()=>{});
+  console.warn('Native controls connection',code);
   message($('status'),new Error('Could not connect to protection. Please retry or open Settings.'));
 }
 refresh().catch(connectionError);

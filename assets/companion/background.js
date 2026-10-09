@@ -1,4 +1,4 @@
-import {nativeApi as api,webUrl} from './api.js';
+import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
 async function updateAlarm(){
   const {sleepEnabled=true}=await chrome.storage.local.get('sleepEnabled');
@@ -86,7 +86,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
       await chrome.storage.local.set({sessions:[saved,...sessions].slice(0,20)});return {ok:true};
     }
     return {ok:false,error:'Unknown action'};
-  })().then(respond).catch(e=>respond({ok:false,error:e.message}));return true;
+  })().then(respond).catch(e=>respond({ok:false,error:e.message,...(e instanceof NativeConnectionError?{code:e.code}:{})}));return true;
 });
 chrome.commands.onCommand.addListener(command=>{if(command==='open-tabs')chrome.tabs.create({url:chrome.runtime.getURL('tabs.html')});});
 

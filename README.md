@@ -1,8 +1,8 @@
-# MaenBrowser 1.8.3 — development source
+# MaenBrowser 1.8.4 — development source
 
-**Status: 1.8.3 source update; Windows build and hardware performance measurement pending.**
+**Status: 1.8.4 source update; new Windows validation pending.**
 
-Version 1.8.2 passed [Windows CI run 37894230583](https://github.com/maenish-ai/MaenBrowser/actions/runs/37894230583). This update synchronizes hidden WebView2 visibility, avoids redundant resizing and blocking download-completion dialogs, and adds visible-only download speed/progress updates. See [1.8.3 changes and validation boundaries](docs/RELEASE_1.8.3.md).
+Version 1.8.3 passed [Windows CI](https://github.com/maenish-ai/MaenBrowser/actions/runs/37896882053). This update registers the native control endpoint for each request context, adds a read-only connection fallback and visible diagnostic/version information, and clears a stale toolbar badge on connection failure. See [1.8.4 validation boundaries](docs/RELEASE_1.8.4.md).
 
 MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp and direct media files. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
@@ -31,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-Version 1.8.2 completed run 37894230583 successfully. The new 1.8.3 changes have not yet run on Windows. Local checks do not establish a measured performance improvement or complete third-party translation.
+Version 1.8.3 completed run 37896882053 successfully. The new 1.8.4 changes have not yet run on Windows. Local checks do not establish a measured performance improvement or complete third-party translation.
 
 ## Compatibility boundaries
 

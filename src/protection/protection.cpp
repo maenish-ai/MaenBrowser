@@ -110,7 +110,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.3");
+    d->SetString("version", "1.8.4");
   }
   return d;
 }
@@ -236,8 +236,12 @@ class Resource final : public CefResourceRequestHandler {
   std::string source_; bool document_, internal_, trusted_, media_, denied_ = false;
   IMPLEMENT_REFCOUNTING(Resource);
 };
+void RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context);
 class Context final : public CefRequestContextHandler {
  public:
+  void OnRequestContextInitialized(CefRefPtr<CefRequestContext> context) override {
+    RegisterLocalEndpoint(context);
+  }
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(CefRefPtr<CefBrowser> browser,
       CefRefPtr<CefFrame>, CefRefPtr<CefRequest> r, bool navigation, bool download,
       const CefString& initiator, bool& disable) override {
@@ -278,6 +282,11 @@ class NoNetworkFactory final : public CefSchemeHandlerFactory {
   }
   IMPLEMENT_REFCOUNTING(NoNetworkFactory);
 };
+void RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context) {
+  // Register on every actual context, including worker-only requests and new
+  // profiles. Shared storage does not substitute for context initialization.
+  context->RegisterSchemeHandlerFactory("https", "maen.browser", new NoNetworkFactory());
+}
 }  // namespace
 
 Url ParseUrl(const std::string& url) {

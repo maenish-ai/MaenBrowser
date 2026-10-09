@@ -9,3 +9,15 @@ assert.deepEqual(sent[1],{op:'nativeApi',operation:'save',extra:{settings:{ads:f
 chrome.runtime.sendMessage=async()=>({ok:false,error:'Incorrect parent PIN.'});
 await assert.rejects(api('save'),/Incorrect parent PIN/);
 console.log('Popup API routes through worker and preserves settings errors');
+let fetches=0;
+globalThis.fetch=async()=>{fetches++;return {ok:true,json:async()=>({ok:true,ads:false,language:'en'})};};
+chrome.runtime.sendMessage=async()=>{throw new Error('Worker unavailable');};
+assert.equal((await api()).ads,false);assert.equal(fetches,1);
+await assert.rejects(api('save',{settings:{ads:true}}),/PROTECTION_WORKER/);
+assert.equal(fetches,1,'settings writes must not be replayed');
+chrome.runtime.sendMessage=async()=>({ok:false,error:'Incorrect parent PIN.'});
+await assert.rejects(api('save'),/Incorrect parent PIN/);assert.equal(fetches,1);
+chrome.runtime.sendMessage=async()=>({ok:false,code:'PROTECTION_NETWORK'});
+globalThis.fetch=async()=>({ok:false,status:403});
+await assert.rejects(api(),/PROTECTION_HTTP_403/);
+console.log('Read fallback, no write replay and diagnostic codes passed');
