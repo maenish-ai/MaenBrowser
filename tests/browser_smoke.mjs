@@ -36,6 +36,12 @@ try{
   ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
   ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}};
+  const technical=await call({op:'technical'});
+  assert.equal(technical.status,200);assert.equal(technical.data.ok,true);
+  assert(technical.data.engine.startsWith('CEF '));
+  assert(['Lite','Balanced','Performance'].includes(technical.data.resourceMode));
+  assert(technical.data.browserProcessMemoryMiB>0);
+  assert(technical.data.browserProcessCpuSeconds>=0);
   let result=await call({op:'get'});assert.equal(result.status,200);assert.equal(result.data.ok,true);assert(result.data.adDomains>1000);assert(result.data.adultDomains>1000);
   console.log('PASS: real CEF extension loaded and native API connected');
   result=await call({op:'save',settings:{ads:false,askDownload:false}});assert(result.data.ok);assert.equal(result.data.ads,false);assert.equal(result.data.askDownload,false);

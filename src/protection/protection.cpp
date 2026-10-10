@@ -2,6 +2,9 @@
 #include "src/app/ui_language.h"
 #include <windows.h>
 #include <bcrypt.h>
+#include <psapi.h>
+#include "src/app/resource_mode.h"
+#include "include/cef_version.h"
 #include <wincrypt.h>
 #include <shlobj.h>
 #include <algorithm>
@@ -110,7 +113,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.8");
+    d->SetString("version", "1.8.9");
   }
   return d;
 }
@@ -397,6 +400,30 @@ std::string Api(const std::string& body) {
   if (body.size() > 65536) return Error("Request too large");
   auto d = Dictionary(body); if (!d) return Error("Invalid JSON");
   const auto op = d->GetString("op").ToString();
+  if (op == "technical") {
+    auto out = CefDictionaryValue::Create();
+    out->SetBool("ok", true);
+    out->SetString("version", "1.8.9");
+    out->SetString("engine", "CEF " CEF_VERSION);
+    out->SetString("mediaEngine", "WebView2 (on demand)");
+    const auto profile = resource::DetectResourceProfile();
+    out->SetString("resourceMode", profile.lite ? "Lite" :
+        profile.mode == resource::Mode::Performance ? "Performance" : "Balanced");
+    out->SetDouble("physicalMemoryMiB", static_cast<double>(profile.physical_mb));
+    out->SetInt("logicalProcessors", static_cast<int>(profile.logical_processors));
+    PROCESS_MEMORY_COUNTERS counters{};
+    counters.cb = sizeof(counters);
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
+      out->SetDouble("browserProcessMemoryMiB", counters.WorkingSetSize / 1048576.0);
+    FILETIME created{}, exited{}, kernel{}, user{};
+    if (GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user)) {
+      ULARGE_INTEGER k{}, u{};
+      k.LowPart = kernel.dwLowDateTime; k.HighPart = kernel.dwHighDateTime;
+      u.LowPart = user.dwLowDateTime; u.HighPart = user.dwHighDateTime;
+      out->SetDouble("browserProcessCpuSeconds", (k.QuadPart + u.QuadPart) / 10000000.0);
+    }
+    return Json(out);
+  }
   if (op == "get") {
     auto out = Export(*Current(), false); out->SetBool("ok", true); return Json(out);
   }

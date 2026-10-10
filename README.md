@@ -1,8 +1,8 @@
-# MaenBrowser 1.8.8 — development source
+# MaenBrowser 1.8.9 — development source
 
-**Status: 1.8.8 source fix; new Windows validation pending.**
+**Status: local source checks passed; Windows build and runtime validation pending.**
 
-Version 1.8.7 passed [Windows CI](https://github.com/maenish-ai/MaenBrowser/actions/runs/37968620382), but the installed panel still reported the worker's Unknown action response. Version 1.8.8 removes that worker dependency from native protection controls and adds numbered, bilingual, privacy-preserving diagnostics. See [diagnosis and validation](docs/RELEASE_1.8.8.md) and the [error-code reference](docs/ERROR_CODES.md). Earlier fixes remain included.
+This update adds on-demand Technical Details under Settings → About, a bounded private local error journal, media error codes and safer idle-tab rechecks. See [delivery and validation](docs/RELEASE_1.8.9.md).
 
 MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp and direct media files. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
@@ -31,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-Version 1.8.7 completed run 37968620382 successfully. The new 1.8.8 changes have not yet run on Windows. Local checks do not establish a measured performance improvement, universal media playback or complete third-party translation.
+Version 1.8.7 completed run 37968620382 successfully. The new 1.8.9 changes have not yet run on Windows. Local checks do not establish a measured performance improvement, universal media playback or complete third-party translation.
 
 ## Compatibility boundaries
 

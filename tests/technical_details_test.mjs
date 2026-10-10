@@ -1,0 +1,14 @@
+import {strict as assert} from 'node:assert';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync('assets/companion/about.js','utf8').replace(/^import .*;\n/gm,'');
+const tick=()=>new Promise(r=>setImmediate(r));
+const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,children:[],replaceChildren(){this.children=[];},append(p){this.children.push(p);},select(){}});return nodes.get(id);};
+let fail=false,calls=0;
+const context=vm.createContext({readErrorJournal:async()=>[],$,t:s=>s,JSON,navigator:{onLine:false},diagnosticReport:()=>'{"events":[]}',message:(n,s)=>n.textContent=String(s),nativeApi:async()=>{calls++;if(fail)throw Error('E102');return {version:'1.8.9',engine:'CEF',resourceMode:'Lite'};},api:async()=>({ads:true,family:false,pin:'DO_NOT_EXPORT',allowed:['private.test']}),document:{createElement:()=>({}),addEventListener(){}}});
+vm.runInContext(source,context);await tick();
+assert.equal(calls,1);assert.equal($('export').disabled,false);
+$('export').onclick();assert(!$('report').value.includes('DO_NOT_EXPORT'));assert(!$('report').value.includes('private.test'));
+assert.equal(JSON.parse($('report').value).online,false);
+fail=true;await $('refresh').onclick();assert.equal($('export').disabled,true);assert.equal($('details').children.length,0);assert.equal($('report').hidden,true);
+console.log('Technical details: on-demand snapshots, private field exclusion and failed refresh passed');

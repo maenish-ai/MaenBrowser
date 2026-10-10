@@ -1,5 +1,8 @@
 export const translations = {
-  "Diagnostic report": ["Diagnostic report", "تقرير التشخيص"],
+  "Diagnostic report": [
+    "Diagnostic report",
+    "تقرير التشخيص"
+  ],
   "Performance preferences could not be loaded. Other settings remain available.": [
     "Performance preferences could not be loaded. Other settings remain available.",
     "تعذر تحميل تفضيلات الأداء. تبقى الإعدادات الأخرى متاحة."
@@ -516,9 +519,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.8.8 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.8.8 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.8.8 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.8.9 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.8.9 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.8.9 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",
@@ -919,5 +922,113 @@ export const translations = {
   "Panel {panel} · Error {code}": [
     "Panel {panel} · Error {code}",
     "اللوحة {panel} · الخطأ {code}"
+  ],
+  "About MaenBrowser": [
+    "About MaenBrowser",
+    "حول متصفح معن"
+  ],
+  "Technical Details": [
+    "Technical Details",
+    "التفاصيل التقنية"
+  ],
+  "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU is cumulative time, not utilization.": [
+    "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU is cumulative time, not utilization.",
+    "تُحدّث البيانات عند الطلب فقط. الذاكرة والمعالج للعملية الرئيسية دون عمليات الصفحات وWebView2. وقت المعالج تراكمي وليس نسبة الاستخدام."
+  ],
+  "Refresh details": [
+    "Refresh details",
+    "تحديث التفاصيل"
+  ],
+  "Export technical report": [
+    "Export technical report",
+    "عرض التقرير للنسخ"
+  ],
+  "Network status is an operating-system hint, not proof of Internet access. No browsing addresses or parent PINs are included in this report.": [
+    "Network status is an operating-system hint, not proof of Internet access. No browsing addresses or parent PINs are included in this report.",
+    "حالة الشبكة إشارة من النظام ولا تثبت الوصول للإنترنت. لا يتضمن التقرير عناوين التصفح أو رمز الوالدين."
+  ],
+  "Snapshot captured.": [
+    "Snapshot captured.",
+    "تم تسجيل البيانات الحالية."
+  ],
+  "Version": [
+    "Version",
+    "الإصدار"
+  ],
+  "Engine": [
+    "Engine",
+    "المحرك"
+  ],
+  "Media engine": [
+    "Media engine",
+    "محرك الوسائط"
+  ],
+  "Resource mode": [
+    "Resource mode",
+    "وضع الموارد"
+  ],
+  "System memory (MiB)": [
+    "System memory (MiB)",
+    "ذاكرة الجهاز (MiB)"
+  ],
+  "Logical processors": [
+    "Logical processors",
+    "المعالجات المنطقية"
+  ],
+  "Browser process memory (MiB)": [
+    "Browser process memory (MiB)",
+    "ذاكرة العملية الرئيسية (MiB)"
+  ],
+  "Browser process CPU seconds": [
+    "Browser process CPU seconds",
+    "ثواني المعالج للعملية الرئيسية"
+  ],
+  "Network hint": [
+    "Network hint",
+    "إشارة الشبكة"
+  ],
+  "Online hint": [
+    "Online hint",
+    "النظام يشير إلى اتصال"
+  ],
+  "Offline hint": [
+    "Offline hint",
+    "النظام يشير إلى انقطاع"
+  ],
+  "Ad blocking": [
+    "Ad blocking",
+    "حجب الإعلانات"
+  ],
+  "Enabled": [
+    "Enabled",
+    "مفعّل"
+  ],
+  "Disabled": [
+    "Disabled",
+    "معطّل"
+  ],
+  "Family Protection": [
+    "Family Protection",
+    "حماية الأسرة"
+  ],
+  "Playback was aborted.": [
+    "Playback was aborted.",
+    "تم إيقاف التشغيل."
+  ],
+  "Media loading failed. Check the connection or file access.": [
+    "Media loading failed. Check the connection or file access.",
+    "فشل تحميل الوسائط. تحقق من الاتصال أو الوصول للملف."
+  ],
+  "Media decoding failed. The file may be damaged or unsupported.": [
+    "Media decoding failed. The file may be damaged or unsupported.",
+    "فشل فك ترميز الوسائط. قد يكون الملف تالفًا أو غير مدعوم."
+  ],
+  "Media source or format is not supported.": [
+    "Media source or format is not supported.",
+    "مصدر الوسائط أو صيغتها غير مدعومة."
+  ],
+  "Media playback failed; the engine did not report a specific cause.": [
+    "Media playback failed; the engine did not report a specific cause.",
+    "فشل تشغيل الوسائط ولم يحدد المحرك السبب."
   ]
 };

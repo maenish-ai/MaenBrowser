@@ -1,3 +1,4 @@
+import {appendError} from './error-journal.js';
 // Local, bounded diagnostics. Never record URLs, domains, requests, PINs or raw errors.
 import {currentLanguage} from './i18n.js';
 export const errorCatalogue={
@@ -48,6 +49,7 @@ export function recordDiagnostic(operation,error,state){
   const stage=code==='E101'?'worker':code==='E102'?'transport':['E103','E104'].includes(code)?'http':code==='E105'?'response':error?'native-validation':'native-http';
   const event={time:new Date().toISOString(),stage,operation:['get','save','setLanguage'].includes(operation)?operation:'unsupported',code};
   const http=String(error?.code||'').match(/^PROTECTION_HTTP_(\d+)$/);if(http)event.httpStatus=Number(http[1]);
+  if(error)void appendError(code,'protection');
   events.push(event);if(events.length>20)events.shift();
 }
 export function diagnosticReport(){return JSON.stringify({schema:1,panel:chrome.runtime.getManifest().version,native:nativeVersion,transport:'direct-local-endpoint',protection,events},null,2);}

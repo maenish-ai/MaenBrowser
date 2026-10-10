@@ -1,0 +1,7 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>About MaenBrowser</title><link rel="stylesheet" href="ui.css"><body><main>
+<header><img src="icon32.png" alt=""><h1>About MaenBrowser</h1></header><h2>Technical Details</h2>
+<p>Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU is cumulative time, not utilization.</p>
+<button id="refresh">Refresh details</button><button id="export" disabled>Export technical report</button><p id="status" role="status"></p><section id="details" class="card"></section>
+<p>Network status is an operating-system hint, not proof of Internet access. No browsing addresses or parent PINs are included in this report.</p>
+<textarea id="report" readonly hidden aria-label="Diagnostic report"></textarea><nav><a href="options.html">Back to settings</a><a href="media.html">Media check</a></nav>
+</main><script type="module" src="about.js"></script><script type="module" src="i18n.js"></script></body></html>

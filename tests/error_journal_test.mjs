@@ -1,0 +1,12 @@
+import {strict as assert} from 'node:assert';
+import {appendError,readErrorJournal,sanitizeEvents} from '../assets/companion/error-journal.js';
+let data={};globalThis.chrome={storage:{local:{get:async()=>structuredClone(data),set:async value=>{data=structuredClone(value);}}}};
+await Promise.all(Array.from({length:70},()=>appendError('MB-204','media')));
+assert.equal((await readErrorJournal()).length,50);
+assert.deepEqual(sanitizeEvents([{time:new Date().toISOString(),code:'E102',component:'protection',url:'private.test',pin:'secret'}]).map(Object.keys),[['time','code','component']]);
+assert.deepEqual(sanitizeEvents([{time:'bad',code:'E102',component:'protection'}]),[]);
+assert.deepEqual(sanitizeEvents(null),[]);
+chrome.storage.local.get=async()=>{throw Error('unavailable');};
+assert.deepEqual(await readErrorJournal(),[]);
+await appendError('E102','protection');
+console.log('Local error journal: bounded, serialized, privacy-filtered and storage failure tolerant');

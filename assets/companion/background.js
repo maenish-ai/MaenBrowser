@@ -13,6 +13,7 @@ chrome.runtime.onInstalled.addListener(()=>initialize());
 chrome.runtime.onStartup.addListener(()=>initialize());
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.sleepEnabled)updateAlarm();});
 async function pageIsSafe(tabId){
+  let timeout;
   try{
     const results=await Promise.race([chrome.scripting.executeScript({target:{tabId,allFrames:true},func:async()=>{
       if(document.visibilityState==='visible'||document.hasFocus())return false;
@@ -23,17 +24,20 @@ async function pageIsSafe(tabId){
       // observe a site's private MediaStream/RTCPeerConnection objects.
       try{for(const name of ['microphone','camera']){const p=await navigator.permissions.query({name});if(p.state==='granted')return false;}}catch{return false;}
       return true;
-    }}),new Promise(resolve=>setTimeout(()=>resolve([]),5000))]);
+    }}),new Promise(resolve=>{timeout=setTimeout(()=>resolve([]),5000);})]);
     return results.length>0&&results.every(r=>r.result===true);
-  }catch{return false;}
+  }catch{return false;}finally{clearTimeout(timeout);}
 }
-async function releaseTab(id,manual=false){
+async function releaseTab(id,manual=false,minutes=15){
   if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return {ok:false,error:'A download is running. Tabs are kept awake.'};
   const tab=await chrome.tabs.get(id);const {keepAwake=[]}=await chrome.storage.local.get('keepAwake');
   const probe=manual?{...tab,lastAccessed:0}:tab;
-  if(!candidate(probe,Date.now(),15,keepAwake)||!await pageIsSafe(id))return {ok:false,error:'This tab is active or may contain work, media or protected content. It was kept awake.'};
+  if(!candidate(probe,Date.now(),minutes,keepAwake)||!await pageIsSafe(id))return {ok:false,error:'This tab is active or may contain work, media or protected content. It was kept awake.'};
   const current=await chrome.tabs.get(id);
-  if(current.active||current.audible||current.pinned||current.status!=='complete'||current.url!==tab.url)return {ok:false,error:'Tab changed; it was kept awake.'};
+  const latest=await chrome.storage.local.get({sleepEnabled:true,keepAwake:[],sleepMinutes:30});
+  const recheck=manual?{...current,lastAccessed:0}:current;
+  if((!manual&&!latest.sleepEnabled)||!candidate(recheck,Date.now(),manual?15:Math.max(minutes,latest.sleepMinutes),latest.keepAwake)||current.url!==tab.url||current.lastAccessed!==tab.lastAccessed)return {ok:false,error:'Tab changed; it was kept awake.'};
+  if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return {ok:false,error:'A download is running. Tabs are kept awake.'};
   await chrome.tabs.discard(id);return {ok:true};
 }
 chrome.alarms.onAlarm.addListener(async alarm=>{
@@ -46,7 +50,7 @@ chrome.alarms.onAlarm.addListener(async alarm=>{
     let inspected=0,visited=0;
     for(;visited<tabs.length&&inspected<3;visited++){
       const tab=tabs[(scanOffset+visited)%tabs.length];
-      if(candidate(tab,Date.now(),p.sleepMinutes,p.keepAwake)){inspected++;await releaseTab(tab.id);}
+      if(candidate(tab,Date.now(),p.sleepMinutes,p.keepAwake)){inspected++;await releaseTab(tab.id,false,p.sleepMinutes);}
     }
     await chrome.storage.session.set({scanOffset:(scanOffset+visited)%tabs.length});
   }catch{/* Best effort: inspection errors must never cause a discard. */}

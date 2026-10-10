@@ -1,6 +1,6 @@
 # Protection diagnostic codes / رموز تشخيص الحماية
 
-Codes are stable identifiers, not HTTP status numbers. The panel and settings show the localized explanation; Diagnostic report selects a copyable JSON report. Reports are held only in the open page's memory (last 20 API results), and reset when it closes. No automatic upload or persistent log is used. No URLs, exception lists, PINs or raw request bodies are recorded.
+Codes are stable identifiers, not HTTP status numbers. The panel and settings show the localized explanation; Diagnostic report selects a copyable JSON report. Reports are held only in the open page's memory (last 20 API results), and reset when it closes. No automatic upload is used. In 1.8.9, a separate bounded local journal retains up to 50 error codes with timestamps and component names; Technical Details includes this best-effort journal. No URLs, exception lists, PINs or raw request bodies are recorded.
 
 | Code | Meaning / المعنى | Action / الإجراء |
 |---|---|---|
@@ -21,3 +21,5 @@ Codes are stable identifiers, not HTTP status numbers. The panel and settings sh
 Report fields: schema, panel version, last known native version, transport, protection state (ads/family/locked/filter error/domain count/blocked-request count), and bounded events (UTC time, stage, operation, code, optional HTTP status). Unknown native version remains null; it is never assumed equal to the panel.
 
 Developer tracing: `assets/companion/diagnostics.js` owns classification; `api.js` records direct local API outcomes; native API and filter enforcement live in `src/protection/protection.cpp`. An E101 response from an older worker cannot determine whether native filtering itself is running. Only a successful state read and a real blocked-request test provide that evidence.
+
+Media-check codes in 1.8.9: MB-201 aborted, MB-202 load/network failure, MB-203 decode failure, MB-204 unsupported source, MB-299 unspecified. These do not identify a particular codec or DRM failure.
