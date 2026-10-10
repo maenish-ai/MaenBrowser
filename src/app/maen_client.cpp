@@ -9,6 +9,8 @@
 
 #include "include/cef_app.h"
 #include "include/cef_task.h"
+#include "include/base/cef_bind.h"
+#include "include/base/cef_callback.h"
 #include "include/wrapper/cef_closure_task.h"
 #include "src/app/internal_navigation.h"
 #include "include/wrapper/cef_helpers.h"
@@ -126,10 +128,13 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
 
   if (IsAboutAlias(request->GetURL().ToString())) {
     // Defer replacement until the canceled navigation callback has returned.
-    CefPostTask(TID_UI, CefCreateClosureTask([browser]() {
-      if (browser->IsValid() && browser->GetMainFrame())
-        browser->GetMainFrame()->LoadURL(protection::ControlsUrl("about.html"));
-    }));
+    CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(
+        [](CefRefPtr<CefBrowser> target_browser) {
+          if (!target_browser->IsValid()) return;
+          CefRefPtr<CefFrame> target_frame = target_browser->GetMainFrame();
+          if (target_frame)
+            target_frame->LoadURL(protection::ControlsUrl("about.html"));
+        }, browser)));
     return true;
   }
 
