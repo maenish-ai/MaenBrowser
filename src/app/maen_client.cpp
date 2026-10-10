@@ -33,6 +33,22 @@ CefRefPtr<CefResourceRequestHandler> MaenClient::GetResourceRequestHandler(
 namespace {
 std::wstring Utf16(const CefString& value) { return value.ToWString(); }
 
+void InstallMediaProbe(CefRefPtr<CefFrame> frame) {
+  if (!frame) return;
+  // Install at load-start as well as load-end. Some players create their
+  // <video> element before the document's load event and the old probe missed
+  // those failures. MutationObserver keeps this event-driven and lightweight.
+  frame->ExecuteJavaScript(
+      "(()=>{if(window.__maenMediaProbe)return;window.__maenMediaProbe=1;"
+      "const bad=e=>{if(e&&e.error&&e.error.code===4)console.warn('MAEN_MEDIA_UNSUPPORTED')};"
+      "const watch=e=>{if(!(e instanceof HTMLMediaElement)||e.__maenWatched)return;"
+      "e.__maenWatched=1;e.addEventListener('error',()=>bad(e),true);bad(e)};"
+      "const scan=()=>document.querySelectorAll('video,audio').forEach(watch);scan();"
+      "new MutationObserver(scan).observe(document.documentElement||document,{childList:true,subtree:true});"
+      "setTimeout(scan,250);setTimeout(scan,1000);setTimeout(scan,2500)})();",
+      frame->GetURL(), 0);
+}
+
 void ApplyMaenWindowIcon(HWND hwnd) {
   if (!hwnd) return;
   // The final CEF bootstrap EXE is stamped by CI with the canonical Maen icon
@@ -154,14 +170,7 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
   // marker is intentionally opaque and contains no page data; OnConsoleMessage
   // uses it to perform a one-time WebView2 fallback for that tab.
   if (!media::UsesEmbeddedMedia(url)) {
-    frame->ExecuteJavaScript(
-        "(()=>{if(window.__maenMediaProbe)return;window.__maenMediaProbe=1;"
-        "const report=()=>{for(const e of document.querySelectorAll('video,audio'))"
-        "if(e.error&&e.error.code===4){console.warn('MAEN_MEDIA_UNSUPPORTED');return true}return false};"
-        "document.addEventListener('error',e=>{const t=e.target;"
-        "if((t instanceof HTMLMediaElement)&&t.error&&t.error.code===4)console.warn('MAEN_MEDIA_UNSUPPORTED')},true);"
-        "setTimeout(report,1200)})();",
-        frame->GetURL(), 0);
+    InstallMediaProbe(frame);
   }
   const auto pending = media_navigations_.find(browser->GetIdentifier());
   if (pending == media_navigations_.end() || pending->second != url ||
@@ -197,6 +206,16 @@ bool MaenClient::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
     frame->LoadURL(url);
   }
   return false;
+}
+
+void MaenClient::OnLoadStart(CefRefPtr<CefBrowser> browser,
+                             CefRefPtr<CefFrame> frame,
+                             TransitionType) {
+  CEF_REQUIRE_UI_THREAD();
+  if (!browser || !frame || !frame->IsMain() ||
+      browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
+  const auto url = frame->GetURL().ToWString();
+  if (!media::UsesEmbeddedMedia(url)) InstallMediaProbe(frame);
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {
