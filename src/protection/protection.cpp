@@ -113,7 +113,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.8.9");
+    d->SetString("version", "1.9.0");
   }
   return d;
 }
@@ -403,7 +403,7 @@ std::string Api(const std::string& body) {
   if (op == "technical") {
     auto out = CefDictionaryValue::Create();
     out->SetBool("ok", true);
-    out->SetString("version", "1.8.9");
+    out->SetString("version", "1.9.0");
     out->SetString("engine", "CEF " CEF_VERSION);
     out->SetString("mediaEngine", "WebView2 (on demand)");
     const auto profile = resource::DetectResourceProfile();

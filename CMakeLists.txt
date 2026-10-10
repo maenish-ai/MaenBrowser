@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.8.9 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.0 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -171,3 +171,7 @@ add_test(NAME media_policy COMMAND MaenMediaTests)
 # WebView2 is linked into the main browser as a lazy embedded surface. It is
 # instantiated only for routed media sites (WhatsApp Web and direct HTTPS MP4/M4V/M4A/AAC files), preserving
 # the full CEF Chrome Runtime UI while avoiding a second top-level application.
+
+add_executable(MaenNavigationTests tests/internal_navigation_test.cpp)
+target_include_directories(MaenNavigationTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME internal_navigation COMMAND MaenNavigationTests)

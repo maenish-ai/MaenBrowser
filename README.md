@@ -1,8 +1,8 @@
-# MaenBrowser 1.8.9 — development source
+# MaenBrowser 1.9.0 — development source
 
 **Status: local source checks passed; Windows build and runtime validation pending.**
 
-This update adds on-demand Technical Details under Settings → About, a bounded private local error journal, media error codes and safer idle-tab rechecks. See [delivery and validation](docs/RELEASE_1.8.9.md).
+This update removes media-error-triggered page reloads and routes Chromium About to local MaenBrowser Technical Details. Existing 1.8.9 diagnostics are preserved. See [delivery and validation](docs/RELEASE_1.9.0.md).
 
 MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp and direct media files. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
@@ -31,7 +31,7 @@ g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
 ./domain-tests
 ```
 
-Version 1.8.7 completed run 37968620382 successfully. The new 1.8.9 changes have not yet run on Windows. Local checks do not establish a measured performance improvement, universal media playback or complete third-party translation.
+Version 1.8.7 completed run 37968620382 successfully. The new 1.9.0 changes have not yet run on Windows. Local checks do not establish a measured performance improvement, universal media playback or complete third-party translation.
 
 ## Compatibility boundaries
 

@@ -8,6 +8,9 @@
 #include <sstream>
 
 #include "include/cef_app.h"
+#include "include/cef_task.h"
+#include "include/wrapper/cef_closure_task.h"
+#include "src/app/internal_navigation.h"
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
 #include "src/media/webview2_embedded.h"
@@ -16,7 +19,13 @@
 #include "include/cef_request_context.h"
 
 namespace maenbrowser {
-bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser>, int command_id, cef_window_open_disposition_t) {
+bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id, cef_window_open_disposition_t) {
+  CEF_REQUIRE_UI_THREAD();
+  const int about_id = cef_id_for_command_id_name("IDC_ABOUT");
+  if (about_id > 0 && command_id == about_id && browser && browser->GetMainFrame()) {
+    browser->GetMainFrame()->LoadURL(protection::ControlsUrl("about.html"));
+    return true;
+  }
   if (!protection::FamilyEnabled()) return false;
   for (const char* name : {"IDC_NEW_INCOGNITO_WINDOW", "IDC_DEV_TOOLS", "IDC_DEV_TOOLS_CONSOLE", "IDC_DEV_TOOLS_INSPECT", "IDC_MANAGE_EXTENSIONS"}) {
     if (command_id == cef_id_for_command_id_name(name)) return true;
@@ -32,22 +41,6 @@ CefRefPtr<CefResourceRequestHandler> MaenClient::GetResourceRequestHandler(
 
 namespace {
 std::wstring Utf16(const CefString& value) { return value.ToWString(); }
-
-void InstallMediaProbe(CefRefPtr<CefFrame> frame) {
-  if (!frame) return;
-  // Install at load-start as well as load-end. Some players create their
-  // <video> element before the document's load event and the old probe missed
-  // those failures. MutationObserver keeps this event-driven and lightweight.
-  frame->ExecuteJavaScript(
-      "(()=>{if(window.__maenMediaProbe)return;window.__maenMediaProbe=1;"
-      "const bad=e=>{if(e&&e.error&&e.error.code===4)console.warn('MAEN_MEDIA_UNSUPPORTED')};"
-      "const watch=e=>{if(!(e instanceof HTMLMediaElement)||e.__maenWatched)return;"
-      "e.__maenWatched=1;e.addEventListener('error',()=>bad(e),true);bad(e)};"
-      "const scan=()=>document.querySelectorAll('video,audio').forEach(watch);scan();"
-      "new MutationObserver(scan).observe(document.documentElement||document,{childList:true,subtree:true});"
-      "setTimeout(scan,250);setTimeout(scan,1000);setTimeout(scan,2500)})();",
-      frame->GetURL(), 0);
-}
 
 void ApplyMaenWindowIcon(HWND hwnd) {
   if (!hwnd) return;
@@ -114,7 +107,6 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
     const int id = browser->GetIdentifier();
     media::CloseEmbeddedWebView2(id);
     media_navigations_.erase(id);
-    media_fallbacks_.erase(id);
     std::lock_guard<std::mutex> lock(downloads_mutex_);
     popup_browser_ids_.erase(id);
     popup_browsers_.erase(id);
@@ -132,6 +124,15 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if (!browser || !frame || !frame->IsMain() || !request) return false;
   const std::wstring url = request->GetURL().ToWString();
 
+  if (IsAboutAlias(request->GetURL().ToString())) {
+    // Defer replacement until the canceled navigation callback has returned.
+    CefPostTask(TID_UI, CefCreateClosureTask([browser]() {
+      if (browser->IsValid() && browser->GetMainFrame())
+        browser->GetMainFrame()->LoadURL(protection::ControlsUrl("about.html"));
+    }));
+    return true;
+  }
+
   if (protection::BlockNavigation(request->GetURL().ToString())) {
     MessageBoxW(browser->GetHost()->GetWindowHandle(), ui::Text(L"This address is blocked by MaenBrowser Family Protection. Open the shield to ask a parent to review it.", L"هذا العنوان محجوب بحماية الأسرة. افتح الحماية ليتمكن الوالدان من مراجعته."), L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
     return true;
@@ -139,10 +140,8 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
 
   media::CloseEmbeddedWebView2(browser->GetIdentifier());
   const int browser_id = browser->GetIdentifier();
-  const bool fallback = media_fallbacks_.find(browser_id) != media_fallbacks_.end() &&
-                        media_fallbacks_[browser_id] == url;
   media_navigations_.erase(browser_id);
-  if (request->GetMethod() != "GET" || (!media::UsesEmbeddedMedia(url) && !fallback)) {
+  if (request->GetMethod() != "GET" || !media::UsesEmbeddedMedia(url)) {
     // If this tab was using the on-demand WebView2 media surface, returning to
     // an ordinary URL tears it down immediately to release RAM and processes.
     return false;
@@ -153,7 +152,6 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if (browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return false;
 
   media_navigations_[browser_id] = url;
-  media_fallbacks_.erase(browser_id);
   // Let the native resource handler commit a local placeholder at this URL.
   // OnLoadEnd then attaches WebView2 without losing Chrome's address/history.
   return false;
@@ -165,16 +163,11 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
       browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
   const auto url = frame->GetURL().ToWString();
 
-  // Probe only ordinary pages.  CEF can expose a page successfully while an
-  // embedded HTML5 player later fails with MEDIA_ERR_SRC_NOT_SUPPORTED.  The
-  // marker is intentionally opaque and contains no page data; OnConsoleMessage
-  // uses it to perform a one-time WebView2 fallback for that tab.
-  if (!media::UsesEmbeddedMedia(url)) {
-    InstallMediaProbe(frame);
-  }
   const auto pending = media_navigations_.find(browser->GetIdentifier());
   if (pending == media_navigations_.end() || pending->second != url ||
       protection::BlockNavigation(frame->GetURL().ToString())) return;
+  // Consume once: duplicate load notifications must not navigate an existing surface.
+  media_navigations_.erase(pending);
   const bool opened = media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
       [browser](const std::wstring& target) {
         if (browser->IsValid() && browser->GetMainFrame()) browser->GetMainFrame()->LoadURL(target);
@@ -183,39 +176,6 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
       ui::Arabic() ? "document.body.textContent='تعذر فتح الصفحة. أعد التحميل للمحاولة.';"
                    : "document.body.textContent='Could not open this page. Reload to retry.';",
       frame->GetURL(), 0);
-}
-
-bool MaenClient::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
-                                  cef_log_severity_t,
-                                  const CefString& message,
-                                  const CefString&,
-                                  int) {
-  CEF_REQUIRE_UI_THREAD();
-  // The probe is deliberately local and emits no URL, title, cookie or media
-  // data.  It only asks the native browser to retry the same page in the
-  // on-demand WebView2 media engine when CEF reports MEDIA_ERR_SRC_NOT_SUPPORTED.
-  if (!browser || message.ToString() != "MAEN_MEDIA_UNSUPPORTED") return false;
-  const int id = browser->GetIdentifier();
-  if (browser->GetHost()->GetRequestContext()->GetCachePath().empty() ||
-      media_fallbacks_.find(id) != media_fallbacks_.end()) return false;
-  const auto frame = browser->GetMainFrame();
-  if (!frame) return false;
-  const std::wstring url = frame->GetURL().ToWString();
-  if (!media::IsWhatsAppWebUrl(url) && !media::IsDirectMediaUrl(url)) {
-    media_fallbacks_[id] = url;
-    frame->LoadURL(url);
-  }
-  return false;
-}
-
-void MaenClient::OnLoadStart(CefRefPtr<CefBrowser> browser,
-                             CefRefPtr<CefFrame> frame,
-                             TransitionType) {
-  CEF_REQUIRE_UI_THREAD();
-  if (!browser || !frame || !frame->IsMain() ||
-      browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
-  const auto url = frame->GetURL().ToWString();
-  if (!media::UsesEmbeddedMedia(url)) InstallMediaProbe(frame);
 }
 
 void MaenClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {

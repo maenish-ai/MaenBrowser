@@ -32,8 +32,6 @@ class MaenClient final : public CefClient,
   CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
   CefRefPtr<CefCommandHandler> GetCommandHandler() override { return this; }
   CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
-  void OnLoadStart(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
-                   TransitionType transition_type) override;
   void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) override;
   bool OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id,
                        cef_window_open_disposition_t disposition) override;
@@ -60,12 +58,6 @@ class MaenClient final : public CefClient,
   void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
 
   void OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) override;
-  bool OnConsoleMessage(CefRefPtr<CefBrowser> browser,
-                        cef_log_severity_t level,
-                        const CefString& message,
-                        const CefString& source,
-                        int line) override;
-
   bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefRequest> request,
@@ -92,9 +84,6 @@ class MaenClient final : public CefClient,
 
   // UI-thread-only: only GET navigations intercepted by the media router.
   std::map<int, std::wstring> media_navigations_;
-  // Main-frame URLs whose CEF page reported an unsupported HTML5 media
-  // source.  They are retried once in the on-demand WebView2 surface.
-  std::map<int, std::wstring> media_fallbacks_;
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;
