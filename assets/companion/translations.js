@@ -519,9 +519,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.9.0 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.9.0 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.9.0 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.9.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.9.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.9.2 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",
@@ -1030,5 +1030,29 @@ export const translations = {
   "Media playback failed; the engine did not report a specific cause.": [
     "Media playback failed; the engine did not report a specific cause.",
     "فشل تشغيل الوسائط ولم يحدد المحرك السبب."
+  ],
+  "Inspect page video": [
+    "Inspect page video",
+    "فحص فيديو الصفحة"
+  ],
+  "Media inspection is unavailable in private windows.": [
+    "Media inspection is unavailable in private windows.",
+    "فحص الوسائط غير متاح في النوافذ الخاصة."
+  ],
+  "Snapshot captured. No reported error does not prove successful playback.": [
+    "Snapshot captured. No reported error does not prove successful playback.",
+    "تم التقاط التشخيص. عدم وجود خطأ مسجل لا يثبت نجاح التشغيل."
+  ],
+  "WhatsApp and media pages now open in CEF. Automatic WebView2 routing is disabled. Some media formats may remain unsupported.": [
+    "WhatsApp and media pages now open in CEF. Automatic WebView2 routing is disabled. Some media formats may remain unsupported.",
+    "تفتح صفحات واتساب والوسائط الآن بمحرك CEF. التحويل التلقائي إلى WebView2 معطل. قد تبقى بعض صيغ الوسائط غير مدعومة."
+  ],
+  "Files open only when you choose Open. Downloads use the browser download manager.": [
+    "Files open only when you choose Open. Downloads use the browser download manager.",
+    "تفتح الملفات فقط عند اختيار فتح. تستخدم التنزيلات مدير تنزيلات المتصفح."
+  ],
+  "Device availability and permissions depend on Windows and the engine. These checks describe CEF capabilities, not proven website playback.": [
+    "Device availability and permissions depend on Windows and the engine. These checks describe CEF capabilities, not proven website playback.",
+    "توفر الأجهزة والأذونات يعتمد على ويندوز والمحرك. تصف هذه الفحوص قدرات CEF ولا تثبت تشغيل فيديوهات المواقع."
   ]
 };

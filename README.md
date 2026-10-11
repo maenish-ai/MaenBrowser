@@ -1,3 +1,11 @@
+# MaenBrowser 1.9.2 — media handoff rollback
+
+See [current release notes](docs/RELEASE_1.9.2.md). Windows validation pending.
+
+# MaenBrowser 1.9.1 — development source
+
+See [release notes and Windows acceptance](docs/RELEASE_1.9.1.md). Built from 1.9.0 FIX1. Windows validation is pending.
+
 # MaenBrowser 1.9.0 — development source
 
 **Status: local source checks passed; Windows build and runtime validation pending.**

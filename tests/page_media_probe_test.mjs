@@ -1,0 +1,16 @@
+import {strict as assert} from 'node:assert';
+import {inspectPageMedia} from '../assets/companion/page-media-probe.js';
+const video={tagName:'VIDEO',error:{code:4,message:'secret'},readyState:0,networkState:3,paused:true,ended:false,currentSrc:'https://private.test/token',mediaKeys:null,videoWidth:0,videoHeight:0};
+let entries=[video];
+globalThis.document={querySelectorAll:()=>entries,createElement:()=>({canPlayType:()=>''})};
+let result=inspectPageMedia();
+assert.equal(result.items[0].errorCode,4);
+assert.equal(result.items[0].hasSource,true);
+assert.ok(!JSON.stringify(result).includes('secret'));
+assert.ok(!JSON.stringify(result).includes('private.test'));
+entries=Array(25).fill({...video,error:null,mediaKeys:{}});
+result=inspectPageMedia();
+assert.equal(result.items.length,20);assert.equal(result.total,25);assert.equal(result.truncated,true);
+assert.equal(result.items[0].encrypted,true);assert.equal(result.items[0].errorCode,null);
+entries=[];assert.equal(inspectPageMedia().total,0);
+console.log('Media snapshot: bounded, no URLs/raw error text, unsupported/encrypted/empty states preserved');

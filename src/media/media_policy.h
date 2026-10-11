@@ -4,6 +4,9 @@
 #include <string_view>
 
 namespace maenbrowser::media {
+// Roll back placeholder interception until Windows handoff is validated.
+// Both native navigation and request interception use this same policy.
+inline constexpr bool kEmbeddedMediaRoutingEnabled = false;
 // Input is a parsed URL path, never the query or fragment.
 inline bool IsDirectMediaPath(std::string_view scheme, std::string path) {
   if (scheme != "https" || path.empty() || path.front() != '/' ||

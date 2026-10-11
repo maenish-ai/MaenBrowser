@@ -48,6 +48,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/idle_recheck_test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/page_media_probe_test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/media_errors_test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/technical_details_test.mjs

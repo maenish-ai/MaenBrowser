@@ -1,3 +1,6 @@
+import {inspectPageMedia} from './page-media-probe.js';
+import {mediaError} from './media-errors.js';
+import {appendError} from './error-journal.js';
 import {revealVideoControls} from './video-controls.js';
 import {t} from './i18n.js';
 import {diagnosticCode,describeError,diagnosticReport} from './diagnostics.js';
@@ -55,4 +58,23 @@ $('videoControls').onclick=async()=>{
     const count=results.reduce((total,item)=>total+(Number(item.result)||0),0);
     message($('status'),count?t('Controls enabled for {count} videos. Play the video on the page.',{count}):'No accessible video found. Start the site player and try again.');
   } catch(e) { message($('status'),e); }
+};
+
+$('inspectMedia').onclick=async()=>{
+  const button=$('inspectMedia');button.disabled=true;
+  try{
+    const [current]=await chrome.tabs.query({active:true,currentWindow:true});
+    if(!/^https?:/.test(current?.url||''))throw new Error('Open a normal webpage first.');
+    if(current.incognito)throw new Error('Media inspection is unavailable in private windows.');
+    const results=await chrome.scripting.executeScript({target:{tabId:current.id,allFrames:true},func:inspectPageMedia});
+    const frames=results.filter(r=>r.result?.schema===1).map(r=>({frameId:r.frameId,...r.result}));
+    const errors=[...new Set(frames.flatMap(f=>f.items.filter(i=>i.errorCode).map(i=>i.errorCode)))];
+    for(const code of errors)await appendError(mediaError(code)[0],'media');
+    const report={schema:1,version:chrome.runtime.getManifest().version,capturedAt:new Date().toISOString(),
+      scope:'Accessible CEF frames only; WebView2 and inaccessible frames are not inspected.',
+      frames,errors:errors.map(c=>({code:mediaError(c)[0],reason:t(mediaError(c)[1])}))};
+    $('report').value=JSON.stringify(report,null,2);$('report').hidden=false;
+    message($('status'),errors.length?errors.map(c=>mediaError(c)[0]+' — '+t(mediaError(c)[1])).join('\n'):
+      'Snapshot captured. No reported error does not prove successful playback.');
+  }catch(e){message($('status'),e);}finally{button.disabled=false;}
 };

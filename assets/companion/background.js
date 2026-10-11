@@ -40,8 +40,10 @@ async function releaseTab(id,manual=false,minutes=15){
   if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return {ok:false,error:'A download is running. Tabs are kept awake.'};
   await chrome.tabs.discard(id);return {ok:true};
 }
+let idleScanRunning=false;
 chrome.alarms.onAlarm.addListener(async alarm=>{
-  if(alarm.name!=='safe-idle-tabs')return;
+  if(alarm.name!=='safe-idle-tabs'||idleScanRunning)return;
+  idleScanRunning=true;
   try{
     const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});if(!p.sleepEnabled)return;
     if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return;
@@ -54,6 +56,7 @@ chrome.alarms.onAlarm.addListener(async alarm=>{
     }
     await chrome.storage.session.set({scanOffset:(scanOffset+visited)%tabs.length});
   }catch{/* Best effort: inspection errors must never cause a discard. */}
+  finally{idleScanRunning=false;}
 });
 async function enforceFamily(enabled,closeTabs){
   if(enabled){
