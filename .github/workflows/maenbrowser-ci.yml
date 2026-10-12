@@ -14,7 +14,28 @@ env:
   MAEN_CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
 
 jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    outputs:
+      media_ready: ${{ steps.gate.outputs.media_ready }}
+    steps:
+      - name: Check external CEF media archive configuration
+        id: gate
+        shell: bash
+        env:
+          CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
+          CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
+        run: |
+          if [[ "$CEF_ARCHIVE_URL" == https://* && "$CEF_ARCHIVE_SHA256" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "media_ready=true" >> "$GITHUB_OUTPUT"
+            echo "Verified-format CEF media configuration detected. Archive authenticity is checked during download."
+          else
+            echo "media_ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Setup unavailable::Configure MAEN_CEF_ARCHIVE_URL (HTTPS) and MAEN_CEF_ARCHIVE_SHA256 (64 hex characters) to enable the Windows Setup build."
+          fi
   build-setup:
+    needs: configuration
+    if: needs.configuration.outputs.media_ready == 'true'
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
