@@ -1,3 +1,7 @@
+# MaenBrowser 1.9.5 FIX1 — Windows build correction
+
+See [build correction](docs/BUILD_FIX_1.9.5_FIX1.md).
+
 # MaenBrowser 1.9.5 — manual media compatibility window
 
 See [current release notes](docs/RELEASE_1.9.5.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.

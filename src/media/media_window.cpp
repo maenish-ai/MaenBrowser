@@ -3,6 +3,7 @@
 #include "src/protection/protection.h"
 #include "src/app/ui_language.h"
 #include <windows.h>
+#include <objbase.h>  // CoInitializeEx, CoUninitialize and COINIT_APARTMENTTHREADED.
 #include <atomic>
 #include <algorithm>
 #include <memory>
