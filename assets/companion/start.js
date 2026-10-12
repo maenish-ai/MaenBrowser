@@ -1,4 +1,5 @@
 import {t} from './i18n.js';
+import {api} from './api.js';
 
 const engines={
  google:q=>"https://www.google.com/search?q="+encodeURIComponent(q),
@@ -32,3 +33,43 @@ document.getElementById("mediaCheck").addEventListener("click",()=>{
 });
 paint();
 
+
+
+let protectionState=null;
+const adToggle=document.getElementById('adToggle');
+const adDetail=document.getElementById('adDetail');
+function paintAdToggle(){
+  if(!adToggle||!adDetail)return;
+  if(!protectionState){adToggle.dataset.state='loading';adToggle.textContent='…';adToggle.disabled=true;return;}
+  adToggle.dataset.state=protectionState.ads?'on':'off';
+  adToggle.textContent=protectionState.ads?'ON':'OFF';
+  adToggle.disabled=false;
+  adDetail.classList.remove('protection-error');
+  adDetail.textContent=protectionState.family
+    ? (protectionState.ads?'Family Protection: ad blocking is ON':'Family Protection: ad blocking is OFF')
+    : (protectionState.ads?'الإعلانات محجوبة · Ads are blocked':'حجب الإعلانات متوقف · Ad blocking is off');
+}
+async function refreshProtection(){
+  paintAdToggle();
+  try{protectionState=await api();paintAdToggle();}
+  catch(error){
+    protectionState=null;
+    adToggle.dataset.state='off';adToggle.textContent='RETRY';adToggle.disabled=false;
+    adDetail.textContent='Protection unavailable — click RETRY';adDetail.classList.add('protection-error');
+  }
+}
+adToggle?.addEventListener('click',async()=>{
+  if(!protectionState){await refreshProtection();return;}
+  if(protectionState.family){location.href='options.html#family';return;}
+  adToggle.disabled=true;
+  try{
+    await api('save',{settings:{ads:!protectionState.ads}});
+    protectionState=await api();
+    paintAdToggle();
+  }catch(error){
+    protectionState=null;
+    adToggle.dataset.state='off';adToggle.textContent='RETRY';adToggle.disabled=false;
+    adDetail.textContent='Could not change ad blocking — click RETRY';adDetail.classList.add('protection-error');
+  }
+});
+refreshProtection();
