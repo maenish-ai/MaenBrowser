@@ -10,6 +10,7 @@
 #include "src/updater/update_manager.h"
 
 #include "src/security/windows_hardening.h"
+#include "src/media/media_window.h"
 namespace {
 
 int RunMain(HINSTANCE instance, void* sandbox_info) {
@@ -62,6 +63,7 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
   maenbrowser::updater::UpdateManager::Initialize();
   CefRunMessageLoop();
   maenbrowser::updater::UpdateManager::Shutdown();
+  maenbrowser::media::ShutdownMediaWindow();
   CefShutdown();
   return 0;
 }

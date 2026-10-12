@@ -13,6 +13,8 @@
 #include "include/cef_request_handler.h"
 #include "include/cef_command_handler.h"
 #include "include/cef_load_handler.h"
+#include "include/cef_context_menu_handler.h"
+#include "include/cef_keyboard_handler.h"
 
 namespace maenbrowser {
 
@@ -22,9 +24,18 @@ class MaenClient final : public CefClient,
                          public CefDownloadHandler,
                          public CefRequestHandler,
                          public CefCommandHandler,
-                         public CefLoadHandler {
+                         public CefLoadHandler,
+                         public CefContextMenuHandler,
+                         public CefKeyboardHandler {
  public:
   MaenClient() = default;
+  CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() override { return this; }
+  CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
+  void OnBeforeContextMenu(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
+      CefRefPtr<CefContextMenuParams>, CefRefPtr<CefMenuModel>) override;
+  bool OnContextMenuCommand(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
+      CefRefPtr<CefContextMenuParams>, int, CefContextMenuHandler::EventFlags) override;
+  bool OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent&, CefEventHandle, bool*) override;
 
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }

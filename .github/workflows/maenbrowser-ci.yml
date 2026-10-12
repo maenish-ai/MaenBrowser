@@ -107,6 +107,19 @@ jobs:
         shell: pwsh
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: Ensure WebView2 Runtime for playback test
+        shell: pwsh
+        run: |
+          $bootstrap = "$env:RUNNER_TEMP\MicrosoftEdgeWebview2Setup.exe"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $bootstrap
+          $install = Start-Process -FilePath $bootstrap -ArgumentList '/silent','/install' -Wait -PassThru
+          if ($install.ExitCode -notin @(0, 3010, 1641)) { throw "WebView2 Runtime setup failed: $($install.ExitCode)" }
+
+      - name: Real WebView2 H264 playback test
+        timeout-minutes: 3
+        shell: pwsh
+        run: node tests/media_window_smoke.mjs build/Release/MaenBrowser.exe
+
       - name: Browser integration smoke test
         shell: pwsh
         run: node tests/browser_smoke.mjs build/Release/MaenBrowser.exe

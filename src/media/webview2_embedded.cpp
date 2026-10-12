@@ -19,7 +19,6 @@
 
 #include "WebView2.h"
 #include "WebView2EnvironmentOptions.h"
-#include "include/cef_task.h"
 #include "src/protection/protection.h"
 #include "src/media/webview2_media_router.h"
 
@@ -28,17 +27,6 @@ using Microsoft::WRL::ComPtr;
 
 namespace maenbrowser::media {
 namespace {
-
-class DownloadTask final : public CefTask {
- public:
-  DownloadTask(std::function<void()> action, ComPtr<ICoreWebView2Deferral> deferral)
-      : action_(std::move(action)), deferral_(std::move(deferral)) {}
-  void Execute() override { action_(); deferral_->Complete(); }
- private:
-  std::function<void()> action_;
-  ComPtr<ICoreWebView2Deferral> deferral_;
-  IMPLEMENT_REFCOUNTING(DownloadTask);
-};
 
 struct Surface {
   int browser_id = 0;
@@ -51,7 +39,7 @@ struct Surface {
   EventRegistrationToken permission_token{};
   EventRegistrationToken new_window_token{};
   EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{}, failed_token{};
-  std::function<void(const std::wstring&)> navigate;
+  std::function<void(const std::wstring&)> navigate, address_changed;
   bool parent_hook = false, root_hook = false, refresh_queued = false;
   HWND root_window = nullptr;
   int visible = -1;
@@ -60,10 +48,11 @@ struct Surface {
   bool starting = true, failed = false;
 };
 
-ComPtr<ICoreWebView2Environment> g_environment;
-bool g_environment_pending = false;
-std::map<int, std::shared_ptr<Surface>> g_surfaces;
-ATOM g_surface_class = 0;
+thread_local ComPtr<ICoreWebView2Environment> g_environment;
+thread_local bool g_environment_pending = false;
+thread_local unsigned long long g_environment_generation = 0;
+thread_local std::map<int, std::shared_ptr<Surface>> g_surfaces;
+thread_local ATOM g_surface_class = 0;
 
 bool StartsWithInsensitive(const std::wstring& value, const std::wstring& prefix) {
   if (value.size() < prefix.size()) return false;
@@ -119,6 +108,7 @@ void FailSurface(const std::shared_ptr<Surface>& surface) {
   surface->starting = false;
   surface->failed = true;
   KillTimer(surface->child, 2);
+  if (surface->webview) surface->webview->Stop();
   if (surface->controller && SUCCEEDED(surface->controller->put_IsVisible(FALSE))) surface->visible = 0;
   InvalidateRect(surface->child, nullptr, TRUE);
 }
@@ -148,7 +138,7 @@ void ResizeSurface(const std::shared_ptr<Surface>& surface) {
                  SWP_NOACTIVATE | SWP_NOZORDER);
   UpdateBounds(surface);
   if (surface->controller) {
-    const bool visible = !surface->starting && !surface->failed && IsWindowVisible(parent) && !IsIconic(surface->root_window);
+    const bool visible = !surface->failed && IsWindowVisible(parent) && !IsIconic(surface->root_window);
     if (surface->visible != static_cast<int>(visible) &&
         SUCCEEDED(surface->controller->put_IsVisible(visible ? TRUE : FALSE)))
       surface->visible = visible;
@@ -187,8 +177,8 @@ LRESULT CALLBACK SurfaceProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         RECT rect{}; GetClientRect(hwnd, &rect); InflateRect(&rect, -24, -24);
         SetBkMode(dc, TRANSPARENT);
         const wchar_t* text = surface->failed
-            ? ui::Text(L"Could not open this page. Reload to retry, or return to the site for a new video link.",
-                       L"تعذر فتح الصفحة. أعد التحميل للمحاولة، أو ارجع للموقع للحصول على رابط فيديو جديد.")
+            ? ui::Text(L"MB-704: Media engine could not load the page. Check WebView2 Runtime, then use Retry. The original tab is unchanged.",
+                       L"MB-704: تعذر تحميل الصفحة بمحرك الوسائط. تحقق من تثبيت WebView2 ثم اضغط إعادة المحاولة. التبويب الأصلي لم يتغير.")
             : ui::Text(L"Loading…", L"جارٍ التحميل…");
         DrawTextW(dc, text, -1, &rect, DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
       }
@@ -258,29 +248,9 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
       Callback<ICoreWebView2PermissionRequestedEventHandler>(
           [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2PermissionRequestedEventArgs* args) -> HRESULT {
             if (!args) return E_INVALIDARG;
-            COREWEBVIEW2_PERMISSION_KIND kind{};
-            if (FAILED(args->get_PermissionKind(&kind))) return S_OK;
-            auto current = weak.lock();
-            if (!current || !IsWhatsAppWebUrl(current->pending_url)) {
-              args->put_State(COREWEBVIEW2_PERMISSION_STATE_DENY);
-              return S_OK;
-            }
-            if (kind != COREWEBVIEW2_PERMISSION_KIND_MICROPHONE && kind != COREWEBVIEW2_PERMISSION_KIND_CAMERA) return S_OK;
-
-            LPWSTR raw_uri = nullptr;
-            std::wstring uri;
-            if (SUCCEEDED(args->get_Uri(&raw_uri)) && raw_uri) {
-              uri = raw_uri;
-              CoTaskMemFree(raw_uri);
-            }
-            bool allow = false;
-            if (current && IsTrustedMicrophoneOrigin(uri) && !protection::FamilyEnabled()) {
-              const wchar_t* question = kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE
-                  ? ui::Text(L"Allow WhatsApp Web to use your microphone for this request?", L"هل تسمح لواتساب باستخدام الميكروفون لهذا الطلب؟")
-                  : ui::Text(L"Allow WhatsApp Web to use your camera for this request?", L"هل تسمح لواتساب باستخدام الكاميرا لهذا الطلب؟");
-              allow = MessageBoxW(current->cef_window, question, ui::Text(L"MaenBrowser permission", L"إذن المتصفح"), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
-            }
-            args->put_State(allow ? COREWEBVIEW2_PERMISSION_STATE_ALLOW : COREWEBVIEW2_PERMISSION_STATE_DENY);
+            // This compatibility window is for playback. Never inherit CEF
+            // camera/microphone grants or prompt modally inside a COM callback.
+            args->put_State(COREWEBVIEW2_PERMISSION_STATE_DENY);
             return S_OK;
           }).Get(),
       &surface->permission_token);
@@ -291,6 +261,10 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
               ICoreWebView2*, ICoreWebView2NewWindowRequestedEventArgs* args) -> HRESULT {
             auto current = weak.lock();
             if (!current || !current->webview || !args) return S_OK;
+            args->put_Handled(TRUE);
+            BOOL user_initiated = FALSE;
+            args->get_IsUserInitiated(&user_initiated);
+            if (!user_initiated) return S_OK;
             LPWSTR raw_uri = nullptr;
             if (SUCCEEDED(args->get_Uri(&raw_uri)) && raw_uri) {
               if (IsWebNavigation(raw_uri) && !protection::BlockNavigation(CefString(raw_uri).ToString()) && current->navigate) current->navigate(raw_uri);
@@ -311,7 +285,15 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
               args->put_Cancel(TRUE);
             } else if (protection::BlockNavigation(CefString(uri).ToString())) {
               args->put_Cancel(TRUE);
-              MessageBoxW(current->cef_window, ui::Text(L"This address is blocked by Family Protection.", L"هذا العنوان محجوب بحماية الأسرة."), L"MaenBrowser", MB_OK | MB_ICONINFORMATION);
+              // Do not enter a modal message loop from a WebView2 callback.
+              SetWindowTextW(current->root_window, ui::Text(
+                  L"MaenBrowser — address blocked by Family Protection",
+                  L"MaenBrowser — العنوان محجوب بحماية الأسرة"));
+            } else if (current->address_changed) {
+              // Dedicated native media window: redirects remain in WebView2,
+              // including their cookies/methods. Update its own address display.
+              current->pending_url = uri;
+              current->address_changed(uri);
             } else if (!(IsWhatsAppWebUrl(current->pending_url) && IsWhatsAppWebUrl(uri)) &&
                        uri != current->pending_url) {
               // All changed URLs (including redirects) go back through CEF so
@@ -326,7 +308,7 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
       Callback<ICoreWebView2NavigationCompletedEventHandler>(
           [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2NavigationCompletedEventArgs* args) -> HRESULT {
             auto current = weak.lock();
-            if (!current || !args) return S_OK;
+            if (!current || !args || current->failed) return S_OK;
             BOOL success = FALSE;
             args->get_IsSuccess(&success);
             if (!success) {
@@ -372,54 +354,21 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
     downloads->add_DownloadStarting(
         Callback<ICoreWebView2DownloadStartingEventHandler>(
             [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2DownloadStartingEventArgs* args) -> HRESULT {
-              auto current = weak.lock();
-              if (!args || !current) return S_OK;
-              ComPtr<ICoreWebView2Deferral> deferral;
-              if (FAILED(args->GetDeferral(&deferral))) { args->put_Cancel(TRUE); return S_OK; }
-              ComPtr<ICoreWebView2DownloadStartingEventArgs> pending = args;
-              // Return from the WebView2 event before displaying modal UI.
-              const bool posted = CefPostTask(TID_UI, new DownloadTask([weak, pending]() {
-                auto current = weak.lock();
-                auto* args = pending.Get();
-                if (!current || !IsWindow(current->cef_window)) { args->put_Cancel(TRUE); return; }
-              LPWSTR raw = nullptr; args->get_ResultFilePath(&raw);
-              std::wstring suggested = raw ? raw : L"download";
-              CoTaskMemFree(raw);
-              auto path = protection::DownloadPath(suggested);
-              if (protection::Current()->ask_download || path.empty()) {
-                ComPtr<IFileSaveDialog> dialog;
-                HRESULT hr = CoCreateInstance(CLSID_FileSaveDialog, nullptr,
-                    CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog));
-                if (SUCCEEDED(hr)) {
-                  DWORD options = 0; dialog->GetOptions(&options);
-                  dialog->SetOptions(options | FOS_FORCEFILESYSTEM | FOS_OVERWRITEPROMPT);
-                  const std::filesystem::path initial(path.empty() ? suggested : path);
-                  dialog->SetFileName(initial.filename().c_str());
-                  ComPtr<IShellItem> folder;
-                  if (!initial.parent_path().empty() && SUCCEEDED(SHCreateItemFromParsingName(
-                      initial.parent_path().c_str(), nullptr, IID_PPV_ARGS(&folder))))
-                    dialog->SetDefaultFolder(folder.Get());
-                  hr = dialog->Show(current->cef_window);
-                  ComPtr<IShellItem> result;
-                  if (SUCCEEDED(hr)) hr = dialog->GetResult(&result);
-                  LPWSTR selected = nullptr;
-                  if (SUCCEEDED(hr)) hr = result->GetDisplayName(SIGDN_FILESYSPATH, &selected);
-                  if (SUCCEEDED(hr) && selected) path = selected;
-                  CoTaskMemFree(selected);
-                }
-                if (FAILED(hr)) { args->put_Cancel(TRUE); return; }
+              if (args) args->put_Cancel(TRUE);
+              // Downloading remains in the original CEF tab in this first
+              // compatibility release; do not move WebView2 COM objects to CEF.
+              if (auto current = weak.lock()) {
+                if (IsWindow(current->root_window)) SetWindowTextW(current->root_window,
+                    ui::Text(L"MaenBrowser — download from the original tab",
+                             L"MaenBrowser — نزّل الملف من التبويب الأصلي"));
               }
-              if (!path.empty()) args->put_ResultFilePath(path.c_str());
-
-              }, deferral));
-              if (!posted) { args->put_Cancel(TRUE); deferral->Complete(); }
               return S_OK;
             }).Get(), &surface->download_token);
   }
 }
 
 void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
-  if (!surface || !g_environment || surface->controller || !surface->child ||
+  if (!surface || surface->failed || !g_environment || surface->controller || !surface->child ||
       !IsWindow(surface->child))
     return;
 
@@ -429,7 +378,7 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
           [weak = std::weak_ptr<Surface>(surface)](
               HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
             auto current = weak.lock();
-            if (!current) return S_OK;
+            if (!current || current->failed) { if (controller) controller->Close(); return S_OK; }
             if (FAILED(result) || !controller || !current->child || !IsWindow(current->child)) {
               FailSurface(current);
               return S_OK;
@@ -452,19 +401,15 @@ void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
 void StartEnvironmentIfNeeded() {
   if (g_environment || g_environment_pending) return;
 
-  // WebView2 requires COM on the creating UI thread. CEF's Chrome Runtime owns
-  // the message loop; initialize STA here only when the media engine is first
-  // requested instead of paying the cost at browser startup.
-  static bool com_checked = false;
-  if (!com_checked) {
-    const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    if (FAILED(com_hr)) {
-      for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
-      return;
-    }
-    com_checked = true;
+  // The dedicated media window owns STA initialization and its message pump.
+  // Never initialize WebView2 on an unknown CEF apartment.
+  APTTYPE apartment{}; APTTYPEQUALIFIER qualifier{};
+  if (FAILED(CoGetApartmentType(&apartment, &qualifier)) ||
+      (apartment != APTTYPE_STA && apartment != APTTYPE_MAINSTA)) {
+    for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
+    return;
   }
-
+  const auto generation = ++g_environment_generation;
   g_environment_pending = true;
   const std::wstring data_folder = WebView2UserDataFolder();
   auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
@@ -478,7 +423,8 @@ void StartEnvironmentIfNeeded() {
   const HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(
       nullptr, data_folder.c_str(), options.Get(),
       Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
-          [](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
+          [generation](HRESULT result, ICoreWebView2Environment* environment) -> HRESULT {
+            if (generation != g_environment_generation) return S_OK;
             g_environment_pending = false;
             if (FAILED(result) || !environment) {
               for (const auto& [id, surface] : g_surfaces) FailSurface(surface);
@@ -503,7 +449,8 @@ void StartEnvironmentIfNeeded() {
 }  // namespace
 
 bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& url,
-                         std::function<void(const std::wstring&)> navigate) {
+                         std::function<void(const std::wstring&)> navigate,
+                         std::function<void(const std::wstring&)> address_changed) {
   if (browser_id <= 0 || !cef_window || !IsWindow(cef_window) || url.empty()) return false;
   if (!EnsureSurfaceClass()) return false;
 
@@ -512,6 +459,7 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
     auto surface = existing->second;
     surface->pending_url = url;
     surface->navigate = std::move(navigate);
+  surface->address_changed = std::move(address_changed);
     if (surface->webview) surface->webview->Navigate(url.c_str());
     if (surface->child) {
       ShowWindow(surface->child, SW_SHOW);
@@ -531,6 +479,7 @@ bool OpenEmbeddedWebView2(int browser_id, HWND cef_window, const std::wstring& u
   surface->root_window = GetAncestor(cef_window, GA_ROOT);
   surface->pending_url = url;
   surface->navigate = std::move(navigate);
+  surface->address_changed = std::move(address_changed);
   surface->child = CreateWindowExW(
       0, L"MaenBrowserEmbeddedWebView2", L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
       0, 0, 1, 1, content_host, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -560,6 +509,8 @@ void CloseEmbeddedWebView2(int browser_id) {
   auto surface = it->second;
   g_surfaces.erase(it);
   if (!surface) return;
+  surface->failed = true;
+  surface->starting = false;
   if (surface->webview) {
     surface->webview->remove_ProcessFailed(surface->failed_token);
     surface->webview->remove_PermissionRequested(surface->permission_token);
@@ -579,7 +530,11 @@ void CloseEmbeddedWebView2(int browser_id) {
     RemoveWindowSubclass(surface->root_window, ParentProc, static_cast<UINT_PTR>(browser_id));
   if (surface->child && IsWindow(surface->child)) DestroyWindow(surface->child);
   surface->child = nullptr;
-  if (g_surfaces.empty()) g_environment.Reset();
+  if (g_surfaces.empty()) {
+    g_environment.Reset();
+    g_environment_pending = false;
+    ++g_environment_generation; // Ignore a completion from an abandoned attempt.
+  }
 }
 
 }  // namespace maenbrowser::media

@@ -266,8 +266,8 @@ if ($allSource -match 'Continue\([^\)]*,\s*false\s*\).*Open|ShellExecute') {
 
 
 # 1.7.0 embedded WebView2 media release gate.
-# Main browsing remains the full CEF 152 Chrome Runtime. WhatsApp Web is routed
-# to an on-demand WebView2 child surface inside the current MaenBrowser tab.
+# Main browsing remains CEF. Media compatibility is manually opened in a
+# separate native STA window; automatic placeholder interception stays disabled.
 $wf = Get-Content ".github/workflows/maenbrowser-ci.yml" -Raw
 foreach ($needle in @(
   "WEBVIEW2_SDK_VERSION",
@@ -289,7 +289,7 @@ $client = Get-Content "src/app/maen_client.cpp" -Raw
 foreach ($needle in @("web.whatsapp.com")) {
   if (-not $router.Contains($needle)) { throw "WhatsApp media router missing: $needle" }
 }
-foreach ($needle in @("CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "PermissionRequested", "COREWEBVIEW2_PERMISSION_KIND_MICROPHONE")) {
+foreach ($needle in @("CreateCoreWebView2EnvironmentWithOptions", "ICoreWebView2Controller", "PermissionRequested", "COREWEBVIEW2_PERMISSION_STATE_DENY")) {
   if (-not $embedded.Contains($needle)) { throw "Embedded WebView2 media layer missing: $needle" }
 }
 if (-not $client.Contains("OpenEmbeddedWebView2")) { throw "CEF-to-embedded-WebView2 routing is missing." }
@@ -339,4 +339,9 @@ foreach ($list in (Get-Content "assets/filters/manifest.json" -Raw | ConvertFrom
   $actual = (Get-FileHash "assets/filters/$($list.name).txt" -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($actual -ne $list.sha256) { throw "Filter hash mismatch: $($list.name)" }
 }
+$mediaWindow = Get-Content "src/media/media_window.cpp" -Raw
+foreach ($needle in @("COINIT_APARTMENTTHREADED", "GetMessageW", "CloseEmbeddedWebView2", "ShutdownMediaWindow")) {
+  if (-not $mediaWindow.Contains($needle)) { throw "Media window lifecycle missing: $needle" }
+}
+if (-not $wf.Contains("media_window_smoke.mjs")) { throw "Real media playback gate missing." }
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green

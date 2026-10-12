@@ -1,14 +1,14 @@
-# MaenBrowser 1.9.4 — control page refresh limits
+# MaenBrowser 1.9.5 — manual media compatibility window
 
-See [current release notes](docs/RELEASE_1.9.4.md). Windows validation pending.
+See [current release notes](docs/RELEASE_1.9.5.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
 
 # MaenBrowser 1.9.3 — on-demand performance diagnostics
 
-See [current release notes](docs/RELEASE_1.9.3.md). Windows validation pending.
+See [current release notes](docs/RELEASE_1.9.3.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
 
 # MaenBrowser 1.9.2 — media handoff rollback
 
-See [current release notes](docs/RELEASE_1.9.2.md). Windows validation pending.
+See [current release notes](docs/RELEASE_1.9.2.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
 
 # MaenBrowser 1.9.1 — development source
 

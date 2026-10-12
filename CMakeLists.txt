@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.4 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.5 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -51,6 +51,7 @@ set(MAEN_SOURCES
   src/security/windows_hardening.cpp
   src/media/windows_media_foundation.cpp
   src/media/webview2_media_router.cpp
+  src/media/media_window.cpp
   src/media/webview2_embedded.cpp
   src/win/maenbrowser.rc
   src/extensions/extension_manager.cpp
@@ -69,6 +70,7 @@ set(MAEN_HEADERS
   src/security/windows_hardening.h
   src/media/windows_media_foundation.h
   src/media/webview2_media_router.h
+  src/media/media_window.h
   src/media/webview2_embedded.h
   src/win/resource.h
   src/extensions/extension_manager.h

@@ -8,6 +8,7 @@
 
 #include "include/maenbrowser/version.h"
 #include "src/app/maen_client.h"
+#include "src/media/media_window.h"
 #include "src/app/ui_language.h"
 #include "src/app/resource_mode.h"
 #include "src/app/browser_preferences.h"
@@ -98,6 +99,10 @@ void MaenApp::OnContextInitialized() {
       browser_settings,
       nullptr,
       context);
+  // Also used by CI to exercise real WebView2 playback. This flag is local
+  // startup input only and follows the same URL/family checks as the menu.
+  const auto media_url = CefCommandLine::GetGlobalCommandLine()->GetSwitchValue("maen-media-url");
+  if (!media_url.empty()) media::OpenMediaWindow(media_url.ToWString());
 }
 
 }  // namespace maenbrowser

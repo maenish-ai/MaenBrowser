@@ -16,11 +16,59 @@
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
 #include "src/media/webview2_embedded.h"
+#include "src/media/media_window.h"
 #include "src/protection/protection.h"
 #include "include/cef_id_mappers.h"
 #include "include/cef_request_context.h"
 
 namespace maenbrowser {
+namespace {
+constexpr int kOpenMediaWindow = MENU_ID_USER_FIRST + 95;
+bool CanOpenMedia(CefRefPtr<CefBrowser> browser) {
+  if (!browser || !browser->GetMainFrame() ||
+      browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return false;
+  const auto url = browser->GetMainFrame()->GetURL().ToString();
+  const auto parsed = protection::ParseUrl(url);
+  return parsed.valid && !parsed.host.empty() &&
+      (parsed.scheme == "https" || parsed.scheme == "http") && !protection::BlockNavigation(url);
+}
+void OpenMedia(CefRefPtr<CefBrowser> browser) {
+  if (!CanOpenMedia(browser)) return;
+  if (!media::OpenMediaWindow(browser->GetMainFrame()->GetURL().ToWString()))
+    MessageBoxW(browser->GetHost()->GetWindowHandle(),
+        ui::Text(L"Could not start the media compatibility window.", L"تعذر بدء نافذة توافق الفيديو."),
+        L"MaenBrowser", MB_OK | MB_ICONERROR);
+}
+}
+void MaenClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame>,
+    CefRefPtr<CefContextMenuParams>, CefRefPtr<CefMenuModel> model) {
+  CEF_REQUIRE_UI_THREAD();
+  if (!model || !CanOpenMedia(browser)) return;
+  model->AddSeparator();
+  model->AddItem(kOpenMediaWindow, ui::Text(
+      L"Open page in media window (Ctrl+Shift+M)", L"فتح الصفحة في نافذة الفيديو (Ctrl+Shift+M)"));
+}
+bool MaenClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame>,
+    CefRefPtr<CefContextMenuParams>, int command, CefContextMenuHandler::EventFlags) {
+  CEF_REQUIRE_UI_THREAD();
+  if (command != kOpenMediaWindow) return false;
+  // Defer until the native menu callback returns.
+  CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce([](CefRefPtr<CefBrowser> target) {
+    if (target && target->IsValid()) OpenMedia(target);
+  }, browser)));
+  return true;
+}
+bool MaenClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent& event,
+    CefEventHandle, bool*) {
+  CEF_REQUIRE_UI_THREAD();
+  if (event.type == KEYEVENT_RAWKEYDOWN && event.windows_key_code == 'M' &&
+      (event.modifiers & EVENTFLAG_CONTROL_DOWN) && (event.modifiers & EVENTFLAG_SHIFT_DOWN) &&
+      !(event.modifiers & EVENTFLAG_ALT_DOWN)) {
+    OpenMedia(browser); return true;
+  }
+  return false;
+}
+
 bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id, cef_window_open_disposition_t) {
   CEF_REQUIRE_UI_THREAD();
   const int about_id = cef_id_for_command_id_name("IDC_ABOUT");
