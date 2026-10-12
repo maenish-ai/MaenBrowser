@@ -26,17 +26,19 @@ jobs:
           CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
           CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
         run: |
-          if [[ "$CEF_ARCHIVE_URL" =~ ^https://[^[:space:]]+$ && "$CEF_ARCHIVE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+          if [[ -z "$CEF_ARCHIVE_URL" && -z "$CEF_ARCHIVE_SHA256" ]]; then
+            echo "media_ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Building installable preview Setup with official CEF. H.264 playback is not enabled or validated in this mode."
+          elif [[ "$CEF_ARCHIVE_URL" =~ ^https://[^[:space:]]+$ && "$CEF_ARCHIVE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
             echo "media_ready=true" >> "$GITHUB_OUTPUT"
             echo "Verified CEF archive settings are present; Windows Setup validation will run."
           else
-            echo "media_ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Windows Setup skipped: configure valid MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 repository secrets to build the verified H.264 runtime."
+            echo "::error::CEF archive configuration is incomplete or invalid. Set both MAEN_CEF_ARCHIVE_URL (HTTPS) and MAEN_CEF_ARCHIVE_SHA256 (64 hex characters), or remove both to build the stock-CEF preview Setup."
+            exit 1
           fi
 
   build-setup:
     needs: configuration
-    if: needs.configuration.outputs.media_ready == 'true'
     runs-on: windows-2022
     timeout-minutes: 90
     steps:
@@ -46,6 +48,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Select CEF runtime mode
+        shell: pwsh
+        run: |
+          $mediaBuild = '${{ needs.configuration.outputs.media_ready }}' -eq 'true'
+          "MAEN_MEDIA_BUILD=$($mediaBuild.ToString().ToLowerInvariant())" | Out-File $env:GITHUB_ENV -Append
+          if ($mediaBuild) {
+            Write-Host "Building Setup with the verified media-enabled CEF runtime."
+          } else {
+            Write-Warning "Building an installable preview with stock CEF. H.264 playback is not enabled or validated in this Setup."
+          }
 
       - name: JavaScript safeguards and package verification
         shell: pwsh
@@ -62,11 +75,20 @@ jobs:
           .\tools\preflight.ps1
 
       - name: Fetch verified media-enabled CEF 152
+        if: needs.configuration.outputs.media_ready == 'true'
         shell: pwsh
         run: |
           $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
           if (-not $cefRoot) { throw "CEF root was not returned." }
           .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
+          "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Fetch pinned stock CEF 152 for installable preview
+        if: needs.configuration.outputs.media_ready != 'true'
+        shell: pwsh
+        run: |
+          $cefRoot=& .\tools\fetch-cef.ps1
+          if (-not $cefRoot) { throw "CEF root was not returned." }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Fetch Microsoft WebView2 SDK
@@ -97,9 +119,16 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Browser integration and real in-tab H.264 playback test
+        if: needs.configuration.outputs.media_ready == 'true'
         timeout-minutes: 8
         shell: pwsh
         run: node tests/browser_smoke.mjs build/Release/MaenBrowser.exe
+
+      - name: Record stock-CEF media limitation
+        if: needs.configuration.outputs.media_ready != 'true'
+        shell: pwsh
+        run: |
+          Write-Host "H.264 playback test skipped: this installable preview uses stock CEF and does not include the verified proprietary-codec runtime."
 
       - name: Upload validation logs
         if: always()
@@ -153,9 +182,19 @@ jobs:
           Write-Host "Setup produced: $setup ($((Get-Item $setup).Length) bytes)"
 
       - name: Upload Setup only
+        if: needs.configuration.outputs.media_ready == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: MaenBrowser-${{ env.MAEN_VERSION }}-Windows-x64-Setup
-          path: installer/MaenBrowser-${{ env.MAEN_VERSION }}-Setup.exe
+          name: MaenBrowser-Windows-x64-Setup-H264
+          path: installer/MaenBrowser-*-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Setup only (stock CEF preview; H.264 not enabled)
+        if: needs.configuration.outputs.media_ready != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaenBrowser-Windows-x64-Setup-stock-CEF-preview
+          path: installer/MaenBrowser-*-Setup.exe
           if-no-files-found: error
           retention-days: 30

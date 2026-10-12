@@ -16,8 +16,11 @@ assert 'ParseAdSnapshot(text, rules->domains)' in native
 assert native.index('ParseAdSnapshot(text, rules->domains)') < native.index('SaveAdSnapshot(text)')
 workflow=(r/'.github/workflows/maenbrowser-ci.yml').read_text()
 assert 'browser_smoke.mjs' in workflow and ' -RequireMedia' in workflow
-assert 'stock CEF' not in workflow
-assert 'if: env.MAEN_MEDIA_BUILD' not in workflow
+assert 'Setup-stock-CEF-preview' in workflow
+assert 'Setup-H264' in workflow
+assert 'if: needs.configuration.outputs.media_ready == \'true\'' in workflow
+assert 'if: needs.configuration.outputs.media_ready != \'true\'' in workflow
+assert 'does not include the verified proprietary-codec runtime' in workflow
 assert 'MicrosoftEdgeWebview2Setup.exe' not in workflow
 installer=(r/'installer/MaenBrowser.nsi').read_text()
 assert 'RMDir /r "$LOCALAPPDATA\\MaenBrowser"' not in installer

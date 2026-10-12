@@ -30,19 +30,24 @@ acceptance remain pending**. See [validation](docs/VALIDATION_1.9.6.md).
 ## Build Windows Setup
 Extract the archive and upload its **contents** to the repository root, including
 `.github/workflows`. Uploading the ZIP alone does not update the application source.
-The workflow **Build MaenBrowser Windows Setup** requires both repository secrets:
+The workflow **Build MaenBrowser Windows Setup** creates an installable stock-CEF
+preview when the two optional media-runtime secrets are absent. That preview does
+not enable or verify H.264 playback. For a verified H.264 Setup, configure both
+repository secrets:
 
 - `MAEN_CEF_ARCHIVE_URL`: HTTPS URL of the verified, version-matched media CEF ZIP.
 - `MAEN_CEF_ARCHIVE_SHA256`: exact SHA-256 of that archive.
 
-There is no stock-codec fallback for release packaging. If those prerequisites are
-absent, the job stops with an actionable message. The existing separate media runtime
-workflow needs an online Windows x64 self-hosted build runner. Source changes cannot
-supply the publisher's archive, credentials, codec licensing review or signing certificate.
+The stock-CEF preview and H.264 Setup are uploaded as differently named artifacts.
+If only one secret is set or either value is malformed, configuration fails instead of
+silently selecting a runtime. The separate media runtime workflow needs an online
+Windows x64 self-hosted build runner. Source changes cannot supply the publisher's
+archive, credentials, codec licensing review or signing certificate.
 
-The Setup workflow performs source checks, sandboxed C++ build, native tests and
-actual CEF playback before creating `MaenBrowser-1.9.6-Setup.exe`. A green workflow
-still does not prove device performance or all third-party service compatibility.
+The Setup workflow performs source checks, sandboxed C++ build and native tests before
+creating `MaenBrowser-1.9.6-Setup.exe`. The in-tab playback test runs only with the
+verified custom CEF archive. A green stock-CEF preview workflow does not establish H.264
+support, device performance or all third-party service compatibility.
 No GitHub changes or workflow runs were made as part of preparing this source archive.
 
 ## Local source checks
