@@ -7,6 +7,7 @@
 #include <string>
 
 #include "include/cef_client.h"
+#include "src/protection/protection.h"
 #include "include/cef_display_handler.h"
 #include "include/cef_download_handler.h"
 #include "include/cef_life_span_handler.h"
@@ -84,6 +85,7 @@ class MaenClient final : public CefClient,
                          CefRefPtr<CefDownloadItemCallback> callback) override;
 
  private:
+  CefRefPtr<CefRequestContextHandler> resource_handler_ = protection::ContextHandler();
   struct DownloadState {
     std::wstring path;
     int last_percent = -1;

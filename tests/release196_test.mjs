@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {changedSettings} from '../assets/companion/settings-patch.js';
+import {idlePolicy} from '../assets/companion/memory-policy.js';
+import {parseHosts} from '../assets/companion/filter-update.js';
+import {restoreSession} from '../assets/companion/session-restore.js';
+// A panel opened before a popup change cannot send its untouched ad checkbox.
+const baseline={ads:true,askDownload:true,exceptions:[]};
+assert.deepEqual(changedSettings(baseline,{...baseline,askDownload:false}),{askDownload:false});
+assert.deepEqual(changedSettings(baseline,{...baseline,ads:false}),{ads:false});
+assert.equal(idlePolicy({},{resourceMode:'UltraLite',memoryLoadPercent:90}).minutes,5);
+assert.equal(idlePolicy({},{resourceMode:'Lite',availableMemoryMiB:200}).minutes,10);
+assert.equal(idlePolicy({sleepMinutes:60},{}).minutes,60);
+assert.throws(()=>parseHosts('<html>error</html>'));
+const input=Array.from({length:10001},(_,i)=>`0.0.0.0 ad${i}.example`).join('\n');
+const parsed=parseHosts(input+'\n0.0.0.0 ad1.example # duplicate\n');
+assert.equal(parsed.trim().split('\n').length,10001);
+assert(!parsed.includes('0.0.0.0'));
+let realLoads=[],created=[];
+globalThis.chrome={storage:{local:{get:async()=>({sessions:[{id:'one',tabs:[{url:'https://first.example'},{url:'https://second.example',pinned:true},{url:'javascript:alert(1)'}]}]})}},windows:{create:async({url})=>{realLoads.push(url);return {id:42,tabs:[{id:1}]};}},tabs:{create:async t=>created.push(t),update:async()=>{}},runtime:{getURL:p=>'chrome-extension://test/'+p}};
+await restoreSession('one');
+assert.deepEqual(realLoads,['https://first.example']);
+assert.equal(created.length,1);assert.equal(created[0].active,false);
+assert(created[0].url.startsWith('chrome-extension://test/deferred.html#'));
+assert.equal(created[0].pinned,true);
+await assert.rejects(restoreSession('missing'));
+console.log('1.9.6: minimal settings patch, pressure policy, bounded filter validation and lazy sessions passed');

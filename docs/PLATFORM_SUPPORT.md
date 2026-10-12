@@ -1,32 +1,10 @@
-# Platform support
+# Supported target — 1.9.6
 
-## Windows desktop — current release line
+Windows x64 with an OS/CPU/GPU supported by the pinned CEF runtime. Resource modes
+target 2 GB and 4 GB machines but do not guarantee performance for all sites.
+Windows 7/8/8.1 and 32-bit Windows are not claimed as supported. No Android build.
 
-MaenBrowser 1.5.12 is a native Windows x64 desktop application using CEF/Chromium 152.
-The GitHub workflow produces:
-
-- `MaenBrowser-1.5.12-Setup.exe` — the normal double-click installer.
-- `MaenBrowser-1.5.12-Windows-x64-Portable.zip` — optional portable build.
-
-The installer installs under the current user's Local AppData, creates Start Menu and
-Desktop shortcuts, registers Installed Apps/uninstall information, registers MaenBrowser
-as a browser candidate for HTTP/HTTPS, and adds an App Paths registration.
-
-Windows decides default-app ownership. MaenBrowser does not silently take over HTTP/HTTPS.
-
-### Supported Windows target
-
-The maintained target is modern supported 64-bit Windows. The project does not claim
-Windows 7/8/8.1 support with Chromium/CEF 152. Supporting obsolete Windows safely would
-require a separate legacy engine branch with its own security implications and is not
-shipped as part of this release.
-
-## Android
-
-Android is a separate application target, not the Windows CEF binary repackaged as an APK.
-The current repository does not yet contain a production Android browser and therefore
-does not claim old/new Android compatibility.
-
-When Android development begins it should use an Android-supported web engine and Play
-policy-compliant packaging, with explicit minimum/target SDK levels and device testing.
-No external Windows updater or executable-code download mechanism should be reused on Android.
+Setup registers the browser as an HTTP/HTTPS candidate; Windows/user chooses the
+default. Profiles survive upgrade and uninstall. The optional manual WebView2
+window requires its Runtime already installed; ordinary browsing uses CEF.
+Current release and hardware qualification remain subject to Windows acceptance.

@@ -1,4 +1,7 @@
 #include "src/app/resource_mode.h"
+#include "src/storage/local_profile.h"
+#include <filesystem>
+#include <fstream>
 
 namespace maenbrowser::resource {
 ResourceProfile DetectResourceProfile() {
@@ -19,15 +22,22 @@ ResourceProfile DetectResourceProfile() {
   p.constrained_hardware =
       (p.physical_mb > 0 && p.physical_mb <= 6144) || p.logical_processors <= 4;
 
-  if (p.constrained_hardware) {
-    p.mode = Mode::Lite;
-    p.lite = true;
-  } else if (p.physical_mb >= 16384 && p.logical_processors >= 8) {
-    p.mode = Mode::Performance;
-  } else {
-    p.mode = Mode::Balanced;
-  }
+  std::string selected;
+  std::ifstream mode_file(std::filesystem::path(storage::GetAppDataRoot()) / L"resource-mode.txt");
+  char mode_hint[32]{}; mode_file.getline(mode_hint, sizeof(mode_hint));
+  if (mode_file) selected = mode_hint;
+  p.mode = ChooseMode(p.physical_mb, p.logical_processors, selected);
+  p.lite = p.mode == Mode::UltraLite || p.mode == Mode::Lite;
   return p;
+}
+
+const char* ModeName(Mode mode) {
+  switch (mode) {
+    case Mode::UltraLite: return "UltraLite";
+    case Mode::Lite: return "Lite";
+    case Mode::Performance: return "Performance";
+    default: return "Balanced";
+  }
 }
 
 void ApplyResourcePolicy(CefRefPtr<CefCommandLine> cmd,
@@ -41,13 +51,16 @@ void ApplyResourcePolicy(CefRefPtr<CefCommandLine> cmd,
   cmd->AppendSwitch("disable-sync");
   cmd->AppendSwitch("disable-default-apps");
 
-  if (p.mode == Mode::Lite) {
+  if (p.mode == Mode::Lite || p.mode == Mode::UltraLite) {
     cmd->AppendSwitchWithValue("disable-features",
                                "Prerender2,BackForwardCache,OptimizationHints,MediaRouter");
 
     // 4 GiB-class systems need tighter caches than 6 GiB systems. These are
     // cache ceilings, not hard limits on a page/game renderer.
-    if (p.physical_mb > 0 && p.physical_mb <= 4096) {
+    if (p.mode == Mode::UltraLite) {
+      cmd->AppendSwitchWithValue("disk-cache-size", "33554432");
+      cmd->AppendSwitchWithValue("media-cache-size", "16777216");
+    } else if (p.physical_mb > 0 && p.physical_mb <= 4096) {
       cmd->AppendSwitchWithValue("disk-cache-size", "67108864");   // 64 MiB
       cmd->AppendSwitchWithValue("media-cache-size", "33554432"); // 32 MiB
     } else {

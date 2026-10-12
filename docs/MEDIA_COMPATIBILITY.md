@@ -1,41 +1,18 @@
-> Current status: see [1.8.2 notes](RELEASE_1.8.2.md). The stock CEF runtime is unchanged. Direct HTTPS MP4/M4V/M4A/AAC routing uses on-demand WebView2; actual Windows playback validation is pending. Historical custom-CEF gates below are not proof that proprietary codecs are included in stock CEF.
+# Current media policy — 1.9.6
 
-# MaenBrowser media compatibility policy
+Normal playback remains in CEF in the current tab. Release builds require the
+verified version-matched media CEF archive described in CUSTOM_CEF_MEDIA_BUILD.md.
+Stock-codec fallback cannot produce the release Setup.
 
-MaenBrowser treats modern media playback as a release-blocking compatibility surface.
+Required automated samples: H.264/AAC MP4; VP8/Vorbis, VP9/Opus and AV1/Opus WebM;
+MP3, FLAC, PCM WAV, Ogg Vorbis and AAC/M4A. tests/browser_smoke.mjs verifies playback
+progress and video dimensions. A canPlayType claim alone is insufficient.
 
-## Required web media surface
+The automated samples do not prove audible device output, commercial DRM services,
+HEVC support, platform-specific WebCodecs or the operation of every third-party
+website. These need the manual acceptance matrix in ACCEPTANCE_1.9.6.md.
+No unsafe codec packs, GPU blocklist overrides, TLS exceptions or automatic second
+engine routing were added. Manual WebView2 compatibility requires an already
+installed Runtime and a separate session; it is optional, not the codec guarantee.
 
-Release testing covers MP4/H.264/AVC + AAC, WebM VP8/VP9 + Opus/Vorbis, AV1, MP3, FLAC, WAV, Media Source Extensions (MSE), WebRTC, WebCodecs and common browser-supported image formats. HEVC/H.265 is opportunistic/platform-dependent and must not be advertised as universal. DRM playback is a separate CDM/licensing surface.
-
-## Performance and security rules
-
-- Keep Chromium GPU acceleration and accelerated video decoding enabled by default.
-- Never use `--ignore-gpu-blocklist` as a production compatibility shortcut.
-- Never disable sandbox, site isolation or certificate validation for media compatibility.
-- Prefer hardware decoding when Chromium/Windows exposes a safe supported path; retain Chromium fallbacks.
-- Do not ship random codec packs or replace Chromium FFmpeg binaries at runtime.
-- Do not preload media services in the background.
-
-## CEF distribution boundary
-
-The public CEF binary downloaded by `tools/fetch-cef.ps1` is the reproducible CI baseline. A production distribution that enables additional proprietary codecs must use a separately built and verified CEF/Chromium runtime with the appropriate Chromium GN media configuration and must pass licensing review before redistribution.
-
-The custom CEF build must remain ABI/version matched to the pinned CEF branch. Do not mix `libcef.dll`, resources, locales or FFmpeg artifacts from another Chromium/CEF version.
-
-## Release gate
-
-A release is not declared media-ready solely because `canPlayType()` reports support. Manual/runtime tests must include:
-
-1. WhatsApp Web received MP4 video: thumbnail, open, play/pause, seek and audio.
-2. WhatsApp Web download of the same media.
-3. H.264/AAC MP4 test asset.
-4. VP9/Opus WebM and AV1 test asset.
-5. YouTube playback controls, resolution menu and subtitles.
-6. WebRTC audio/video call smoke test.
-7. 4 GiB Windows machine: 1080p playback without MaenBrowser-specific background overhead; 4K is capability-dependent and is never guaranteed on unsupported hardware.
-
-If H.264/AAC playback is absent, the release remains blocked rather than silently falling back to an untrusted codec package.
-
-## 1.5.24 media-release invariant
-The production media Setup workflow refuses the stock CEF fallback. It requires a SHA-256-pinned custom CEF 152 runtime built from the pinned Chromium 152 line with `proprietary_codecs=true` and `ffmpeg_branding=Chrome`. This enables the Chromium media paths required for common MP4/H.264 + AAC playback while retaining Chromium's existing VP8/VP9/AV1, WebM, MSE, WebRTC, WebCodecs and GPU/hardware-decoder selection. Capability claims remain subject to the actual media file, OS/GPU support and runtime testing.
+Documentation: https://www.chromium.org/audio-video/

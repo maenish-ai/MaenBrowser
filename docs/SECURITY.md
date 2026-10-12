@@ -52,3 +52,14 @@ mobile engine and Google Play requirements at implementation time.
 Do not advertise MaenBrowser as impossible to hack. Security defects should be treated as
 release-blocking when they affect sandboxing, TLS, credentials, permissions, updates, or
 profile confidentiality.
+
+## 1.9.6 implementation notes
+The CMake target and launcher now reject sandbox-free operation. Startup rejects
+known unsafe flags, while the release does not install an antivirus/background
+scanner. Native writes require a current revision. Recovery from the encrypted
+previous-version backup is explicit, PIN-protected and always retains family mode.
+An unreadable profile never silently falls back to an unlocked backup. Common
+external app URLs require explicit main-frame user action plus a native prompt;
+other protocol execution remains denied. These source protections still require
+Windows runtime testing; see ACCEPTANCE_1.9.6.md. Local OS administrators and
+same-user file modification remain outside the parental security boundary.

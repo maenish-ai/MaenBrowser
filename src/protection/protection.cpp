@@ -1,4 +1,5 @@
 #include "src/protection/protection.h"
+#include "src/protection/filter_snapshot.h"
 #include "src/app/ui_language.h"
 #include <windows.h>
 #include <bcrypt.h>
@@ -27,11 +28,12 @@
 namespace maenbrowser::protection {
 namespace {
 std::atomic<std::shared_ptr<const Settings>> g_settings{std::make_shared<const Settings>()};
-DomainRules g_ads, g_adult, g_violence;
+struct AdRules { DomainRules domains; std::string error; };
+std::atomic<std::shared_ptr<const AdRules>> g_ad_rules{std::make_shared<const AdRules>()};
 std::atomic<uint64_t> g_blocked{0};
 std::mutex g_write;
 std::chrono::steady_clock::time_point g_retry{};
-std::string g_list_error;
+
 
 std::string ReadFile(const std::filesystem::path& path, size_t max) {
   std::error_code ec;
@@ -97,6 +99,8 @@ bool ReadRules(CefRefPtr<CefDictionaryValue> d, const char* key, DomainRules& ou
 CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
   auto d = CefDictionaryValue::Create();
   d->SetInt("schema", 1);
+  d->SetString("revision", std::to_string(s.revision));
+  d->SetString("resourceModePreference", s.resource_mode);
   d->SetString("language", ui::Arabic()?"ar":"en");
   d->SetBool("ads", s.ads); d->SetBool("family", s.family);
   d->SetBool("allowOnly", s.allow_only); d->SetBool("adult", s.adult);
@@ -109,11 +113,12 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
   else {
     d->SetBool("hasPin", !s.pin_hash.empty()); d->SetBool("lockedFile", s.corrupt);
     d->SetString("blockedRequests", std::to_string(g_blocked.load()));
-    d->SetInt("adDomains", static_cast<int>(g_ads.Size()));
-    d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
-    d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
-    d->SetString("listError", g_list_error);
-    d->SetString("version", "1.9.5");
+    d->SetInt("adDomains", static_cast<int>(g_ad_rules.load()->domains.Size()));
+    d->SetInt("adultDomains", s.categories ? static_cast<int>(s.categories->adult.Size()) : 0);
+    d->SetInt("violenceDomains", s.categories ? static_cast<int>(s.categories->violence.Size()) : 0);
+    d->SetString("listError", g_ad_rules.load()->error + (s.categories ? s.categories->error : ""));
+    d->SetBool("familyListsLoaded", s.categories != nullptr);
+    d->SetString("version", "1.9.6");
   }
   return d;
 }
@@ -132,6 +137,12 @@ bool Import(CefRefPtr<CefDictionaryValue> d, Settings& s) {
     if (path.size() > 240 || path.find(L'\0') != std::wstring::npos || (!path.empty() && !std::filesystem::path(path).is_absolute())) return false;
     s.download_directory = path;
   }
+  if (d->HasKey("resourceModePreference")) {
+    if (d->GetType("resourceModePreference") != VTYPE_STRING) return false;
+    const auto mode = d->GetString("resourceModePreference").ToString();
+    if (mode != "auto" && mode != "ultra" && mode != "lite" && mode != "balanced") return false;
+    s.resource_mode = mode;
+  }
   return ReadRules(d, "exceptions", s.exceptions) && ReadRules(d, "allowed", s.allowed) && ReadRules(d, "blocked", s.blocked);
 }
 bool Save(const Settings& s) {
@@ -145,11 +156,17 @@ bool Save(const Settings& s) {
     if (f) { f.write(reinterpret_cast<char*>(out.pbData), out.cbData); f.flush(); ok = f.good(); }
   }
   SecureZeroMemory(out.pbData, out.cbData); LocalFree(out.pbData);
-  if (ok) ok = MoveFileExW(tmp.c_str(), SettingsPath().c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
+  if (ok) {
+    std::error_code ec;
+    if (std::filesystem::exists(SettingsPath(), ec)) {
+      auto backup = SettingsPath(); backup += L".bak";
+      ok = ReplaceFileW(SettingsPath().c_str(), tmp.c_str(), backup.c_str(), 0, nullptr, nullptr) != FALSE;
+    } else ok = MoveFileExW(tmp.c_str(), SettingsPath().c_str(), MOVEFILE_WRITE_THROUGH) != FALSE;
+  }
   if (!ok) { std::error_code ec; std::filesystem::remove(tmp, ec); }
   return ok;
 }
-void LoadDomains(const char* name, DomainRules& rules) {
+std::string LoadDomains(const char* name, DomainRules& rules) {
   const auto path = InstallDirectory() / L"filters" / name;
   auto text = ReadFile(path, 16 * 1024 * 1024);
   std::istringstream in(text); std::string line; std::vector<std::string> values;
@@ -158,7 +175,47 @@ void LoadDomains(const char* name, DomainRules& rules) {
     if (ValidDomain(line)) values.push_back(std::move(line));
   }
   rules.Assign(std::move(values));
-  if (rules.Size() == 0) g_list_error += std::string(name) + " missing or empty. ";
+  return rules.Size() == 0 ? std::string(name) + " missing or empty. " : "";
+}
+std::shared_ptr<const FamilyRules> LoadFamilyRules() {
+  auto rules = std::make_shared<FamilyRules>();
+  rules->error = LoadDomains("adult.txt", rules->adult);
+  rules->error += LoadDomains("violence.txt", rules->violence);
+  return rules;
+}
+std::filesystem::path AdSnapshotPath() {
+  return std::filesystem::path(storage::GetAppDataRoot()) / L"ads-updated.txt";
+}
+bool SaveAdSnapshot(const std::string& text) {
+  auto target = AdSnapshotPath(); auto tmp = target; tmp += L".tmp";
+  { std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
+    if (!file || !file.write(text.data(), text.size()) || !file.flush()) return false;
+  }
+  std::error_code ec;
+  if (std::filesystem::exists(target, ec)) {
+    auto backup = target; backup += L".bak";
+    return ReplaceFileW(target.c_str(), tmp.c_str(), backup.c_str(), 0, nullptr, nullptr) != FALSE;
+  }
+  return MoveFileExW(tmp.c_str(), target.c_str(), MOVEFILE_WRITE_THROUGH) != FALSE;
+}
+// Bounded snapshot, captured only when native settings are changed. No URLs/PINs.
+std::vector<std::string> g_changes;
+void RecordChange(const Settings& old, const Settings& next) {
+  if (old.ads == next.ads && old.family == next.family) return;
+  g_changes.push_back(std::to_string(GetTickCount64()) + ":ads=" + (next.ads ? "1" : "0") +
+      ",family=" + (next.family ? "1" : "0") + ",revision=" + std::to_string(next.revision));
+  if (g_changes.size() > 20) g_changes.erase(g_changes.begin());
+}
+bool DecodeSettings(const std::filesystem::path& path, Settings& s) {
+  auto bytes = ReadFile(path, 1024 * 1024);
+  DATA_BLOB in{static_cast<DWORD>(bytes.size()), reinterpret_cast<BYTE*>(bytes.data())}, out{};
+  if (bytes.empty() || !CryptUnprotectData(&in, nullptr, nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out)) return false;
+  auto d = Dictionary(std::string(reinterpret_cast<char*>(out.pbData), out.cbData));
+  SecureZeroMemory(out.pbData, out.cbData); LocalFree(out.pbData);
+  if (!d || d->GetInt("schema") != 1 || !Import(d, s)) return false;
+  s.salt = d->GetString("salt").ToString(); s.pin_hash = d->GetString("pinHash").ToString();
+  try { if (d->HasKey("revision")) s.revision = std::stoull(d->GetString("revision").ToString()); } catch (...) { return false; }
+  return !s.family || !s.pin_hash.empty();
 }
 std::string Error(const char* message) {
   auto d = CefDictionaryValue::Create(); d->SetBool("ok", false); d->SetString("error", message); return Json(d);
@@ -234,7 +291,7 @@ class Resource final : public CefResourceRequestHandler {
       if (!post) return new Response(Error("Missing request"), "application/json", 400, false, true);
       CefPostData::ElementVector elements; post->GetElements(elements); std::string body;
       for (const auto& e : elements) {
-        if (e->GetType() != PDE_TYPE_BYTES || e->GetBytesCount() > 65536 || body.size() + e->GetBytesCount() > 65536)
+        if (e->GetType() != PDE_TYPE_BYTES || e->GetBytesCount() > 5 * 1024 * 1024 || body.size() + e->GetBytesCount() > 5 * 1024 * 1024)
           return new Response(Error("Request too large"), "application/json", 413, false, true);
         const auto n = body.size(); body.resize(n + e->GetBytesCount()); e->GetBytes(e->GetBytesCount(), body.data() + n);
       }
@@ -322,23 +379,30 @@ std::shared_ptr<const Settings> Current() { return g_settings.load(); }
 bool FamilyEnabled() { return Current()->family; }
 void Initialize() {
   CefRegisterSchemeHandlerFactory("https", "maen.browser", new NoNetworkFactory());
-  LoadDomains("ads.txt", g_ads); LoadDomains("adult.txt", g_adult); LoadDomains("violence.txt", g_violence);
+  auto ads = std::make_shared<AdRules>();
+  ads->error = LoadDomains("ads.txt", ads->domains);
+  DomainRules updated;
+  if (ParseAdSnapshot(ReadFile(AdSnapshotPath(), 4 * 1024 * 1024), updated)) {
+    ads->domains = std::move(updated); ads->error.clear();
+  } else {
+    auto backup = AdSnapshotPath(); backup += L".bak";
+    if (ParseAdSnapshot(ReadFile(backup, 4 * 1024 * 1024), updated)) {
+      ads->domains = std::move(updated); ads->error.clear();
+    }
+  }
+  g_ad_rules.store(ads);
   auto s = std::make_shared<Settings>();
   PWSTR dir = nullptr;
   if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &dir))) { s->download_directory = dir; CoTaskMemFree(dir); }
   std::error_code ec;
   if (std::filesystem::exists(SettingsPath(), ec)) {
-    auto bytes = ReadFile(SettingsPath(), 1024 * 1024);
-    DATA_BLOB in{static_cast<DWORD>(bytes.size()), reinterpret_cast<BYTE*>(bytes.data())}, out{};
-    bool valid = CryptUnprotectData(&in, nullptr, nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out) != FALSE;
-    if (valid) {
-      auto d = Dictionary(std::string(reinterpret_cast<char*>(out.pbData), out.cbData));
-      valid = d && d->GetInt("schema") == 1 && Import(d, *s);
-      if (valid) { s->salt = d->GetString("salt").ToString(); s->pin_hash = d->GetString("pinHash").ToString(); }
-      SecureZeroMemory(out.pbData, out.cbData); LocalFree(out.pbData);
-    }
-    if (!valid || (s->family && s->pin_hash.empty())) { s = std::make_shared<Settings>(); s->family = true; s->corrupt = true; }
+    if (!DecodeSettings(SettingsPath(), *s)) { s = std::make_shared<Settings>(); s->family = true; s->corrupt = true; }
   }
+  else {
+    auto backup = SettingsPath(); backup += L".bak";
+    if (std::filesystem::exists(backup, ec)) { s->family = true; s->corrupt = true; }
+  }
+  if (s->family) s->categories = LoadFamilyRules();
   g_settings.store(s);
 }
 bool BlockNavigation(const std::string& url) {
@@ -360,13 +424,13 @@ bool Block(const std::string& url, const std::string& source, bool document) {
     if (s->blocked.Contains(u.host)) denied = true;
     if (!s->allowed.Contains(u.host)) {
       if (document && s->allow_only) denied = true;
-      if ((s->adult && g_adult.Contains(u.host)) || (s->violence && g_violence.Contains(u.host))) denied = true;
+      if ((s->adult && s->categories && s->categories->adult.Contains(u.host)) || (s->violence && s->categories && s->categories->violence.Contains(u.host))) denied = true;
     }
-    if (!g_list_error.empty() && !s->allow_only && document) denied = true;
+    if ((s->categories && !s->categories->error.empty()) && !s->allow_only && document) denied = true;
   }
   // Most resources are not advertising domains. Avoid parsing the source URL
   // or searching exceptions unless the ad list actually matches.
-  if (!denied && s->ads && g_ads.Contains(u.host) && !s->exceptions.Contains(u.host))
+  if (!denied && s->ads && g_ad_rules.load()->domains.Contains(u.host) && !s->exceptions.Contains(u.host))
     denied = s->exceptions.Size() == 0 || !s->exceptions.Contains(ParseUrl(source).host);
   if (denied) ++g_blocked;
   return denied;
@@ -397,18 +461,28 @@ std::string Rewrite(const std::string& url) {
   return prefix + "?" + args + key + "=" + val + fragment;
 }
 std::string Api(const std::string& body) {
-  if (body.size() > 65536) return Error("Request too large");
+  if (body.size() > 5 * 1024 * 1024) return Error("Request too large");
   auto d = Dictionary(body); if (!d) return Error("Invalid JSON");
   const auto op = d->GetString("op").ToString();
+  if (op != "updateAdFilters" && body.size() > 65536) return Error("Request too large");
   if (op == "technical") {
     auto out = CefDictionaryValue::Create();
     out->SetBool("ok", true);
-    out->SetString("version", "1.9.5");
+    out->SetString("version", "1.9.6");
     out->SetString("engine", "CEF " CEF_VERSION);
     out->SetString("mediaEngine", "CEF; automatic WebView2 routing disabled");
     const auto profile = resource::DetectResourceProfile();
-    out->SetString("resourceMode", profile.lite ? "Lite" :
-        profile.mode == resource::Mode::Performance ? "Performance" : "Balanced");
+    out->SetString("resourceMode", resource::ModeName(profile.mode));
+    MEMORYSTATUSEX memory{}; memory.dwLength = sizeof(memory);
+    if (GlobalMemoryStatusEx(&memory)) {
+      out->SetDouble("availableMemoryMiB", memory.ullAvailPhys / 1048576.0);
+      out->SetInt("memoryLoadPercent", static_cast<int>(memory.dwMemoryLoad));
+    }
+    { std::lock_guard<std::mutex> lock(g_write);
+      auto changes = CefListValue::Create();
+      for (size_t i = 0; i < g_changes.size(); ++i) changes->SetString(i, g_changes[i]);
+      out->SetList("protectionChanges", changes);
+    }
     out->SetDouble("physicalMemoryMiB", static_cast<double>(profile.physical_mb));
     out->SetInt("logicalProcessors", static_cast<int>(profile.logical_processors));
     out->SetInt("processId", static_cast<int>(GetCurrentProcessId()));
@@ -434,10 +508,48 @@ std::string Api(const std::string& body) {
     if (!ui::SaveLanguage(d->GetString("language").ToString())) return Error("Could not save language.");
     auto out = Export(*Current(), false); out->SetBool("ok", true); return Json(out);
   }
+  if (op == "restoreBackup") {
+    std::lock_guard<std::mutex> lock(g_write);
+    auto old = Current();
+    if (!old->corrupt) return Error("Recovery is available only for unreadable protected settings.");
+    if (std::chrono::steady_clock::now() < g_retry) return Error("Please wait before trying your PIN again.");
+    auto backup = SettingsPath(); backup += L".bak";
+    auto recovered = std::make_shared<Settings>();
+    if (!DecodeSettings(backup, *recovered) || recovered->pin_hash.empty() || !VerifyPin(*recovered, d->GetString("pin").ToString())) {
+      g_retry = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      return Error("Backup recovery requires a valid backup and its parent PIN.");
+    }
+    // Even a formerly unlocked backup cannot silently remove the corruption lock.
+    recovered->family = true; recovered->categories = LoadFamilyRules(); recovered->revision += 1;
+    if (!Save(*recovered)) return Error("Could not save protected settings. No changes were applied.");
+    g_settings.store(recovered);
+    auto out = Export(*recovered, false); out->SetBool("ok", true); return Json(out);
+  }
+  if (op == "updateAdFilters") {
+    std::lock_guard<std::mutex> lock(g_write);
+    auto old = Current();
+    if (old->corrupt) return Error("Protected settings cannot be read. Restore your profile backup or reinstall with a new profile.");
+    if (d->GetString("expectedRevision").ToString() != std::to_string(old->revision))
+      return Error("Settings changed in another window. Reload settings before saving.");
+    if (old->family) {
+      if (std::chrono::steady_clock::now() < g_retry) return Error("Please wait before trying your PIN again.");
+      if (!VerifyPin(*old, d->GetString("pin").ToString())) {
+        g_retry = std::chrono::steady_clock::now() + std::chrono::seconds(5); return Error("Incorrect parent PIN.");
+      }
+    }
+    auto rules = std::make_shared<AdRules>();
+    const auto text = d->GetString("domains").ToString();
+    if (!ParseAdSnapshot(text, rules->domains)) return Error("Invalid ad filter snapshot. Existing filters were kept.");
+    if (!SaveAdSnapshot(text)) return Error("Could not save filters. Existing filters were kept.");
+    g_ad_rules.store(rules);
+    auto out = Export(*old, false); out->SetBool("ok", true); return Json(out);
+  }
   if (op != "save") return Error("Unknown operation");
   std::lock_guard<std::mutex> lock(g_write);
   auto old = Current();
   if (old->corrupt) return Error("Protected settings cannot be read. Restore your profile backup or reinstall with a new profile.");
+  if (d->GetString("expectedRevision").ToString() != std::to_string(old->revision))
+    return Error("Settings changed in another window. Reload settings before saving.");
   auto patch = d->GetDictionary("settings"); if (!patch) return Error("Missing settings");
   if (old->family || (!old->pin_hash.empty() && (patch->HasKey("family") || d->HasKey("newPin")))) {
     if (std::chrono::steady_clock::now() < g_retry) return Error("Please wait before trying your PIN again.");
@@ -456,9 +568,21 @@ std::string Api(const std::string& body) {
     if (next->pin_hash.empty()) return Error("PIN protection failed.");
   }
   if (next->family && next->pin_hash.empty()) return Error("Set a parent PIN before enabling family mode.");
-  if (next->family && !next->allow_only && !g_list_error.empty()) return Error("Family category lists are missing. Repair installation or use allowed-sites-only mode.");
+  if (next->family && !next->categories) next->categories = LoadFamilyRules();
+  if (!next->family) next->categories.reset();
+  if (next->family && !next->allow_only && next->categories && !next->categories->error.empty()) return Error("Family category lists are missing. Repair installation or use allowed-sites-only mode.");
+  next->revision = old->revision + 1;
   if (!Save(*next)) return Error("Could not save protected settings. No changes were applied.");
-  g_settings.store(next); auto out = Export(*next, false); out->SetBool("ok", true); return Json(out);
+  RecordChange(*old, *next);
+  g_settings.store(next);
+  // Non-security restart hint. An invalid/missing hint uses automatic mode.
+  if (next->resource_mode != old->resource_mode) {
+    const auto target = std::filesystem::path(storage::GetAppDataRoot()) / L"resource-mode.txt";
+    auto tmp = target; tmp += L".tmp";
+    { std::ofstream f(tmp, std::ios::trunc); f << next->resource_mode; }
+    MoveFileExW(tmp.c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+  }
+  auto out = Export(*next, false); out->SetBool("ok", true); return Json(out);
 }
 CefRefPtr<CefRequestContextHandler> ContextHandler() { return new Context(); }
 std::wstring DownloadPath(const std::wstring& suggested) {

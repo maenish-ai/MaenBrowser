@@ -8,7 +8,7 @@ export async function nativeApi(op = 'get', extra = {}) {
   try {
     response = await fetch('https://maen.browser/api', {
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(8000)
+      body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(op==='updateAdFilters'?20000:8000)
     });
   }catch{throw new NativeConnectionError('PROTECTION_NETWORK');}
   if(!response.ok)throw new NativeConnectionError('PROTECTION_HTTP_'+response.status);
@@ -27,6 +27,10 @@ export async function api(op = 'get', extra = {}) {
   if(!data||data.ok!==true||typeof data.ads!=='boolean'||typeof data.family!=='boolean'||!Array.isArray(data.exceptions))
     throw new NativeConnectionError('PROTECTION_RESPONSE');
   recordDiagnostic(op,null,data);
+  if(op==='save'||op==='updateAdFilters'||op==='restoreBackup') {
+    try { Promise.resolve(chrome.storage.local.set({protectionRevision:String(data.revision)})).catch(()=>{}); } catch {}
+    try { Promise.resolve(chrome.action.setBadgeText({text:data.ads?'✓':'—'})).catch(()=>{}); } catch {}
+  }
   }catch(error){recordDiagnostic(op,error);throw error;}
   // Language persistence is optional UI housekeeping, not a protection failure.
   if(op==='get'&&['en','ar'].includes(data.language)){

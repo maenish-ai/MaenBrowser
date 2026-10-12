@@ -13,6 +13,7 @@
 #include "include/base/cef_callback.h"
 #include "include/wrapper/cef_closure_task.h"
 #include "src/app/internal_navigation.h"
+#include "src/app/external_protocol.h"
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
 #include "src/media/webview2_embedded.h"
@@ -86,7 +87,7 @@ bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id, 
 CefRefPtr<CefResourceRequestHandler> MaenClient::GetResourceRequestHandler(
     CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> request,
     bool navigation, bool download, const CefString& initiator, bool& disable) {
-  return protection::ContextHandler()->GetResourceRequestHandler(browser, frame, request, navigation, download, initiator, disable);
+  return resource_handler_->GetResourceRequestHandler(browser, frame, request, navigation, download, initiator, disable);
 }
 
 namespace {
@@ -100,10 +101,10 @@ void ApplyMaenWindowIcon(HWND hwnd) {
   HINSTANCE exe = GetModuleHandleW(nullptr);
   HICON big = static_cast<HICON>(LoadImageW(
       exe, MAKEINTRESOURCEW(1), IMAGE_ICON,
-      GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR));
+      GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR | LR_SHARED));
   HICON small = static_cast<HICON>(LoadImageW(
       exe, MAKEINTRESOURCEW(1), IMAGE_ICON,
-      GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
+      GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR | LR_SHARED));
   if (big) SendMessageW(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(big));
   if (small) SendMessageW(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(small));
 }
@@ -191,6 +192,14 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     return true;
   }
 
+  if (AllowedExternalUrl(request->GetURL().ToString())) {
+    if (user_gesture && !protection::FamilyEnabled()) {
+      const auto prompt = std::wstring(ui::Text(L"Open this link in its Windows application?\n", L"فتح هذا الرابط في تطبيق ويندوز؟\n")) + url;
+      if (MessageBoxW(browser->GetHost()->GetWindowHandle(), prompt.c_str(), L"MaenBrowser", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES)
+        ShellExecuteW(browser->GetHost()->GetWindowHandle(), L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    }
+    return true;
+  }
   media::CloseEmbeddedWebView2(browser->GetIdentifier());
   const int browser_id = browser->GetIdentifier();
   media_navigations_.erase(browser_id);

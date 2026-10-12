@@ -1,3 +1,5 @@
+import {idlePolicy} from './memory-policy.js';
+import {restoreSession} from './session-restore.js';
 import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
 async function updateAlarm(){
@@ -18,8 +20,9 @@ async function pageIsSafe(tabId){
     const results=await Promise.race([chrome.scripting.executeScript({target:{tabId,allFrames:true},func:async()=>{
       if(document.visibilityState==='visible'||document.hasFocus())return false;
       if([...document.querySelectorAll('audio,video')].some(e=>!e.paused||e.srcObject))return false;
+      if(navigator.mediaSession?.playbackState==='playing')return false;
       if(document.querySelector('[contenteditable="true"],iframe[src*="meet"],iframe[src*="call"]'))return false;
-      if([...document.querySelectorAll('input,textarea,select')].some(e=>!['hidden','button','submit','reset'].includes(e.type)&&(e.value||e.checked)))return false;
+      if([...document.querySelectorAll('input,textarea,select')].some(e=>!['hidden','button','submit','reset'].includes(e.type)&&(e.value||e.checked||e.value!==e.defaultValue&&['INPUT','TEXTAREA'].includes(e.tagName))))return false;
       // Granted media permissions are treated conservatively even if we cannot
       // observe a site's private MediaStream/RTCPeerConnection objects.
       try{for(const name of ['microphone','camera']){const p=await navigator.permissions.query({name});if(p.state==='granted')return false;}}catch{return false;}
@@ -28,7 +31,7 @@ async function pageIsSafe(tabId){
     return results.length>0&&results.every(r=>r.result===true);
   }catch{return false;}finally{clearTimeout(timeout);}
 }
-async function releaseTab(id,manual=false,minutes=15){
+async function releaseTab(id,manual=false,minutes=15,sample={}){
   if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return {ok:false,error:'A download is running. Tabs are kept awake.'};
   const tab=await chrome.tabs.get(id);const {keepAwake=[]}=await chrome.storage.local.get('keepAwake');
   const probe=manual?{...tab,lastAccessed:0}:tab;
@@ -36,7 +39,7 @@ async function releaseTab(id,manual=false,minutes=15){
   const current=await chrome.tabs.get(id);
   const latest=await chrome.storage.local.get({sleepEnabled:true,keepAwake:[],sleepMinutes:30});
   const recheck=manual?{...current,lastAccessed:0}:current;
-  if((!manual&&!latest.sleepEnabled)||!candidate(recheck,Date.now(),manual?15:Math.max(minutes,latest.sleepMinutes),latest.keepAwake)||current.url!==tab.url||current.lastAccessed!==tab.lastAccessed)return {ok:false,error:'Tab changed; it was kept awake.'};
+  if((!manual&&!latest.sleepEnabled)||!candidate(recheck,Date.now(),manual?15:Math.max(minutes,idlePolicy(latest,sample).minutes),latest.keepAwake)||current.url!==tab.url||current.lastAccessed!==tab.lastAccessed)return {ok:false,error:'Tab changed; it was kept awake.'};
   if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return {ok:false,error:'A download is running. Tabs are kept awake.'};
   await chrome.tabs.discard(id);return {ok:true};
 }
@@ -47,12 +50,14 @@ chrome.alarms.onAlarm.addListener(async alarm=>{
   try{
     const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});if(!p.sleepEnabled)return;
     if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return;
+    let sample={};try{sample=await api('technical');}catch{}
+    const policy=idlePolicy(p,sample);
     const tabs=await chrome.tabs.query({});if(!tabs.length)return;
     const {scanOffset=0}=await chrome.storage.session.get('scanOffset');
     let inspected=0,visited=0;
-    for(;visited<tabs.length&&inspected<3;visited++){
+    for(;visited<tabs.length&&inspected<policy.batch;visited++){
       const tab=tabs[(scanOffset+visited)%tabs.length];
-      if(candidate(tab,Date.now(),p.sleepMinutes,p.keepAwake)){inspected++;await releaseTab(tab.id,false,p.sleepMinutes);}
+      if(candidate(tab,Date.now(),policy.minutes,p.keepAwake)){inspected++;await releaseTab(tab.id,false,policy.minutes,sample);}
     }
     await chrome.storage.session.set({scanOffset:(scanOffset+visited)%tabs.length});
   }catch{/* Best effort: inspection errors must never cause a discard. */}
@@ -87,6 +92,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
     if(request.op==='settingsChanged'){
       const s=await api();await enforceFamily(s.family,s.family&&!request.wasFamily);await updateAlarm();return {ok:true};
     }
+    if(request.op==='restoreSession')return restoreSession(request.id);
     if(request.op==='saveSession'){
       const tabs=await chrome.tabs.query({currentWindow:true});const {sessions=[]}=await chrome.storage.local.get('sessions');
       const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(tabs)};

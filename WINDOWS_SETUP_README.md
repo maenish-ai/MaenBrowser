@@ -1,7 +1,50 @@
-# Windows Setup via GitHub Actions
+# معن براوزر 1.9.6 — ابدأ من هنا
 
-Push this repository to `main`, then open **Actions → Build MaenBrowser Windows Setup → latest run → Artifacts**. Download `MaenBrowser-1.9.5-Windows-x64-Setup` and extract its `MaenBrowser-1.9.5-Setup.exe`.
+هذا الملف المضغوط يحتوي مشروع البرنامج كاملًا بعد التعديل، وليس Setup جاهزًا.
+لم يُرفع أي تعديل إلى GitHub نيابة عنك.
 
-Without CEF secrets, the workflow downloads official stock CEF and builds an installable browser. **Stock CEF does not guarantee H.264/AAC playback inside the CEF tab.** This is not the media-certified release. To enable media-certified builds, configure both `MAEN_CEF_ARCHIVE_URL` and `MAEN_CEF_ARCHIVE_SHA256` for the verified custom CEF 152 runtime; the workflow then performs strict H.264 playback testing.
+## الرفع مرة واحدة
+1. احتفظ بنسخة من مشروعك السابق وملف Setup 1.9.5.
+2. فك ضغط الملف. افتح مجلد المشروع الذي يحتوي README.md وCMakeLists.txt.
+3. انسخ محتويات هذا المجلد فوق محتويات مستودع MaenBrowser المحلي، بما فيها مجلد .github.
+   لا تضع المشروع داخل مجلد إضافي داخل المستودع، ولا ترفع ZIP وحده.
+4. راجع التغييرات ثم ارفعها بعملية Commit/Push واحدة عبر Git أو GitHub Desktop.
+   الرفع من موقع GitHub ممكن على دفعات، مع مراعاة حدود عدد الملفات وإظهار .github.
+5. من تبويب Actions افتح Build MaenBrowser Windows Setup.
+   يعمل عند الرفع إلى main أو development/**، ويمكن تشغيله من Run workflow.
+6. بعد نجاح البناء والاختبارات نزّل Artifact المسمى
+   MaenBrowser-1.9.6-Windows-x64-Setup، وفك ضغطه للحصول على Setup.exe.
 
-A successful Windows-hosted Actions run is necessary to confirm the installer. The ZIP is source code, not an already compiled Setup.
+## شرط دعم الفيديو — مهم قبل تشغيل البناء
+يلزم وجود الإعدادين التاليين في Settings → Secrets and variables → Actions:
+- MAEN_CEF_ARCHIVE_URL
+- MAEN_CEF_ARCHIVE_SHA256
+
+هما رابط HTTPS لحزمة محرك CEF المخصص للفيديو وقيمة SHA-256 الصحيحة لها.
+إذا لم يكونا موجودين أو كان الرابط غير قابل للتنزيل، سيتوقف البناء. هذه الحزمة
+لا تحتوي محرك CEF المبني ولا شهادة توقيع؛ لا يمكن توفيرهما بمجرد رفع كود المشروع.
+الدليل docs/CUSTOM_CEF_MEDIA_BUILD.md يشرح بناء المحرك. سير بناء المحرك الموجود
+يتطلب جهاز Windows x64 ذاتي الاستضافة مسجلًا ومتاحًا؛ لا يعمل تلقائيًا على الجهاز
+العادي المستخدم لبناء Setup في GitHub.
+
+أُزيل المسار الذي ينتج Setup بالمحرك القياسي دون اختبار H.264، لأن هذا قد يعطي
+نسخة تتثبت بنجاح بينما لا تحقق طلب تشغيل الفيديو.
+
+## ما تم تنفيذه
+- إزالة زر حجب الإعلانات من الصفحة الرئيسية، وإبقاء التحكم في الإضافة.
+- منع حفظ الإعدادات القديمة فوق تغييرات أحدث، وتحديث مؤشرات الحالة بالأحداث.
+- وضع اقتصادي جدًا لأجهزة 2 جيجا، ووضع اقتصادي للأجهزة المحدودة، واختيار يدوي.
+- تفريغ محافظ للتبويبات عند ضغط الذاكرة واستعادة الجلسات المحفوظة تدريجيًا.
+- تحميل قوائم العائلة عند الحاجة فقط، وتحديث يدوي لقوائم الإعلانات.
+- نسخة احتياطية مشفرة لإعدادات الحماية؛ الاستعادة تتطلب رمز النسخة وتبقي قفل العائلة.
+- تشديد متطلبات العزل الأمني، وتأكيد فتح روابط بعض البرامج الخارجية.
+- حفظ بيانات المستخدم عند الترقية وإلغاء التثبيت، وتنظيف ملفات التوزيع غير اللازمة.
+- اختبارات إضافية للصوت والفيديو والحجب والجلسات، وتوحيد تعليمات الإصدار.
+
+## ما لم يُختبر هنا
+لم تتوفر بيئة تشغيل ويندوز، لذلك لم يُنتج Setup هنا ولم تُقَس الذاكرة على 2/4 جيجا.
+اختبارات المواقع التي تتطلب تسجيل دخول والمكالمات والطباعة وDRM والتوقيع تحتاج
+اختبارًا فعليًا. راجع docs/VALIDATION_1.9.6.md وdocs/ACCEPTANCE_1.9.6.md.
+
+حزمة المصدر جاهزة للمراجعة والبناء؛ اعتماد النسخة للتوزيع يكون بعد نجاح اختبارات
+ويندوز وقائمة القبول، وليس بمجرد رفع الملفات.

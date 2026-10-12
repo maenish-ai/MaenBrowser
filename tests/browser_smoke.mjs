@@ -3,13 +3,18 @@
 import {spawn,execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import {createServer} from 'node:http';
 import {strict as assert} from 'node:assert';
 import {revealVideoControls} from '../assets/companion/video-controls.js';
 const exe=path.resolve(process.argv[2]);
+const formats=JSON.parse(fs.readFileSync(new URL('./fixtures/formats.json',import.meta.url)));
+const formatBytes=new Map(formats.map(f=>[f.file,fs.readFileSync(new URL('./fixtures/'+f.file,import.meta.url))]));
 const h264Fixture=fs.readFileSync(new URL('./fixtures/h264-aac.mp4',import.meta.url));
 const id=fs.readFileSync('src/protection/identity.h','utf8').match(/kExtensionId\[\] = "([a-p]+)"/)[1];
-const processHandle=spawn(exe,['--remote-debugging-port=9222','--no-first-run','--no-default-browser-check'],{cwd:path.dirname(exe),stdio:'ignore'});
+const testProfile=fs.mkdtempSync(path.join(os.tmpdir(),'maen-integration-'));
+const launch=()=>spawn(exe,['--remote-debugging-port=9222','--no-first-run','--no-default-browser-check'],{cwd:path.dirname(exe),stdio:'ignore',env:{...process.env,MAEN_BROWSER_TEST_PROFILE:testProfile}});
+let processHandle=launch();
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 let fixture;
 let ws;let serial=0;const pending=new Map();
@@ -26,8 +31,15 @@ async function navigate(url) {
   }
   throw new Error('Page did not finish loading: '+url);
 }
-const call=object=>evaluate(`(async()=>{const r=await fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify(object)})});return {status:r.status,data:await r.json()};})()`);
-try{
+const rawCall=object=>evaluate(`(async()=>{const r=await fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify(object)})});return {status:r.status,data:await r.json()};})()`);
+async function call(object) {
+  // Test convenience only. Real panels use the revision they displayed.
+  if(object.op==='save'&&!Object.hasOwn(object,'expectedRevision')) {
+    const current=await rawCall({op:'get'});object={...object,expectedRevision:current.data.revision};
+  }
+  return rawCall(object);
+}
+async function connectBrowser(){
   let target;
   for(let n=0;n<60;n++){
     try{const targets=await(await fetch('http://127.0.0.1:9222/json/list')).json();target=targets.find(x=>x.type==='page'&&x.url.startsWith('chrome-extension://'+id+'/'));if(target)break;}catch{}
@@ -37,20 +49,39 @@ try{
   ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
   ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}};
+  return target;
+}
+try{
+  const target=await connectBrowser();
   const technical=await call({op:'technical'});
   assert.equal(technical.status,200);assert.equal(technical.data.ok,true);
   assert(technical.data.engine.startsWith('CEF '));
-  assert(['Lite','Balanced','Performance'].includes(technical.data.resourceMode));
+  assert(['UltraLite','Lite','Balanced','Performance'].includes(technical.data.resourceMode));
   assert(technical.data.browserProcessMemoryMiB>0);
   assert(technical.data.browserProcessCpuSeconds>=0);
-  let result=await call({op:'get'});assert.equal(result.status,200);assert.equal(result.data.ok,true);assert(result.data.adDomains>1000);assert(result.data.adultDomains>1000);
+  let result=await call({op:'get'});assert.equal(result.status,200);assert.equal(result.data.ok,true);assert(result.data.adDomains>1000);assert.equal(result.data.familyListsLoaded,false);assert.equal(result.data.adultDomains,0);
   console.log('PASS: real CEF extension loaded and native API connected');
   result=await call({op:'save',settings:{ads:false,askDownload:false}});assert(result.data.ok);assert.equal(result.data.ads,false);assert.equal(result.data.askDownload,false);
   result=await call({op:'save',settings:{ads:true,askDownload:true}});assert(result.data.ok);
+  const staleRevision=result.data.revision;
+  result=await call({op:'save',settings:{askDownload:false}});assert(result.data.ok);
+  const conflict=await rawCall({op:'save',expectedRevision:staleRevision,settings:{ads:false}});
+  assert.equal(conflict.data.ok,false);assert.match(conflict.data.error,/another window/);
+  assert.equal((await call({op:'get'})).data.ads,true);
+  assert.equal((await rawCall({op:'save',settings:{ads:false}})).data.ok,false);
+  assert.equal(await evaluate(`document.getElementById('adToggle')===null`),true);
+  console.log('PASS: stale and revisionless saves rejected; clean search homepage');
   // The extension intentionally allows fetch only to maen.browser via CSP.
   // Exercise ad interception from an ordinary page, not a privileged extension
   // document whose CSP would reject this request before native filtering.
   fixture=createServer((request,response)=>{
+    if(request.url.startsWith('/format/')) {
+      const name=request.url.slice('/format/'.length),format=formats.find(f=>f.file===name);
+      if(!format){response.writeHead(404);response.end();return;}
+      const bytes=formatBytes.get(name);
+      response.writeHead(200,{'Content-Type':format.mime,'Content-Length':bytes.length,'Cache-Control':'no-store'});
+      response.end(bytes);return;
+    }
     if(request.url==='/media'){
       response.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
       response.end('<!doctype html><meta charset="utf-8"><title>MaenBrowser H264 test</title><video id="h264" controls muted autoplay playsinline src="/clip.mp4"></video>');
@@ -111,6 +142,18 @@ try{
   }
   assert(directState?.controls&&directState.time>1&&directState.width===160,'Direct MP4 did not play in the active CEF tab: '+JSON.stringify(directState));
   console.log('PASS: direct MP4 document plays in the same CEF tab');
+  for(const format of formats) {
+    await navigate(fixtureUrl);
+    await evaluate(`(()=>{const p=document.createElement('video');p.id='codec';p.muted=true;p.controls=true;p.src=${JSON.stringify(fixtureUrl)}+'format/'+${JSON.stringify(format.file)};document.body.append(p);p.play().catch(()=>{});})()`);
+    let state;
+    for(let n=0;n<60;n++) {
+      state=await evaluate(`(()=>{const p=document.getElementById('codec');return {time:p.currentTime,width:p.videoWidth,error:p.error?.code||0};})()`);
+      if(state.error||state.time>0.5)break;
+      await pause(100);
+    }
+    assert(!state.error&&state.time>0.5&&(!format.video||state.width===160),'Codec playback failed '+format.file+': '+JSON.stringify(state));
+    console.log('PASS: actual codec decode/time advancement',format.file);
+  }
   await navigate(fixtureUrl);
   const probe=await evaluate(`fetch('https://doubleclick.net/maen-smoke?run='+Date.now(), {
     mode:'no-cors', cache:'no-store', signal:AbortSignal.timeout(5000)
@@ -123,11 +166,12 @@ try{
   assert.equal(probe.resolved,false,'Blocked request unexpectedly completed');
   console.log('PASS: native ad toggle, download preference and request interception');
   result=await call({op:'save',settings:{family:true,allowOnly:true,allowed:['example.com']},newPin:'smoke-test-730192'});assert(result.data.ok);
+  assert(result.data.familyListsLoaded);assert(result.data.adultDomains>1000);
   result=await call({op:'save',settings:{family:false},pin:'wrong'});assert.equal(result.data.ok,false);
   await pause(5100);
-  result=await call({op:'save',settings:{family:false},pin:'smoke-test-730192'});assert(result.data.ok);assert.equal(result.data.family,false);
+  result=await call({op:'save',settings:{family:false},pin:'smoke-test-730192'});assert(result.data.ok);assert.equal(result.data.family,false);assert.equal(result.data.familyListsLoaded,false);
   console.log('PASS: protected family settings and wrong-PIN rejection');
-  const settingsFile=path.join(process.env.LOCALAPPDATA,'MaenBrowser','controls.dat');const bytes=fs.readFileSync(settingsFile);assert(!bytes.includes(Buffer.from('smoke-test-730192')));assert(!bytes.includes(Buffer.from('pinHash')));
+  const settingsFile=path.join(testProfile,'controls.dat');const bytes=fs.readFileSync(settingsFile);assert(!bytes.includes(Buffer.from('smoke-test-730192')));assert(!bytes.includes(Buffer.from('pinHash')));
   console.log('PASS: settings persisted as Windows DPAPI-protected bytes');
   const service=await evaluate(`chrome.runtime.sendMessage({op:'settingsChanged',wasFamily:false})`);assert.equal(service.ok,true,service.error);
   console.log('PASS: companion service worker/native API integration');
@@ -226,11 +270,25 @@ try{
   await navigate(fixtureUrl);
   const untrusted=await evaluate(`fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"op":"get"}'}).then(r=>r.status).catch(()=>0)`);
   assert([0,403,503].includes(untrusted),'Web content accessed privileged settings');
-  console.log('PASS: untrusted web page cannot access native settings');
+  const untrustedWrite=await evaluate(`fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"op":"save","settings":{"ads":false}}'}).then(r=>r.status).catch(()=>0)`);
+  assert([0,403,503].includes(untrustedWrite));
+  await navigate(controlUrl);assert.equal((await call({op:'get'})).data.ads,true);
+  console.log('PASS: untrusted web page cannot read or write native settings');
+  // Persisted ad state must survive a real process restart.
+  result=await call({op:'save',settings:{ads:false}});assert(result.data.ok);
+  const exited=new Promise(resolve=>processHandle.once('exit',resolve));
+  await send('Browser.close');
+  await Promise.race([exited,pause(10000).then(()=>{throw new Error('Browser did not exit for persistence test');})]);
+  ws.close();processHandle=launch();await connectBrowser();
+  const persisted=await call({op:'get'});
+  assert.equal(persisted.data.ads,false);assert.equal(persisted.data.family,false);
+  assert.equal(persisted.data.revision,result.data.revision);
+  console.log('PASS: encrypted ad preference survives real browser restart');
   console.log('MaenBrowser Windows integration smoke passed');
 }finally{
   if(ws)ws.close();
   if(fixture){fixture.closeAllConnections();fixture.close();}
-  if(process.platform==='win32'){try{execFileSync('taskkill',['/IM','MaenBrowser.exe','/T','/F'],{stdio:'ignore'});}catch{}}
+  if(process.platform==='win32'){try{execFileSync('taskkill',['/PID',String(processHandle.pid),'/T','/F'],{stdio:'ignore'});}catch{}}
   else processHandle.kill();
+  try{fs.rmSync(testProfile,{recursive:true,force:true,maxRetries:10,retryDelay:100});}catch{}
 }

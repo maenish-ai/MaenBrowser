@@ -519,9 +519,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.9.5 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.9.5 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.9.5 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.9.6 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",
@@ -1070,5 +1070,133 @@ export const translations = {
   "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.": [
     "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.",
     "تُحدّث البيانات عند الطلب فقط. تشمل الذاكرة والمعالج العملية الرئيسية دون عمليات عرض الصفحات وWebView2. ثواني المعالج تراكمية. حدّث مرتين لقياس متوسط الاستهلاك نسبةً إلى جميع المعالجات المنطقية."
+  ],
+  "Automatic (recommended)": [
+    "Automatic (recommended)",
+    "تلقائي (موصى به)"
+  ],
+  "Ultra economy — 2 GB": [
+    "Ultra economy — 2 GB",
+    "اقتصادي جدًا — 2 جيجا"
+  ],
+  "Economy — 4 GB": [
+    "Economy — 4 GB",
+    "اقتصادي — 4 جيجا"
+  ],
+  "Balanced": [
+    "Balanced",
+    "متوازن"
+  ],
+  "Restart the browser after changing resource mode. Memory pressure checks run only with idle-tab release enabled.": [
+    "Restart the browser after changing resource mode. Memory pressure checks run only with idle-tab release enabled.",
+    "أعد تشغيل المتصفح بعد تغيير وضع الموارد. يجري فحص ضغط الذاكرة فقط عند تفعيل تفريغ التبويبات الخاملة."
+  ],
+  "Update ad filters now": [
+    "Update ad filters now",
+    "تحديث قوائم الإعلانات الآن"
+  ],
+  "Recovery keeps Family Protection enabled and requires the backup parent PIN.": [
+    "Recovery keeps Family Protection enabled and requires the backup parent PIN.",
+    "تبقي الاستعادة حماية العائلة مفعّلة وتتطلب رمز الوالدين الخاص بالنسخة الاحتياطية."
+  ],
+  "Backup parent PIN": [
+    "Backup parent PIN",
+    "رمز الوالدين للنسخة الاحتياطية"
+  ],
+  "Recover protected settings": [
+    "Recover protected settings",
+    "استعادة الإعدادات المحمية"
+  ],
+  "Sleeping tab": [
+    "Sleeping tab",
+    "تبويب خامل"
+  ],
+  "This page loads when selected.": [
+    "This page loads when selected.",
+    "تُحمّل هذه الصفحة عند اختيارها."
+  ],
+  "Load page": [
+    "Load page",
+    "تحميل الصفحة"
+  ],
+  "Filter error": [
+    "Filter error",
+    "خطأ في القوائم"
+  ],
+  "Site excepted": [
+    "Site excepted",
+    "الموقع مستثنى"
+  ],
+  "Settings changed in another window. Reload settings before saving.": [
+    "Settings changed in another window. Reload settings before saving.",
+    "تغيّرت الإعدادات في نافذة أخرى. أعد تحميل الإعدادات قبل الحفظ."
+  ],
+  "Native settings were saved. Reopen the browser to finish applying extension controls.": [
+    "Native settings were saved. Reopen the browser to finish applying extension controls.",
+    "حُفظت الإعدادات الأساسية. أعد تشغيل المتصفح لاستكمال تطبيق إعدادات الإضافة."
+  ],
+  "Settings saved. Reload sites for protection changes; restart the browser for resource mode changes.": [
+    "Settings saved. Reload sites for protection changes; restart the browser for resource mode changes.",
+    "حُفظت الإعدادات. أعد تحميل المواقع لتطبيق تغييرات الحماية، وأعد تشغيل المتصفح لتغيير وضع الموارد."
+  ],
+  "Family lists load when Family Protection is enabled.": [
+    "Family lists load when Family Protection is enabled.",
+    "تُحمّل قوائم العائلة عند تفعيل حماية العائلة."
+  ],
+  "Save or reload your settings before updating filters.": [
+    "Save or reload your settings before updating filters.",
+    "احفظ الإعدادات أو أعد تحميلها قبل تحديث القوائم."
+  ],
+  "Downloading ad filters…": [
+    "Downloading ad filters…",
+    "جارٍ تنزيل قوائم الإعلانات…"
+  ],
+  "Ad filters updated. Reload open sites.": [
+    "Ad filters updated. Reload open sites.",
+    "تم تحديث قوائم الإعلانات. أعد تحميل المواقع المفتوحة."
+  ],
+  "Invalid ad filter snapshot. Existing filters were kept.": [
+    "Invalid ad filter snapshot. Existing filters were kept.",
+    "قائمة إعلانات غير صالحة. تم الاحتفاظ بالقوائم السابقة."
+  ],
+  "Filter download failed. Existing filters were kept.": [
+    "Filter download failed. Existing filters were kept.",
+    "تعذّر تنزيل القوائم. تم الاحتفاظ بالقوائم السابقة."
+  ],
+  "Filter download too large. Existing filters were kept.": [
+    "Filter download too large. Existing filters were kept.",
+    "حجم القوائم أكبر من الحد المسموح. تم الاحتفاظ بالقوائم السابقة."
+  ],
+  "Could not save filters. Existing filters were kept.": [
+    "Could not save filters. Existing filters were kept.",
+    "تعذّر حفظ القوائم. تم الاحتفاظ بالقوائم السابقة."
+  ],
+  "Backup recovery requires a valid backup and its parent PIN.": [
+    "Backup recovery requires a valid backup and its parent PIN.",
+    "تتطلب الاستعادة نسخة احتياطية سليمة ورمز الوالدين الخاص بها."
+  ],
+  "Recovery is available only for unreadable protected settings.": [
+    "Recovery is available only for unreadable protected settings.",
+    "تتاح الاستعادة فقط عند تعذّر قراءة الإعدادات المحمية."
+  ],
+  "Session not found.": [
+    "Session not found.",
+    "الجلسة غير موجودة."
+  ],
+  "No restorable tabs.": [
+    "No restorable tabs.",
+    "لا توجد تبويبات قابلة للاستعادة."
+  ],
+  "Family mode restricts internal settings, private-window and developer-tool commands. Existing web tabs are closed and other extensions are disabled on activation. Camera/microphone in the embedded WhatsApp surface are denied while family mode is active. Device administrators and other browsers are outside this lock.": [
+    "Family mode restricts internal settings, private-window and developer-tool commands. Existing web tabs are closed and other extensions are disabled on activation. Camera/microphone in the embedded WhatsApp surface are denied while family mode is active. Device administrators and other browsers are outside this lock.",
+    "يقيّد وضع الأسرة الإعدادات الداخلية وأوامر التصفح الخاص وأدوات المطور. تُغلق تبويبات الويب المفتوحة عند تفعيله. تُمنع الكاميرا والميكروفون في واتساب المدمج أثناء تفعيله. لا يشمل هذا القفل مسؤولي الجهاز أو المتصفحات الأخرى. تُعطّل الإضافات الأخرى عند تفعيل حماية العائلة."
+  ],
+  "Under memory pressure, safe idle tabs may be released after 5–10 minutes. Tabs reload when reactivated. Active, pinned, audible, captured, private, embedded WhatsApp and form-filled pages are excluded. If page inspection fails, the tab is kept. No discarding while downloads are in progress.": [
+    "Under memory pressure, safe idle tabs may be released after 5–10 minutes. Tabs reload when reactivated. Active, pinned, audible, captured, private, embedded WhatsApp and form-filled pages are excluded. If page inspection fails, the tab is kept. No discarding while downloads are in progress.",
+    "عند ضغط الذاكرة، قد تُفرّغ التبويبات الخاملة الآمنة بعد 5–10 دقائق. تُعاد الصفحة عند فتح التبويب. تُستثنى الصفحات النشطة والمثبتة والمسموعة والخاصة وواتساب المدمج والصفحات التي تحتوي نماذج معبأة. عند تعذر الفحص يُترك التبويب كما هو. لا يتم التفريغ أثناء التنزيل."
+  ],
+  "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.": [
+    "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.",
+    "إصدار معن براوزر 1.9.6 التجريبي. تقلل الحماية المخاطر ولا تضمن الأمان أو تستبدل إشراف الوالدين. تُحدّث قوائم الإعلانات يدويًا وقوائم العائلة مع إصدارات البرنامج المراجعة."
   ]
 };

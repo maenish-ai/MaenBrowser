@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -8,7 +9,14 @@
 #include "src/protection/domain_rules.h"
 
 namespace maenbrowser::protection {
+struct FamilyRules {
+  DomainRules adult, violence;
+  std::string error;
+};
 struct Settings {
+  uint64_t revision = 0;
+  std::string resource_mode = "auto";
+  std::shared_ptr<const FamilyRules> categories;
   bool ads = true;
   bool family = false;
   bool allow_only = true;

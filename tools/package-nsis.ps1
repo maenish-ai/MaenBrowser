@@ -12,11 +12,12 @@ if (-not $makensis) {
 Push-Location (Join-Path $repoRoot "installer")
 try {
   & $makensis.Source "MaenBrowser.nsi"
+  if ($LASTEXITCODE -ne 0) { throw "NSIS failed" }
 } finally {
   Pop-Location
 }
 
-$setup = Join-Path $repoRoot "installer\MaenBrowser-1.5.12-Setup.exe"
+$setup = Join-Path $repoRoot "installer\MaenBrowser-$((Get-Content (Join-Path $repoRoot 'VERSION') -Raw).Trim())-Setup.exe"
 if (-not (Test-Path $setup)) {
   throw "Installer was not produced."
 }

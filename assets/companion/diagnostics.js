@@ -14,9 +14,20 @@ export const errorCatalogue={
   E110:['Settings could not be saved. Check write access and free disk space.','تعذر حفظ الإعدادات. راجع صلاحية الكتابة والمساحة المتاحة.'],
   E111:['Wait before retrying the parent PIN.','انتظر قبل إعادة محاولة رمز الوالدين.'],
   E112:['Protection filter files are missing or empty. Repair the installation.','ملفات قوائم الحماية مفقودة أو فارغة. أصلح التثبيت.'],
+  E113:['Settings changed in another window. Reload settings before saving.','تغيّرت الإعدادات في نافذة أخرى. أعد تحميل الإعدادات قبل الحفظ.'],
+  E114:['Filter update failed. Existing filters were kept.','فشل تحديث القوائم. تم الاحتفاظ بالقوائم السابقة.'],
+  E115:['Backup recovery requires a valid backup and its parent PIN.','تتطلب الاستعادة نسخة احتياطية سليمة ورمز الوالدين الخاص بها.'],
+  E116:['Native settings were saved. Reopen the browser to finish applying extension controls.','حُفظت الإعدادات الأساسية. أعد تشغيل المتصفح لاستكمال تطبيق إعدادات الإضافة.'],
   E199:['An unclassified protection error occurred. Copy the diagnostic report.','حدث خطأ حماية غير مصنف. انسخ تقرير التشخيص.']
 };
 const nativeMessages={
+  'Invalid ad filter snapshot. Existing filters were kept.':'E114',
+  'Filter download failed. Existing filters were kept.':'E114',
+  'Filter download too large. Existing filters were kept.':'E114',
+  'Could not save filters. Existing filters were kept.':'E114',
+  'Backup recovery requires a valid backup and its parent PIN.':'E115',
+  'Native settings were saved. Reopen the browser to finish applying extension controls.':'E116',
+  'Settings changed in another window. Reload settings before saving.':'E113',
   'Unknown action':'E101','Unknown operation':'E106',
   'Incorrect parent PIN.':'E108','Set a parent PIN before enabling family mode.':'E108',
   'Please wait before trying your PIN again.':'E111',

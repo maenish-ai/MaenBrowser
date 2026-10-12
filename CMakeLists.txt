@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.5 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.6 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -37,6 +37,9 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
 find_package(CEF REQUIRED)
+if(NOT USE_SANDBOX)
+  message(FATAL_ERROR "MaenBrowser distribution requires USE_SANDBOX=ON")
+endif()
 
 add_subdirectory("${CEF_LIBCEF_DLL_WRAPPER_PATH}" libcef_dll_wrapper)
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
@@ -177,3 +180,15 @@ add_test(NAME media_policy COMMAND MaenMediaTests)
 add_executable(MaenNavigationTests tests/internal_navigation_test.cpp)
 target_include_directories(MaenNavigationTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME internal_navigation COMMAND MaenNavigationTests)
+
+add_executable(MaenExternalTests tests/external_protocol_test.cpp)
+target_include_directories(MaenExternalTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME external_protocol COMMAND MaenExternalTests)
+
+add_executable(MaenFilterTests tests/filter_snapshot_test.cpp)
+target_include_directories(MaenFilterTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME filter_snapshot COMMAND MaenFilterTests)
+
+add_executable(MaenResourceTests tests/resource_policy_test.cpp)
+target_include_directories(MaenResourceTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_test(NAME resource_policy COMMAND MaenResourceTests)

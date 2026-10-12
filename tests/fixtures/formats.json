@@ -1,0 +1,42 @@
+[
+  {
+    "file": "vp8-vorbis.webm",
+    "mime": "video/webm",
+    "video": true
+  },
+  {
+    "file": "vp9-opus.webm",
+    "mime": "video/webm",
+    "video": true
+  },
+  {
+    "file": "av1-opus.webm",
+    "mime": "video/webm",
+    "video": true
+  },
+  {
+    "file": "sample.mp3",
+    "mime": "audio/mpeg",
+    "video": false
+  },
+  {
+    "file": "sample.flac",
+    "mime": "audio/flac",
+    "video": false
+  },
+  {
+    "file": "sample.wav",
+    "mime": "audio/wav",
+    "video": false
+  },
+  {
+    "file": "sample.ogg",
+    "mime": "audio/ogg",
+    "video": false
+  },
+  {
+    "file": "sample.m4a",
+    "mime": "audio/mp4",
+    "video": false
+  }
+]

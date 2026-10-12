@@ -159,7 +159,7 @@ foreach ($needle in $installerRequired) {
 }
 
 # Unified lightweight policy regression guards.
-$resource = Get-Content "src/app/resource_mode.cpp" -Raw
+$resource = (Get-Content "src/app/resource_mode.cpp" -Raw) + (Get-Content "src/app/resource_policy.h" -Raw)
 foreach ($needle in @("Mode::Lite","Mode::Balanced","Mode::Performance","Prerender2")) {
   if (-not $resource.Contains($needle)) { throw "Resource policy missing: $needle" }
 }
@@ -253,7 +253,10 @@ foreach ($forbidden in @(
   "disable-features=IsolateOrigins",
   "allow-running-insecure-content"
 )) {
-  if ($allSource.Contains($forbidden)) { throw "Release-blocking insecure browser switch detected: $forbidden" }
+  # The startup validator names rejected switches; reject enabling calls,
+  # not the defensive deny-list itself.
+  $enabling = 'AppendSwitch(?:WithValue)?\s*\(\s*"' + [regex]::Escape($forbidden) + '"'
+  if ($allSource -match $enabling) { throw "Release-blocking insecure browser switch enabled: $forbidden" }
 }
 if (-not $workflow.Contains("-DUSE_SANDBOX=ON")) { throw "Release build must keep CEF sandbox enabled." }
 foreach ($needle in @("ApplyWindowsProcessHardening","ProcessDEPPolicy","ProcessASLRPolicy","ProcessExtensionPointDisablePolicy")) {
@@ -273,7 +276,6 @@ foreach ($needle in @(
   "WEBVIEW2_SDK_VERSION",
   "Microsoft.Web.WebView2",
   "WebView2LoaderStatic.lib",
-  "MicrosoftEdgeWebview2Setup.exe",
   "fetch-cef.ps1",
   "-DUSE_SANDBOX=ON",
   "Upload Setup only"
@@ -299,8 +301,10 @@ foreach ($needle in @("webview2_embedded.cpp", "WebView2LoaderStatic.lib", "adva
   if (-not $cmake.Contains($needle)) { throw "Embedded WebView2 CMake integration missing: $needle" }
 }
 $nsi = Get-Content "installer/MaenBrowser.nsi" -Raw
-foreach ($needle in @("MicrosoftEdgeWebview2Setup.exe", "/silent /install")) {
-  if (-not $nsi.Contains($needle)) { throw "WebView2 installer integration missing: $needle" }
+if ($nsi.Contains('/silent /install')) { throw "Optional WebView2 must not be installed silently by the CEF installer." }
+if ($mainWin.Contains('settings.no_sandbox = true')) { throw "Runtime sandbox fallback is forbidden." }
+foreach ($needle in @('expectedRevision','restoreBackup','updateAdFilters')) {
+  if (-not (Get-Content 'src/protection/protection.cpp' -Raw).Contains($needle)) { throw "1.9.6 protection guard missing: $needle" }
 }
 
 # PowerShell automatic variables are case-insensitive. Never assign to $Host.

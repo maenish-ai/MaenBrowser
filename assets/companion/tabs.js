@@ -21,7 +21,7 @@ function render(){
 async function sessions(){
   const {sessions=[]}=await chrome.storage.local.get('sessions');$('sessions').replaceChildren();
   for(const s of sessions){const row=document.createElement('div');row.className='tab';const name=document.createElement('span');name.textContent=i18nText('{name} · {count} tabs',{name:s.name,count:s.tabs.length});const actions=document.createElement('div');actions.className='actions';
-    actions.append(button('Restore',async()=>{const urls=s.tabs.filter(t=>webUrl(t.url)).map(t=>t.url);if(urls.length)await chrome.windows.create({url:urls});}),button('Delete',async()=>{await chrome.storage.local.set({sessions:sessions.filter(x=>x.id!==s.id)});await refresh();}));row.append(name,actions);$('sessions').append(row);}
+    actions.append(button('Restore',async()=>{await call('restoreSession',{id:s.id});}),button('Delete',async()=>{await chrome.storage.local.set({sessions:sessions.filter(x=>x.id!==s.id)});await refresh();}));row.append(name,actions);$('sessions').append(row);}
   if(!sessions.length)$('sessions').textContent='No sessions saved yet.';
 }
 $('query').oninput=render;

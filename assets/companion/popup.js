@@ -14,7 +14,7 @@ async function refresh(){
   $('connectionDetail').textContent=t('Panel {panel} · Browser {browser}',{panel:chrome.runtime.getManifest().version,browser:state.version});
   const domain=host(tab?.url);
   $('site').textContent=domain || 'Browser page';
-  $('state').textContent=state.ads?'ON':'OFF';
+  $('state').textContent=state.listError?t('Filter error'):!state.ads?'OFF':state.exceptions.some(d=>matchesHost(domain,d))?t('Site excepted'):'ON';
   $('toggle').textContent=state.ads?'Turn ad blocking OFF':'Turn ad blocking ON';
   $('toggle').disabled=false;
   $('exception').checked=state.exceptions.some(d=>matchesHost(domain,d));
@@ -27,12 +27,12 @@ $('toggle').onclick=async()=>{
   if(!state){$('toggle').disabled=true;try{await refresh();}catch(e){connectionError(e);}return;}
   if(state.family){await open('options.html#family');return;}
   $('toggle').disabled=true;
-  try{await api('save',{settings:{ads:!state.ads}});await refresh();}catch(e){message($('status'),e);$('toggle').disabled=false;}
+  try{await api('save',{settings:{ads:!state.ads},expectedRevision:state.revision});await refresh();}catch(e){message($('status'),e);$('toggle').disabled=false;}
 };
 $('exception').onchange=async()=>{
   const domain=host(tab?.url);let exceptions=state.exceptions.filter(d=>!matchesHost(domain,d));
   if($('exception').checked)exceptions.push(domain);
-  try{await api('save',{settings:{exceptions}});await refresh();message($('status'),'Saved. Reload the site to apply to already loaded content.');}catch(e){message($('status'),e);}
+  try{await api('save',{settings:{exceptions},expectedRevision:state.revision});await refresh();message($('status'),'Saved. Reload the site to apply to already loaded content.');}catch(e){message($('status'),e);}
 };
 $('settings').onclick=()=>open('options.html');$('tabs').onclick=()=>open('tabs.html');$('downloads').onclick=()=>open('downloads.html');
 $('extensions').onclick=()=>chrome.tabs.create({url:'chrome://extensions/'});
@@ -78,3 +78,7 @@ $('inspectMedia').onclick=async()=>{
       'Snapshot captured. No reported error does not prove successful playback.');
   }catch(e){message($('status'),e);}finally{button.disabled=false;}
 };
+
+chrome.storage?.onChanged?.addListener((changes,area)=>{
+  if(area==='local'&&changes.protectionRevision)refresh().catch(connectionError);
+});

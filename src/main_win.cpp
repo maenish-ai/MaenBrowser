@@ -10,6 +10,7 @@
 #include "src/updater/update_manager.h"
 
 #include "src/security/windows_hardening.h"
+#include "src/protection/protection.h"
 #include "src/media/media_window.h"
 namespace {
 
@@ -36,6 +37,14 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
     return subprocess_code;
   }
 
+  auto startup = CefCommandLine::CreateCommandLine();
+  startup->InitFromString(GetCommandLineW());
+  for (const char* flag : {"no-sandbox", "disable-web-security", "ignore-certificate-errors", "disable-site-isolation-trials", "allow-insecure-localhost", "allow-running-insecure-content", "single-process"}) {
+    if (startup->HasSwitch(flag)) {
+      MessageBoxW(nullptr, L"Unsafe security override is not supported by MaenBrowser.", L"MaenBrowser", MB_ICONERROR);
+      return 1;
+    }
+  }
   CefSettings settings;
   CefString(&settings.locale) = maenbrowser::ui::Locale();
   settings.persist_session_cookies = true;
@@ -49,7 +58,8 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
       maenbrowser::storage::GetProfileRoot();
 
   if (!sandbox_info) {
-    settings.no_sandbox = true;
+    MessageBoxW(nullptr, L"MaenBrowser requires its sandbox-enabled launcher.", L"MaenBrowser", MB_ICONERROR);
+    return 1;
   }
 
   if (!CefInitialize(main_args, settings, app, sandbox_info)) {

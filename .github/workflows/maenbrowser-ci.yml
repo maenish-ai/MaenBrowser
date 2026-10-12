@@ -30,59 +30,15 @@ jobs:
         run: |
           $url = $env:MAEN_CEF_ARCHIVE_URL
           $hash = $env:MAEN_CEF_ARCHIVE_SHA256
-          if ($url -and $hash) {
-            if ($url -notmatch '^https://' -or $hash -notmatch '^[0-9a-fA-F]{64}$') {
-              throw "Invalid CEF secrets. URL must use HTTPS and SHA256 must be 64 hex characters."
-            }
-            "MAEN_MEDIA_BUILD=true" | Out-File $env:GITHUB_ENV -Append
-            Write-Host "Verified custom CEF media runtime selected."
-          } elseif (-not $url -and -not $hash) {
-            "MAEN_MEDIA_BUILD=false" | Out-File $env:GITHUB_ENV -Append
-            Write-Host "Using official stock CEF. Setup will be produced; H.264/AAC in-tab support is NOT guaranteed."
-          } else {
-            throw "Both MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 must be set together."
+          if ($url -notmatch '^https://' -or $hash -notmatch '^[0-9a-fA-F]{64}$') {
+            throw "Release requires MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 for the verified media runtime. See docs/CUSTOM_CEF_MEDIA_BUILD.md."
           }
+          "MAEN_MEDIA_BUILD=true" | Out-File $env:GITHUB_ENV -Append
 
       - name: JavaScript safeguards and package verification
         shell: pwsh
         run: |
-          node tests/localization_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/companion_api_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/popup_failure_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/protection_error_ui_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/options_failure_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/options_save_pin_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/download_progress_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/render_scheduler_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/video_controls_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/error_journal_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/idle_recheck_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/page_media_probe_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/media_errors_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/process_sample_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/report_download_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/technical_details_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/tab_policy_test.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/verify-package.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tests/package_encoding_test.py
+          python tools/run-checks.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify source and security
@@ -96,17 +52,9 @@ jobs:
       - name: Fetch verified media-enabled CEF 152
         shell: pwsh
         run: |
-          if ($env:MAEN_MEDIA_BUILD -eq 'true') {
-            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
-          } else {
-            $cefRoot=& .\tools\fetch-cef.ps1
-          }
+          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
           if (-not $cefRoot) { throw "CEF root was not returned." }
-          if ($env:MAEN_MEDIA_BUILD -eq 'true') {
-            .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
-          } else {
-            .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot
-          }
+          .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Fetch Microsoft WebView2 SDK
@@ -137,16 +85,25 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Browser integration and real in-tab H.264 playback test
-        if: env.MAEN_MEDIA_BUILD == 'true'
-        timeout-minutes: 5
+        timeout-minutes: 8
         shell: pwsh
         run: node tests/browser_smoke.mjs build/Release/MaenBrowser.exe
+
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaenBrowser-validation-logs
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/Release/debug.log
+          if-no-files-found: ignore
 
       - name: Stamp MaenBrowser icon
         shell: pwsh
         run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico"
 
-      - name: Stage runtime and WebView2 bootstrapper
+      - name: Stage runtime
         shell: pwsh
         run: |
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
@@ -157,14 +114,22 @@ jobs:
           foreach ($file in @("dist\MaenBrowser.exe","dist\libcef.dll","dist\icudtl.dat","dist\resources.pak")) {
             if (!(Test-Path $file)) { throw "Required runtime file missing: $file" }
           }
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile "dist\MicrosoftEdgeWebview2Setup.exe"
-          if ((Get-Item "dist\MicrosoftEdgeWebview2Setup.exe").Length -lt 1000000) { throw "WebView2 bootstrapper download looks invalid." }
+          Remove-Item "dist\MaenNavigationTests.exe" -ErrorAction SilentlyContinue
+          Remove-Item "dist\MaenExternalTests.exe" -ErrorAction SilentlyContinue
+          Remove-Item "dist\MaenFilterTests.exe" -ErrorAction SilentlyContinue
+          Remove-Item "dist\MaenResourceTests.exe" -ErrorAction SilentlyContinue
+          Get-ChildItem dist -Recurse -File -Include *.pdb,*.lib,*.exp,*.ilk | Remove-Item -Force
+          New-Item -ItemType Directory -Force -Path "dist\notices" | Out-Null
+          Copy-Item assets/filters/sources/*LICENSE* dist/notices
+          Copy-Item THIRD_PARTY_NOTICES.md dist/notices
+          Remove-Item "dist\filters\sources" -Recurse -Force -ErrorAction SilentlyContinue
+          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.9.6.js" } | Remove-Item -Force
 
       - name: Build NSIS installer
         shell: pwsh
         run: |
           Push-Location installer
-          try { makensis MaenBrowser.nsi } finally { Pop-Location }
+          try { makensis MaenBrowser.nsi; if ($LASTEXITCODE -ne 0) { throw "NSIS failed" } } finally { Pop-Location }
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
 

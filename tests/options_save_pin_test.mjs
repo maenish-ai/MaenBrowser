@@ -1,3 +1,4 @@
+import {changedSettings} from '../assets/companion/settings-patch.js';
 import {strict as assert} from 'node:assert';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -6,7 +7,7 @@ const nodes=new Map();
 const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,checked:false});return nodes.get(id);};
 let saved=[];
 let state={ok:true,ads:true,family:false,hasPin:true,lockedFile:false,allowOnly:true,downloadDirectory:'C:\\Downloads',exceptions:[],allowed:[],blocked:[]};
-const context=vm.createContext({$,console,Error,confirm:()=>true,currentLanguage:()=> 'en',t:s=>s,errorText:String,
+const context=vm.createContext({changedSettings,$,console,Error,confirm:()=>true,currentLanguage:()=> 'en',t:s=>s,errorText:String,
   message:(node,text)=>node.textContent=String(text),
   api:async(op,extra)=>{if(op==='save'){saved.push(extra);state={...state,...extra.settings};}return {...state};},
   chrome:{storage:{local:{get:async()=>({keepAwake:[],sleepMinutes:30}),set:async()=>{}}},

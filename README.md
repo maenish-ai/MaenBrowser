@@ -1,76 +1,62 @@
-# MaenBrowser 1.9.5 FIX1 — Windows build correction
+# MaenBrowser 1.9.6 — stability, resource policy and media release gates
 
-See [build correction](docs/BUILD_FIX_1.9.5_FIX1.md).
+Windows x64 C++20 / CEF Chrome Runtime browser. This is the complete **source
+project**, not a prebuilt Setup. Portable checks passed during preparation;
+**Windows compilation, real CEF integration, device performance and external-site
+acceptance remain pending**. See [validation](docs/VALIDATION_1.9.6.md).
 
-# MaenBrowser 1.9.5 — same-tab H.264 media playback
+## Start here
+- [Arabic upload/build guide](START_HERE_AR.md)
+- [Changes and precise scope](docs/RELEASE_1.9.6.md)
+- [Windows acceptance checklist](docs/ACCEPTANCE_1.9.6.md)
+- [Custom CEF media runtime](docs/CUSTOM_CEF_MEDIA_BUILD.md)
 
-See [current release notes](docs/RELEASE_1.9.5.md). MP4/H.264 playback is intended to run in the existing CEF page/tab, with the same profile, controls and browser protections—not in a second WebView2 window. The standard stock CEF package lacks Chrome's proprietary H.264 codecs, so Windows Actions now requires a SHA-256-verified media-enabled CEF archive. See [custom CEF build and licensing requirements](docs/CUSTOM_CEF_MEDIA_BUILD.md). Windows playback validation is still required.
+## Changes
+- Clean search homepage; ad blocking remains controlled by the bundled extension.
+- Native revision checks reject stale or revisionless writes; settings panels send
+  only changed fields. Badge/popup state refreshes on settings events.
+- UltraLite profile for 2 GB-class hardware; manual resource override after restart.
+  Bounded idle-tab scans react to memory pressure, keeping existing safety exclusions.
+- Explicit saved-session restore loads one site, leaving other tabs as local placeholders.
+- Family domain lists load only when family protection is enabled.
+- Manual, bounded HTTPS ad-filter refresh from the existing StevenBlack source;
+  validated atomic replacement with last-good/bundled fallback.
+- DPAPI-protected settings backup; explicit PIN recovery keeps family protection on.
+- Sandbox-required startup/build, explicit confirmation for a small external-protocol
+  allowlist, shared window icons and reuse of the native request handler.
+- Synthetic codec fixtures extend the Windows playback test to VP8/Vorbis,
+  VP9/Opus, AV1/Opus, MP3, FLAC, WAV, Ogg Vorbis and AAC alongside H.264.
 
-# MaenBrowser 1.9.3 — on-demand performance diagnostics
+## Build Windows Setup
+Extract the archive and upload its **contents** to the repository root, including
+`.github/workflows`. Uploading the ZIP alone does not update the application source.
+The workflow **Build MaenBrowser Windows Setup** requires both repository secrets:
 
-See [current release notes](docs/RELEASE_1.9.3.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
+- `MAEN_CEF_ARCHIVE_URL`: HTTPS URL of the verified, version-matched media CEF ZIP.
+- `MAEN_CEF_ARCHIVE_SHA256`: exact SHA-256 of that archive.
 
-# MaenBrowser 1.9.2 — media handoff rollback
+There is no stock-codec fallback for release packaging. If those prerequisites are
+absent, the job stops with an actionable message. The existing separate media runtime
+workflow needs an online Windows x64 self-hosted build runner. Source changes cannot
+supply the publisher's archive, credentials, codec licensing review or signing certificate.
 
-See [current release notes](docs/RELEASE_1.9.2.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
+The Setup workflow performs source checks, sandboxed C++ build, native tests and
+actual CEF playback before creating `MaenBrowser-1.9.6-Setup.exe`. A green workflow
+still does not prove device performance or all third-party service compatibility.
+No GitHub changes or workflow runs were made as part of preparing this source archive.
 
-# MaenBrowser 1.9.1 — development source
-
-See [release notes and Windows acceptance](docs/RELEASE_1.9.1.md). Built from 1.9.0 FIX1. Windows validation is pending.
-
-# MaenBrowser 1.9.0 — development source
-
-**Status: local source checks passed; Windows build and runtime validation pending.**
-
-This update removes media-error-triggered page reloads and routes Chromium About to local MaenBrowser Technical Details. Existing 1.8.9 diagnostics are preserved. See [delivery and validation](docs/RELEASE_1.9.0.md).
-
-MaenBrowser uses C++20 and CEF Chrome Runtime. An optional WebView2 surface remains for compatibility tooling; normal video playback stays in the CEF page. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
-
-## Changes in this source
-
-- Toolbar advertising-domain blocker with on/off and per-site exceptions.
-- PIN-protected family settings: allowlisted sites (default family policy), explicit blocked domains, adult/violence domain lists and supported search-engine SafeSearch parameters.
-- Local protected settings using Windows DPAPI and PBKDF2 PIN verification.
-- Configurable download folder and ask-before-saving in CEF and embedded WebView2.
-- Conservative idle-tab discarding, tab search, pinning, grouping and explicitly saved local sessions.
-- Download controls, plain-text reader and local media capability checks.
-- WebView2 origin checks, permission prompts, navigation filtering and event-driven resizing.
-
-Read [the delivery report](docs/DELIVERY_1.8.0.md) before running or distributing this version. Older documents, including [the previous README](docs/README_HISTORY.md), describe earlier versions and are not proof that new features have passed testing.
-
-## Build and validation
-
-On Windows, run the **Build MaenBrowser Windows Setup** GitHub Actions workflow. It requires repository Actions secrets `MAEN_CEF_ARCHIVE_URL` (HTTPS URL of the verified media-enabled CEF archive) and `MAEN_CEF_ARCHIVE_SHA256` (64-character SHA-256). It validates the archive marker, builds with Visual Studio 2022, tests H.264/AAC playback in the actual CEF tab, then packages Setup using NSIS. Build the runtime using the separate `Build CEF 152 Maen Media Runtime` workflow first; see [custom CEF build instructions](docs/CUSTOM_CEF_MEDIA_BUILD.md). A failed gate must be fixed before release.
-
-Local checks completed during development:
-
-```sh
-python tools/verify-package.py
-node tests/tab_policy_test.mjs
-g++ -std=c++20 -I. tests/domain_rules_test.cpp -o domain-tests
-./domain-tests
+## Local source checks
 ```
+python tools/run-checks.py
+```
+On Windows, with VS 2022, CMake, Node 22, Python, NSIS, the CEF secrets in environment
+variables and `WEBVIEW2_SDK_ROOT` set, run `tools/package-nsis.ps1` from the repo root.
+Normal browsing/media uses CEF. The optional manual WebView2 window requires an
+already-installed WebView2 Runtime; Setup no longer silently installs it.
 
-Version 1.8.7 completed run 37968620382 successfully. The new 1.9.0 changes have not yet run on Windows. Local checks do not establish a measured performance improvement, universal media playback or complete third-party translation.
-
-## Compatibility boundaries
-
-There is no claim of being the world's lightest browser, universal extension compatibility, complete ad removal, perfect parental filtering or universal media playback. Codec/DRM support depends on the shipped runtime and applicable licensing. Family protection is a browser feature, not a substitute for a separate restricted Windows child account. Filters are bundled snapshots; they are not currently refreshed in the background.
-
-## GitHub Actions red build: media runtime prerequisites
-
-The Windows Setup job intentionally requires a **custom, verified CEF 152 media runtime**.
-A public source repository does **not** imply that GitHub Actions secrets are configured.
-If the job fails at **Validate required media runtime configuration**, set both
-`MAEN_CEF_ARCHIVE_URL` (an accessible HTTPS archive URL) and
-`MAEN_CEF_ARCHIVE_SHA256` (the exact 64-character SHA-256 digest) under
-**Settings → Secrets and variables → Actions**. See
-[`docs/CUSTOM_CEF_MEDIA_BUILD.md`](docs/CUSTOM_CEF_MEDIA_BUILD.md).
-
-The separate media-runtime build needs a registered, online Windows x64
-**self-hosted runner**; the normal GitHub-hosted Windows runner cannot satisfy
-that workflow's runner labels. Do not disable codec integrity checks or
-replace the media runtime with stock CEF just to make the badge green.
-
-A red build can have other causes: consult the failed job's log. This source
-package alone cannot establish which step failed in a remote run.
+## Limits
+Targets supported Windows x64 environments, not legacy Windows 7/8 or 32-bit Windows.
+Codec support is tested, not inferred from `canPlayType` alone. HEVC/DRM and service
+acceptance are separate platform/licensing concerns. No universal codec, extension,
+service or 2 GB performance guarantee is made. Filter updates are manual, not a
+background service. Security engine updates remain an ongoing release responsibility.
