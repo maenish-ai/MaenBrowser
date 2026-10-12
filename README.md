@@ -2,9 +2,9 @@
 
 See [build correction](docs/BUILD_FIX_1.9.5_FIX1.md).
 
-# MaenBrowser 1.9.5 — manual media compatibility window
+# MaenBrowser 1.9.5 — in-tab direct media playback
 
-See [current release notes](docs/RELEASE_1.9.5.md). Windows build and actual playback validation pending. Open a web page and press Ctrl+Shift+M for the separate WebView2 media window. Sessions are separate; sign-in may be required. This is a manual experimental path, not a codec upgrade to CEF. The new Windows Actions playback gate must pass before Setup is produced. See the release notes for all limitations.
+See [current release notes](docs/RELEASE_1.9.5.md). Direct supported media-file URLs are routed to a lazy WebView2 surface inside the same tab. Ordinary site pages and WhatsApp remain on CEF. WebView2 codec availability is system-dependent; this does not add H.264 to CEF or guarantee every file/site. Windows build and playback validation are still required; see release notes for limitations.
 
 # MaenBrowser 1.9.3 — on-demand performance diagnostics
 

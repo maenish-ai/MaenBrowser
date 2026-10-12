@@ -4,9 +4,9 @@
 #include <string_view>
 
 namespace maenbrowser::media {
-// Roll back placeholder interception until Windows handoff is validated.
-// Both native navigation and request interception use this same policy.
-inline constexpr bool kEmbeddedMediaRoutingEnabled = false;
+// Route direct media files through the lazy, in-tab WebView2 surface.
+// WhatsApp remains on CEF until its separate handoff path is validated.
+inline constexpr bool kEmbeddedMediaRoutingEnabled = true;
 // Input is a parsed URL path, never the query or fragment.
 inline bool IsDirectMediaPath(std::string_view scheme, std::string path) {
   if (scheme != "https" || path.empty() || path.front() != '/' ||
@@ -14,7 +14,9 @@ inline bool IsDirectMediaPath(std::string_view scheme, std::string path) {
   std::transform(path.begin(), path.end(), path.begin(), [](unsigned char c) {
     return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : static_cast<char>(c);
   });
-  for (std::string_view extension : {".mp4", ".m4v", ".m4a", ".aac"})
+  for (std::string_view extension : {".mp4", ".m4v", ".m4a", ".aac",
+                                    ".mov", ".webm", ".ogv", ".ogg",
+                                    ".mpg", ".mpeg", ".mkv"})
     if (path.size() > extension.size() && path.ends_with(extension)) return true;
   return false;
 }

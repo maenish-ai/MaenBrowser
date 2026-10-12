@@ -13,7 +13,6 @@ bool IsDirectMediaUrl(const std::wstring& url) {
   return parsed.valid && !parsed.host.empty() && IsDirectMediaPath(parsed.scheme, parsed.path);
 }
 bool UsesEmbeddedMedia(const std::wstring& url) {
-  return kEmbeddedMediaRoutingEnabled &&
-         (IsWhatsAppWebUrl(url) || IsDirectMediaUrl(url));
+  return kEmbeddedMediaRoutingEnabled && IsDirectMediaUrl(url);
 }
 }  // namespace maenbrowser::media
