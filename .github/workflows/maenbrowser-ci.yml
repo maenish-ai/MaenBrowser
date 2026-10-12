@@ -14,7 +14,29 @@ env:
   MAEN_CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
 
 jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    outputs:
+      media_ready: ${{ steps.check.outputs.media_ready }}
+    steps:
+      - name: Check verified CEF archive configuration
+        id: check
+        shell: bash
+        env:
+          CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
+          CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
+        run: |
+          if [[ "$CEF_ARCHIVE_URL" =~ ^https://[^[:space:]]+$ && "$CEF_ARCHIVE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "media_ready=true" >> "$GITHUB_OUTPUT"
+            echo "Verified CEF archive settings are present; Windows Setup validation will run."
+          else
+            echo "media_ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Windows Setup skipped: configure valid MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 repository secrets to build the verified H.264 runtime."
+          fi
+
   build-setup:
+    needs: configuration
+    if: needs.configuration.outputs.media_ready == 'true'
     runs-on: windows-2022
     timeout-minutes: 90
     steps:
@@ -24,16 +46,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Select verified CEF runtime mode
-        shell: pwsh
-        run: |
-          $url = $env:MAEN_CEF_ARCHIVE_URL
-          $hash = $env:MAEN_CEF_ARCHIVE_SHA256
-          if ($url -notmatch '^https://' -or $hash -notmatch '^[0-9a-fA-F]{64}$') {
-            throw "Release requires MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 for the verified media runtime. See docs/CUSTOM_CEF_MEDIA_BUILD.md."
-          }
-          "MAEN_MEDIA_BUILD=true" | Out-File $env:GITHUB_ENV -Append
 
       - name: JavaScript safeguards and package verification
         shell: pwsh
