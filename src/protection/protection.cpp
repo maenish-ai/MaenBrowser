@@ -113,7 +113,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("adultDomains", static_cast<int>(g_adult.Size()));
     d->SetInt("violenceDomains", static_cast<int>(g_violence.Size()));
     d->SetString("listError", g_list_error);
-    d->SetString("version", "1.9.2");
+    d->SetString("version", "1.9.3");
   }
   return d;
 }
@@ -403,7 +403,7 @@ std::string Api(const std::string& body) {
   if (op == "technical") {
     auto out = CefDictionaryValue::Create();
     out->SetBool("ok", true);
-    out->SetString("version", "1.9.2");
+    out->SetString("version", "1.9.3");
     out->SetString("engine", "CEF " CEF_VERSION);
     out->SetString("mediaEngine", "CEF; automatic WebView2 routing disabled");
     const auto profile = resource::DetectResourceProfile();
@@ -411,6 +411,8 @@ std::string Api(const std::string& body) {
         profile.mode == resource::Mode::Performance ? "Performance" : "Balanced");
     out->SetDouble("physicalMemoryMiB", static_cast<double>(profile.physical_mb));
     out->SetInt("logicalProcessors", static_cast<int>(profile.logical_processors));
+    out->SetInt("processId", static_cast<int>(GetCurrentProcessId()));
+    out->SetDouble("sampleUptimeSeconds", GetTickCount64() / 1000.0);
     PROCESS_MEMORY_COUNTERS counters{};
     counters.cb = sizeof(counters);
     if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))

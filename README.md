@@ -1,3 +1,7 @@
+# MaenBrowser 1.9.3 — on-demand performance diagnostics
+
+See [current release notes](docs/RELEASE_1.9.3.md). Windows validation pending.
+
 # MaenBrowser 1.9.2 — media handoff rollback
 
 See [current release notes](docs/RELEASE_1.9.2.md). Windows validation pending.

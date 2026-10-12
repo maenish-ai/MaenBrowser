@@ -519,9 +519,9 @@ export const translations = {
     "Changes are local to this Windows user.",
     "التغييرات خاصة بمستخدم ويندوز الحالي."
   ],
-  "MaenBrowser 1.9.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
-    "MaenBrowser 1.9.2 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
-    "معن براوزر 1.9.2 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
+  "MaenBrowser 1.9.3 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.": [
+    "MaenBrowser 1.9.3 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Filter snapshots are updated with reviewed application releases.",
+    "معن براوزر 1.9.3 إصدار تجريبي. تقلل الحماية المخاطر لكنها لا تضمن السلامة ولا تستبدل إشراف الوالدين. تُحدّث القوائم مع إصدارات البرنامج المراجعة."
   ],
   "Browser page": [
     "Browser page",
@@ -1054,5 +1054,21 @@ export const translations = {
   "Device availability and permissions depend on Windows and the engine. These checks describe CEF capabilities, not proven website playback.": [
     "Device availability and permissions depend on Windows and the engine. These checks describe CEF capabilities, not proven website playback.",
     "توفر الأجهزة والأذونات يعتمد على ويندوز والمحرك. تصف هذه الفحوص قدرات CEF ولا تثبت تشغيل فيديوهات المواقع."
+  ],
+  "Download report": [
+    "Download report",
+    "تنزيل التقرير"
+  ],
+  "Main process CPU: {percent}% over {seconds} seconds": [
+    "Main process CPU: {percent}% over {seconds} seconds",
+    "استهلاك معالج العملية الرئيسية: {percent}% خلال {seconds} ثانية"
+  ],
+  "Refresh again after at least one second to measure CPU usage.": [
+    "Refresh again after at least one second to measure CPU usage.",
+    "حدّث مرة أخرى بعد ثانية على الأقل لقياس استهلاك المعالج."
+  ],
+  "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.": [
+    "Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.",
+    "تُحدّث البيانات عند الطلب فقط. تشمل الذاكرة والمعالج العملية الرئيسية دون عمليات عرض الصفحات وWebView2. ثواني المعالج تراكمية. حدّث مرتين لقياس متوسط الاستهلاك نسبةً إلى جميع المعالجات المنطقية."
   ]
 };
