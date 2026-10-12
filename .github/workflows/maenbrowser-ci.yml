@@ -25,6 +25,24 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Validate required media runtime configuration
+        shell: pwsh
+        env:
+          CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
+          CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CEF_ARCHIVE_URL)) {
+            throw "Missing repository secret MAEN_CEF_ARCHIVE_URL. Build the CEF 152 media runtime first, publish its verified archive to an accessible HTTPS URL, and configure Actions secrets. See docs/CUSTOM_CEF_MEDIA_BUILD.md."
+          }
+          $uri = $null
+          if (-not [Uri]::TryCreate($env:CEF_ARCHIVE_URL, [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -ne 'https') {
+            throw "MAEN_CEF_ARCHIVE_URL must be a valid HTTPS URL to the verified CEF media archive."
+          }
+          if ($env:CEF_ARCHIVE_SHA256 -notmatch '^[0-9a-fA-F]{64}$') {
+            throw "Missing or invalid repository secret MAEN_CEF_ARCHIVE_SHA256 (expected 64 hexadecimal characters)."
+          }
+          Write-Host "Required media archive configuration is present; archive integrity is verified during download."
+
       - name: JavaScript safeguards and package verification
         shell: pwsh
         run: |

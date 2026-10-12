@@ -56,3 +56,21 @@ Version 1.8.7 completed run 37968620382 successfully. The new 1.9.0 changes have
 ## Compatibility boundaries
 
 There is no claim of being the world's lightest browser, universal extension compatibility, complete ad removal, perfect parental filtering or universal media playback. Codec/DRM support depends on the shipped runtime and applicable licensing. Family protection is a browser feature, not a substitute for a separate restricted Windows child account. Filters are bundled snapshots; they are not currently refreshed in the background.
+
+## GitHub Actions red build: media runtime prerequisites
+
+The Windows Setup job intentionally requires a **custom, verified CEF 152 media runtime**.
+A public source repository does **not** imply that GitHub Actions secrets are configured.
+If the job fails at **Validate required media runtime configuration**, set both
+`MAEN_CEF_ARCHIVE_URL` (an accessible HTTPS archive URL) and
+`MAEN_CEF_ARCHIVE_SHA256` (the exact 64-character SHA-256 digest) under
+**Settings → Secrets and variables → Actions**. See
+[`docs/CUSTOM_CEF_MEDIA_BUILD.md`](docs/CUSTOM_CEF_MEDIA_BUILD.md).
+
+The separate media-runtime build needs a registered, online Windows x64
+**self-hosted runner**; the normal GitHub-hosted Windows runner cannot satisfy
+that workflow's runner labels. Do not disable codec integrity checks or
+replace the media runtime with stock CEF just to make the badge green.
+
+A red build can have other causes: consult the failed job's log. This source
+package alone cannot establish which step failed in a remote run.
