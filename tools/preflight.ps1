@@ -343,5 +343,13 @@ $mediaWindow = Get-Content "src/media/media_window.cpp" -Raw
 foreach ($needle in @("COINIT_APARTMENTTHREADED", "GetMessageW", "CloseEmbeddedWebView2", "ShutdownMediaWindow")) {
   if (-not $mediaWindow.Contains($needle)) { throw "Media window lifecycle missing: $needle" }
 }
-if (-not $wf.Contains("media_window_smoke.mjs")) { throw "Real media playback gate missing." }
+if (-not $wf.Contains("browser_smoke.mjs") -or
+    -not $wf.Contains("real in-tab H.264 playback test")) {
+  throw "Real in-tab H.264 playback gate missing."
+}
+if (-not $wf.Contains("MAEN_CEF_ARCHIVE_URL") -or
+    -not $wf.Contains("MAEN_CEF_ARCHIVE_SHA256") -or
+    -not $wf.Contains("-RequireMedia")) {
+  throw "Verified media-enabled CEF archive gate missing."
+}
 Write-Host "MaenBrowser preflight passed." -ForegroundColor Green
