@@ -2,9 +2,9 @@
 
 See [build correction](docs/BUILD_FIX_1.9.5_FIX1.md).
 
-# MaenBrowser 1.9.5 — in-tab direct media playback
+# MaenBrowser 1.9.5 — same-tab H.264 media playback
 
-See [current release notes](docs/RELEASE_1.9.5.md). Direct supported media-file URLs are routed to a lazy WebView2 surface inside the same tab. Ordinary site pages and WhatsApp remain on CEF. WebView2 codec availability is system-dependent; this does not add H.264 to CEF or guarantee every file/site. Windows build and playback validation are still required; see release notes for limitations.
+See [current release notes](docs/RELEASE_1.9.5.md). MP4/H.264 playback is intended to run in the existing CEF page/tab, with the same profile, controls and browser protections—not in a second WebView2 window. The standard stock CEF package lacks Chrome's proprietary H.264 codecs, so Windows Actions now requires a SHA-256-verified media-enabled CEF archive. See [custom CEF build and licensing requirements](docs/CUSTOM_CEF_MEDIA_BUILD.md). Windows playback validation is still required.
 
 # MaenBrowser 1.9.3 — on-demand performance diagnostics
 
@@ -24,7 +24,7 @@ See [release notes and Windows acceptance](docs/RELEASE_1.9.1.md). Built from 1.
 
 This update removes media-error-triggered page reloads and routes Chromium About to local MaenBrowser Technical Details. Existing 1.8.9 diagnostics are preserved. See [delivery and validation](docs/RELEASE_1.9.0.md).
 
-MaenBrowser uses C++20, CEF Chrome Runtime and an embedded WebView2 surface for WhatsApp and direct media files. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
+MaenBrowser uses C++20 and CEF Chrome Runtime. An optional WebView2 surface remains for compatibility tooling; normal video playback stays in the CEF page. This development branch adds a bundled Manifest V3 control panel backed by native request filtering. It keeps Chromium sandboxing and site isolation enabled.
 
 ## Changes in this source
 
@@ -40,7 +40,7 @@ Read [the delivery report](docs/DELIVERY_1.8.0.md) before running or distributin
 
 ## Build and validation
 
-On Windows, run the **Build MaenBrowser Windows Setup** GitHub Actions workflow. It runs static checks, builds with Visual Studio 2022, runs native and browser integration tests, then packages Setup using NSIS. The workflow is configured for main and development/** branches, and can also be started manually. A failed gate must be fixed before release.
+On Windows, run the **Build MaenBrowser Windows Setup** GitHub Actions workflow. It requires repository Actions secrets `MAEN_CEF_ARCHIVE_URL` (HTTPS URL of the verified media-enabled CEF archive) and `MAEN_CEF_ARCHIVE_SHA256` (64-character SHA-256). It validates the archive marker, builds with Visual Studio 2022, tests H.264/AAC playback in the actual CEF tab, then packages Setup using NSIS. Build the runtime using the separate `Build CEF 152 Maen Media Runtime` workflow first; see [custom CEF build instructions](docs/CUSTOM_CEF_MEDIA_BUILD.md). A failed gate must be fixed before release.
 
 Local checks completed during development:
 

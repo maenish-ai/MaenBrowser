@@ -4,8 +4,8 @@
 using maenbrowser::media::IsDirectMediaPath;
 void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
 int main() {
-  check(maenbrowser::media::kEmbeddedMediaRoutingEnabled,
-        "Direct media routing should be enabled for in-tab playback");
+  check(!maenbrowser::media::kEmbeddedMediaRoutingEnabled,
+        "Media playback must stay in the same CEF engine/tab");
   for (const char* path : {"/movie.mp4", "/MOVIE.MP4", "/track.m4a", "/video.m4v", "/sound.aac",
                               "/clip.mov", "/stream.webm", "/video.ogv", "/sound.ogg",
                               "/movie.mpg", "/movie.mpeg", "/archive.mkv"})

@@ -10,6 +10,8 @@ permissions:
 
 env:
   WEBVIEW2_SDK_VERSION: 1.0.4258.31
+  MAEN_CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
+  MAEN_CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
 
 jobs:
   build-setup:
@@ -73,11 +75,12 @@ jobs:
           "MAEN_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
           .\tools\preflight.ps1
 
-      - name: Fetch pinned stock CEF 152
+      - name: Fetch verified media-enabled CEF 152
         shell: pwsh
         run: |
-          $cefRoot=& .\tools\fetch-cef.ps1
+          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
           if (-not $cefRoot) { throw "CEF root was not returned." }
+          .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Fetch Microsoft WebView2 SDK
@@ -107,20 +110,8 @@ jobs:
         shell: pwsh
         run: ctest --test-dir build -C Release --output-on-failure
 
-      - name: Ensure WebView2 Runtime for playback test
-        shell: pwsh
-        run: |
-          $bootstrap = "$env:RUNNER_TEMP\MicrosoftEdgeWebview2Setup.exe"
-          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $bootstrap
-          $install = Start-Process -FilePath $bootstrap -ArgumentList '/silent','/install' -Wait -PassThru
-          if ($install.ExitCode -notin @(0, 3010, 1641)) { throw "WebView2 Runtime setup failed: $($install.ExitCode)" }
-
-      - name: Real WebView2 H264 playback test
-        timeout-minutes: 3
-        shell: pwsh
-        run: node tests/media_window_smoke.mjs build/Release/MaenBrowser.exe
-
-      - name: Browser integration smoke test
+      - name: Browser integration and real in-tab H.264 playback test
+        timeout-minutes: 5
         shell: pwsh
         run: node tests/browser_smoke.mjs build/Release/MaenBrowser.exe
 

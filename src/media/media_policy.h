@@ -4,9 +4,9 @@
 #include <string_view>
 
 namespace maenbrowser::media {
-// Route direct media files through the lazy, in-tab WebView2 surface.
-// WhatsApp remains on CEF until its separate handoff path is validated.
-inline constexpr bool kEmbeddedMediaRoutingEnabled = true;
+// H.264 playback is provided by the verified media-enabled CEF runtime.
+// Do not route pages to a second engine: preserve the same tab, profile and controls.
+inline constexpr bool kEmbeddedMediaRoutingEnabled = false;
 // Input is a parsed URL path, never the query or fragment.
 inline bool IsDirectMediaPath(std::string_view scheme, std::string path) {
   if (scheme != "https" || path.empty() || path.front() != '/' ||

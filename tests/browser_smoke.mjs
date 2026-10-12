@@ -7,6 +7,7 @@ import {createServer} from 'node:http';
 import {strict as assert} from 'node:assert';
 import {revealVideoControls} from '../assets/companion/video-controls.js';
 const exe=path.resolve(process.argv[2]);
+const h264Fixture=fs.readFileSync(new URL('./fixtures/h264-aac.mp4',import.meta.url));
 const id=fs.readFileSync('src/protection/identity.h','utf8').match(/kExtensionId\[\] = "([a-p]+)"/)[1];
 const processHandle=spawn(exe,['--remote-debugging-port=9222','--no-first-run','--no-default-browser-check'],{cwd:path.dirname(exe),stdio:'ignore'});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -50,6 +51,22 @@ try{
   // Exercise ad interception from an ordinary page, not a privileged extension
   // document whose CSP would reject this request before native filtering.
   fixture=createServer((request,response)=>{
+    if(request.url==='/media'){
+      response.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+      response.end('<!doctype html><meta charset="utf-8"><title>MaenBrowser H264 test</title><video id="h264" controls muted autoplay playsinline src="/clip.mp4"></video>');
+      return;
+    }
+    if(request.url==='/clip.mp4'){
+      const range=/^bytes=(\d+)-(\d*)$/.exec(request.headers.range||'');
+      if(range){
+        const start=Number(range[1]),end=Math.min(range[2]?Number(range[2]):h264Fixture.length-1,h264Fixture.length-1);
+        if(start>end){response.writeHead(416);response.end();return;}
+        response.writeHead(206,{'Content-Type':'video/mp4','Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${h264Fixture.length}`,'Content-Length':end-start+1,'Cache-Control':'no-store'});
+        response.end(h264Fixture.subarray(start,end+1));return;
+      }
+      response.writeHead(200,{'Content-Type':'video/mp4','Accept-Ranges':'bytes','Content-Length':h264Fixture.length,'Cache-Control':'no-store'});
+      response.end(h264Fixture);return;
+    }
     if(request.url==='/download'){
       const chunk=Buffer.alloc(65536,0x6d);let count=0;
       response.writeHead(200,{'Content-Type':'text/plain','Content-Disposition':'attachment; filename="maen-download-test.txt"','Content-Length':String(chunk.length*32),'Cache-Control':'no-store'});
@@ -71,6 +88,30 @@ try{
   })()`);
   assert.equal(controls.count,1); assert(controls.controls); assert(controls.paused);
   console.log('PASS: HTML5 controls enabled in a real CEF webpage without autoplay');
+  // Exercise H.264/AAC in the actual CEF tab: no WebView2 overlay, popup, or
+  // separate media session. This catches a stock CEF runtime lacking codecs.
+  await navigate(fixtureUrl+'media');
+  await evaluate(`document.getElementById('h264').play().catch(()=>{})`);
+  let mediaState;
+  for(let n=0;n<60;n++){
+    mediaState=await evaluate(`(()=>{const v=document.getElementById('h264');return {h264:v.canPlayType('video/mp4; codecs="avc1.42E01E"'),aac:v.canPlayType('audio/mp4; codecs="mp4a.40.2"'),time:v.currentTime,width:v.videoWidth,frames:v.getVideoPlaybackQuality().totalVideoFrames,error:v.error?.code||0}})()`);
+    if(mediaState.error||mediaState.time>1&&mediaState.width===160&&mediaState.frames>0)break;
+    await pause(250);
+  }
+  assert(mediaState.h264&&mediaState.aac,'CEF runtime lacks H.264/AAC support: '+JSON.stringify(mediaState));
+  assert(mediaState.time>1&&mediaState.width===160&&mediaState.frames>0,'CEF did not decode H.264 frames in the active tab: '+JSON.stringify(mediaState));
+  console.log('PASS: H.264/AAC decoded and played in the same CEF tab with native controls',JSON.stringify(mediaState));
+  // Also exercise Chromium's direct MP4 document, not only an embedded player.
+  await navigate(fixtureUrl+'clip.mp4');
+  let directState;
+  for(let n=0;n<60;n++){
+    directState=await evaluate(`(()=>{const v=document.querySelector('video');return v?{controls:v.controls,width:v.videoWidth,time:v.currentTime,error:v.error?.code||0}:null})()`);
+    if(directState?.error||directState?.time>1&&directState?.width===160)break;
+    await pause(250);
+  }
+  assert(directState?.controls&&directState.time>1&&directState.width===160,'Direct MP4 did not play in the active CEF tab: '+JSON.stringify(directState));
+  console.log('PASS: direct MP4 document plays in the same CEF tab');
+  await navigate(fixtureUrl);
   const probe=await evaluate(`fetch('https://doubleclick.net/maen-smoke?run='+Date.now(), {
     mode:'no-cors', cache:'no-store', signal:AbortSignal.timeout(5000)
   }).then(r=>({resolved:true,status:r.status})).catch(e=>({resolved:false,error:e.name,message:e.message}))`);
