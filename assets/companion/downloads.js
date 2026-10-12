@@ -46,7 +46,7 @@ async function render(){
   }else setText($('items'),t('No downloads yet.'));
   if(items.some(d=>d.state==='in_progress'&&!d.paused))poll=setTimeout(schedule,1000);
 }
-const schedule=scheduleRender(render,e=>message($('status'),e));
+const schedule=scheduleRender(render,e=>message($('status'),e),{minInterval:1000});
 $('folder').onclick=()=>chrome.downloads.showDefaultFolder();$('refresh').onclick=schedule;
 chrome.downloads.onChanged.addListener(schedule);chrome.downloads.onCreated.addListener(schedule);chrome.downloads.onErased.addListener(schedule);
 document.addEventListener('visibilitychange',()=>{clearTimeout(poll);samples.clear();if(!document.hidden)schedule();});

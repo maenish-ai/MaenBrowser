@@ -28,7 +28,7 @@ $('query').oninput=render;
 $('restore').onclick=async()=>{try{await chrome.sessions.restore();await refresh();}catch(e){message($('status'),e);}};
 $('saveSession').onclick=async()=>{try{const name=prompt(i18nText('Name for this session:'),i18nText('My session'));if(name===null)return;await call('saveSession',{name});await refresh();}catch(e){message($('status'),e);}};
 $('group').onclick=async()=>{try{const list=await chrome.tabs.query({currentWindow:true});const groups=new Map();for(const t of list){if(t.pinned||!webUrl(t.url))continue;const h=host(t.url);groups.set(h,[...(groups.get(h)||[]),t.id]);}for(const [title,ids]of groups){if(ids.length<2)continue;const id=await chrome.tabs.group({tabIds:ids});await chrome.tabGroups.update(id,{title,collapsed:false});}await refresh();message($('status'),'Grouped sites with two or more tabs.');}catch(e){message($('status'),e);}};
-const schedule=scheduleRender(refresh,e=>message($('status'),e));
+const schedule=scheduleRender(refresh,e=>message($('status'),e),{minInterval:500});
 chrome.tabs.onRemoved.addListener(schedule);chrome.tabs.onCreated.addListener(schedule);
 chrome.tabs.onUpdated.addListener((_id,change)=>{if(change.title||change.status==='complete'||change.discarded!==undefined)schedule();});
 refresh().catch(e=>message($('status'),e));
