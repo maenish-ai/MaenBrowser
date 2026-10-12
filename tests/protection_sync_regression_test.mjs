@@ -1,0 +1,14 @@
+import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';
+const worker=readFileSync('assets/companion/background.js','utf8');
+const api=readFileSync('assets/companion/api.js','utf8');
+const popup=readFileSync('assets/companion/popup.js','utf8');
+const client=readFileSync('src/app/maen_client.cpp','utf8');
+assert(worker.includes("'protection-state-sync'"));
+assert(worker.includes('await syncProtectionBadge();return;'));
+assert(worker.includes('changes.protectionRevision)syncProtectionBadge()'));
+for(const source of [worker,api,popup])assert(source.includes("listError?'!'"));
+assert(client.includes('if (!user_gesture || !source.valid || !destination.valid'));
+assert(client.includes('source.scheme != destination.scheme || source.host != destination.host'));
+assert(client.includes('opener->GetMainFrame()->LoadURL(next_url)'));
+console.log('Protection state synchronization and same-origin popup guards present');

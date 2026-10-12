@@ -7,9 +7,22 @@ async function updateAlarm(){
   if(sleepEnabled)await chrome.alarms.create('safe-idle-tabs',{periodInMinutes:2});
   else await chrome.alarms.clear('safe-idle-tabs');
 }
+async function syncProtectionBadge(){
+  try {
+    const s=await api();
+    await chrome.action.setBadgeText({text:s.listError?'!':s.ads?'✓':'—'});
+    return s;
+  } catch {
+    // Unknown is not the same as disabled. Never display an incorrect OFF state.
+    await chrome.action.setBadgeText({text:'?'}).catch(()=>{});
+    return null;
+  }
+}
 async function initialize(){
   await updateAlarm();
-  try{const s=await api();await chrome.action.setBadgeText({text:s.ads?'✓':'—'});if(s.family)await enforceFamily(true,false);}catch{await chrome.action.setBadgeText({text:'?'});}
+  await chrome.alarms.create('protection-state-sync',{periodInMinutes:1});
+  const s=await syncProtectionBadge();
+  if(s?.family)await enforceFamily(true,false);
 }
 chrome.runtime.onInstalled.addListener(()=>initialize());
 chrome.runtime.onStartup.addListener(()=>initialize());
@@ -45,6 +58,7 @@ async function releaseTab(id,manual=false,minutes=15,sample={}){
 }
 let idleScanRunning=false;
 chrome.alarms.onAlarm.addListener(async alarm=>{
+  if(alarm.name==='protection-state-sync'){await syncProtectionBadge();return;}
   if(alarm.name!=='safe-idle-tabs'||idleScanRunning)return;
   idleScanRunning=true;
   try{
@@ -104,5 +118,6 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
 chrome.commands.onCommand.addListener(command=>{if(command==='open-tabs')chrome.tabs.create({url:chrome.runtime.getURL('tabs.html')});});
 
 chrome.storage.onChanged.addListener((changes,area)=>{
+  if(area==='local'&&changes.protectionRevision)syncProtectionBadge();
   if(area==='local'&&changes.language)chrome.action.setTitle({title:changes.language.newValue==='ar'?'حماية معن براوزر':'MaenBrowser protection'});
 });

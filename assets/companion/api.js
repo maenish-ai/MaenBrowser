@@ -29,7 +29,7 @@ export async function api(op = 'get', extra = {}) {
   recordDiagnostic(op,null,data);
   if(op==='save'||op==='updateAdFilters'||op==='restoreBackup') {
     try { Promise.resolve(chrome.storage.local.set({protectionRevision:String(data.revision)})).catch(()=>{}); } catch {}
-    try { Promise.resolve(chrome.action.setBadgeText({text:data.ads?'✓':'—'})).catch(()=>{}); } catch {}
+    try { Promise.resolve(chrome.action.setBadgeText({text:data.listError?'!':data.ads?'✓':'—'})).catch(()=>{}); } catch {}
   }
   }catch(error){recordDiagnostic(op,error);throw error;}
   // Language persistence is optional UI housekeeping, not a protection failure.

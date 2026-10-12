@@ -21,7 +21,7 @@ async function refresh(){
   $('exception').disabled=!domain || !/^https?:/.test(tab?.url || '') || state.family;
   $('count').textContent=t('{count} requests blocked this browser session',{count:state.blockedRequests});
   message($('status'),state.listError ? new Error('Filter files are missing or empty. Repair the installation.') : state.family?'Family Protection is ON. Changes need the parent PIN.':'Native protection connected.');
-  try{await chrome.action.setBadgeText({text:state.ads?'✓':'—'});}catch{/* A badge failure must not disable working protection controls. */}
+  try{await chrome.action.setBadgeText({text:state.listError?'!':state.ads?'✓':'—'});}catch{/* A badge failure must not disable working protection controls. */}
 }
 $('toggle').onclick=async()=>{
   if(!state){$('toggle').disabled=true;try{await refresh();}catch(e){connectionError(e);}return;}

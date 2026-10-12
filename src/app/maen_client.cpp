@@ -124,27 +124,41 @@ void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   }
 }
 
-bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser>,
+bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
                                CefRefPtr<CefFrame>,
-                               int popup_id,
-                               const CefString&,
+                               int,
+                               const CefString& target_url,
                                const CefString&,
                                CefLifeSpanHandler::WindowOpenDisposition,
-                               bool,
+                               bool user_gesture,
                                const CefPopupFeatures&,
                                CefWindowInfo&,
                                CefRefPtr<CefClient>& client,
                                CefBrowserSettings&,
-                               CefRefPtr<CefDictionaryValue>& extra_info,
+                               CefRefPtr<CefDictionaryValue>&,
                                bool*) {
   CEF_REQUIRE_UI_THREAD();
-
-  // Keep the same MaenClient on opener-created windows so download events can
-  // be correlated. We deliberately do not cancel the popup here: OAuth,
-  // payment and sign-in windows must remain functional.
   client = this;
+  if (!browser || !browser->GetMainFrame()) return false;
 
-  return false;
+  // Route only explicit, same-origin HTTP(S) link clicks into the existing
+  // tab. Cross-origin popups may be required for sign-in or payment flows.
+  // Never navigate on script-generated popups without a user gesture.
+  const auto destination = protection::ParseUrl(target_url.ToString());
+  const auto source = protection::ParseUrl(browser->GetMainFrame()->GetURL().ToString());
+  if (!user_gesture || !source.valid || !destination.valid ||
+      (destination.scheme != "https" && destination.scheme != "http") ||
+      source.scheme != destination.scheme || source.host != destination.host ||
+      protection::BlockNavigation(target_url.ToString())) {
+    return false;
+  }
+  const std::string url = target_url.ToString();
+  CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(
+      [](CefRefPtr<CefBrowser> opener, std::string next_url) {
+        if (opener && opener->IsValid() && opener->GetMainFrame())
+          opener->GetMainFrame()->LoadURL(next_url);
+      }, browser, url)));
+  return true;
 }
 
 bool MaenClient::DoClose(CefRefPtr<CefBrowser>) {
