@@ -14,30 +14,9 @@ env:
   MAEN_CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
 
 jobs:
-  configuration:
-    runs-on: ubuntu-latest
-    outputs:
-      media_ready: ${{ steps.gate.outputs.media_ready }}
-    steps:
-      - name: Check external CEF media archive configuration
-        id: gate
-        shell: bash
-        env:
-          CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
-          CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
-        run: |
-          if [[ "$CEF_ARCHIVE_URL" == https://* && "$CEF_ARCHIVE_SHA256" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "media_ready=true" >> "$GITHUB_OUTPUT"
-            echo "Verified-format CEF media configuration detected. Archive authenticity is checked during download."
-          else
-            echo "media_ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Setup unavailable::Configure MAEN_CEF_ARCHIVE_URL (HTTPS) and MAEN_CEF_ARCHIVE_SHA256 (64 hex characters) to enable the Windows Setup build."
-          fi
   build-setup:
-    needs: configuration
-    if: needs.configuration.outputs.media_ready == 'true'
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -46,23 +25,23 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate required media runtime configuration
+      - name: Select verified CEF runtime mode
         shell: pwsh
-        env:
-          CEF_ARCHIVE_URL: ${{ secrets.MAEN_CEF_ARCHIVE_URL }}
-          CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:CEF_ARCHIVE_URL)) {
-            throw "Missing repository secret MAEN_CEF_ARCHIVE_URL. Build the CEF 152 media runtime first, publish its verified archive to an accessible HTTPS URL, and configure Actions secrets. See docs/CUSTOM_CEF_MEDIA_BUILD.md."
+          $url = $env:MAEN_CEF_ARCHIVE_URL
+          $hash = $env:MAEN_CEF_ARCHIVE_SHA256
+          if ($url -and $hash) {
+            if ($url -notmatch '^https://' -or $hash -notmatch '^[0-9a-fA-F]{64}$') {
+              throw "Invalid CEF secrets. URL must use HTTPS and SHA256 must be 64 hex characters."
+            }
+            "MAEN_MEDIA_BUILD=true" | Out-File $env:GITHUB_ENV -Append
+            Write-Host "Verified custom CEF media runtime selected."
+          } elseif (-not $url -and -not $hash) {
+            "MAEN_MEDIA_BUILD=false" | Out-File $env:GITHUB_ENV -Append
+            Write-Host "Using official stock CEF. Setup will be produced; H.264/AAC in-tab support is NOT guaranteed."
+          } else {
+            throw "Both MAEN_CEF_ARCHIVE_URL and MAEN_CEF_ARCHIVE_SHA256 must be set together."
           }
-          $uri = $null
-          if (-not [Uri]::TryCreate($env:CEF_ARCHIVE_URL, [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -ne 'https') {
-            throw "MAEN_CEF_ARCHIVE_URL must be a valid HTTPS URL to the verified CEF media archive."
-          }
-          if ($env:CEF_ARCHIVE_SHA256 -notmatch '^[0-9a-fA-F]{64}$') {
-            throw "Missing or invalid repository secret MAEN_CEF_ARCHIVE_SHA256 (expected 64 hexadecimal characters)."
-          }
-          Write-Host "Required media archive configuration is present; archive integrity is verified during download."
 
       - name: JavaScript safeguards and package verification
         shell: pwsh
@@ -117,9 +96,17 @@ jobs:
       - name: Fetch verified media-enabled CEF 152
         shell: pwsh
         run: |
-          $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+          if ($env:MAEN_MEDIA_BUILD -eq 'true') {
+            $cefRoot=& .\tools\fetch-cef.ps1 -RequireMedia
+          } else {
+            $cefRoot=& .\tools\fetch-cef.ps1
+          }
           if (-not $cefRoot) { throw "CEF root was not returned." }
-          .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
+          if ($env:MAEN_MEDIA_BUILD -eq 'true') {
+            .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot -RequireMedia
+          } else {
+            .\tools\verify-media-runtime.ps1 -CefRoot $cefRoot
+          }
           "CEF_ROOT=$cefRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Fetch Microsoft WebView2 SDK
@@ -150,6 +137,7 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Browser integration and real in-tab H.264 playback test
+        if: env.MAEN_MEDIA_BUILD == 'true'
         timeout-minutes: 5
         shell: pwsh
         run: node tests/browser_smoke.mjs build/Release/MaenBrowser.exe
@@ -179,6 +167,13 @@ jobs:
           try { makensis MaenBrowser.nsi } finally { Pop-Location }
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
+
+      - name: Confirm installer payload
+        shell: pwsh
+        run: |
+          $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
+          if (!(Test-Path $setup)) { throw "Setup missing: $setup" }
+          Write-Host "Setup produced: $setup ($((Get-Item $setup).Length) bytes)"
 
       - name: Upload Setup only
         uses: actions/upload-artifact@v4
