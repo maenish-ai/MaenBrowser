@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $required = @(
   "VERSION", "CMakeLists.txt", "installer/MaenBrowser.nsi",
   ".github/workflows/maenbrowser-ci.yml", "tools/fetch-cef.ps1",
@@ -176,8 +176,20 @@ $clientCpp = Get-Content "src/app/maen_client.cpp" -Raw
 if (-not ($clientH.Contains("OnBeforePopup") -or $clientCpp.Contains("OnBeforePopup"))) {
   throw "Popup handler missing; OAuth/payment/login popup compatibility must be preserved."
 }
-if ($clientCpp -match 'OnBeforePopup[\s\S]{0,1800}return true;') {
-  throw "Popup policy must not blanket-cancel normal OAuth/payment/login popups."
+# Inspect the callback body rather than rejecting every `return true`.
+# CEF uses true to cancel a popup, which is appropriate only for narrowly
+# guarded same-origin navigation; false must remain available for auth/payment.
+$popupStart = $clientCpp.IndexOf("bool MaenClient::OnBeforePopup")
+$popupEnd = $clientCpp.IndexOf("bool MaenClient::DoClose", $popupStart)
+if ($popupStart -lt 0 -or $popupEnd -le $popupStart) { throw "Popup callback boundaries not found." }
+$popupBody = $clientCpp.Substring($popupStart, $popupEnd - $popupStart)
+if (-not $popupBody.Contains("return false;") -or
+    -not $popupBody.Contains("user_gesture") -or
+    -not $popupBody.Contains("source.host != destination.host") -or
+    -not $popupBody.Contains("source.scheme != destination.scheme") -or
+    -not $popupBody.Contains("protection::BlockNavigation") -or
+    -not $popupBody.Contains("LoadURL(next_url)")) {
+  throw "Popup policy must preserve OAuth/payment/login popups and restrict same-origin redirects."
 }
 $beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")
 $updatedStart = $clientCpp.IndexOf("void MaenClient::OnDownloadUpdated")
