@@ -3,7 +3,7 @@ Windows integration checks are separately required for actual CEF callbacks.
 """
 from pathlib import Path
 r=Path(__file__).resolve().parents[1]
-s=(r/'src/app/maen_client.cpp').read_text()
+s=(r/'src/app/maen_client.cpp').read_text(encoding="utf-8")
 assert 'MAEN_MEDIA_UNSUPPORTED' not in s
 assert 'media_fallbacks_' not in s
 assert 'InstallMediaProbe' not in s
