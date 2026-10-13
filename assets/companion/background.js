@@ -20,7 +20,7 @@ async function syncProtectionBadge(){
 }
 async function initialize(){
   await updateAlarm();
-  await chrome.alarms.create('protection-state-sync',{periodInMinutes:1});
+  await chrome.alarms.create('protection-state-sync',{periodInMinutes:5});
   const s=await syncProtectionBadge();
   if(s?.family)await enforceFamily(true,false);
 }
@@ -120,4 +120,30 @@ chrome.commands.onCommand.addListener(command=>{if(command==='open-tabs')chrome.
 chrome.storage.onChanged.addListener((changes,area)=>{
   if(area==='local'&&changes.protectionRevision)syncProtectionBadge();
   if(area==='local'&&changes.language)chrome.action.setTitle({title:changes.language.newValue==='ar'?'حماية معن براوزر':'MaenBrowser protection'});
+});
+
+// Chrome runtime may open target=_blank links in a separate browser window.
+// Reparent ordinary link targets into the opener's tab strip. Keep popup-based
+// authentication and payment flows intact (they often require window.opener).
+const sensitivePopupHosts=['accounts.google.com','login.microsoftonline.com','login.live.com',
+ 'appleid.apple.com','paypal.com','www.paypal.com','checkout.stripe.com'];
+const relocatingTabs=new Set();
+chrome.webNavigation?.onCreatedNavigationTarget?.addListener(async ({sourceTabId,tabId,url})=>{
+ if(relocatingTabs.has(tabId)||!/^https?:\/\//i.test(url||''))return;
+ try{
+  const host=new URL(url).hostname.toLowerCase();
+  if(sensitivePopupHosts.some(h=>host===h||host.endsWith('.'+h)))return;
+  const [source,target]=await Promise.all([chrome.tabs.get(sourceTabId),chrome.tabs.get(tabId)]);
+  if(!source?.windowId||!target?.windowId||source.windowId===target.windowId)return;
+  const targetWindow=await chrome.windows.get(target.windowId);
+  // Only move single-tab popup windows, never a user's independent window.
+  const siblings=await chrome.tabs.query({windowId:target.windowId});
+  if(targetWindow.type!=='popup'&&siblings.length!==1)return;
+  if(siblings.length!==1||siblings[0].id!==tabId)return;
+  relocatingTabs.add(tabId);
+  await chrome.tabs.move(tabId,{windowId:source.windowId,index:-1});
+  await chrome.tabs.update(tabId,{active:true});
+  await chrome.windows.update(source.windowId,{focused:true});
+ }catch{/* Preserve Chromium's default behavior on unsupported runtimes. */}
+ finally{relocatingTabs.delete(tabId);}
 });

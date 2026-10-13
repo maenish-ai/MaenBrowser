@@ -36,5 +36,12 @@ void ApplyLocalBrowserPreferences(CefRefPtr<CefPreferenceManager> context) {
   v = CefValue::Create();
   v->SetBool(true);
   Set(context, "browser.show_home_button", v);
+
+  // Chrome's documented startup preference: 5 = new tab page, 1 = restore
+  // last session. Apply only if the runtime exposes it as a writable pref.
+  // Never delete the previous session: the user may choose to restore it.
+  v = CefValue::Create();
+  v->SetInt(5);
+  Set(context, "session.restore_on_startup", v);
 }
 }

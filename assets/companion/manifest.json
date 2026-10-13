@@ -14,7 +14,8 @@
     "tabGroups",
     "sidePanel",
     "management",
-    "downloads.open"
+    "downloads.open",
+    "webNavigation"
   ],
   "host_permissions": [
     "http://*/*",

@@ -31,3 +31,24 @@ document.getElementById("mediaCheck").addEventListener("click",()=>{
  const out=document.getElementById("mediaResult");out.textContent=lines.join("\n");out.style.display="block";
 });
 paint();
+
+// Session recovery is opt-in. Do not eagerly create tabs or reopen a window.
+async function offerPreviousSession(){
+ const panel=document.getElementById('previousSession');
+ if(!chrome.sessions?.getRecentlyClosed)return;
+ try{
+  const entries=await chrome.sessions.getRecentlyClosed({maxResults:10});
+  const previous=entries.find(entry=>entry.window?.tabs?.length||entry.tab?.url);
+  if(!previous)return;
+  panel.hidden=false;
+  const arabic=(navigator.language||'').toLowerCase().startsWith('ar');
+  document.getElementById('sessionPrompt').textContent=arabic?'يمكنك استعادة التبويبات السابقة اختيارياً.':'You can restore your previous tabs if you wish.';
+  document.getElementById('restorePrevious').textContent=arabic?'استعادة التبويبات السابقة':'Restore previous tabs';
+  document.getElementById('restorePrevious').addEventListener('click',async()=>{
+   const button=document.getElementById('restorePrevious');button.disabled=true;
+   try{await chrome.sessions.restore(previous.window?.sessionId||previous.tab?.sessionId);panel.hidden=true;}
+   catch{document.getElementById('sessionFeedback').textContent=arabic?'تعذرت الاستعادة.':'Could not restore tabs.';button.disabled=false;}
+  },{once:false});
+ }catch{/* Sessions API may be unavailable in some CEF builds. */}
+}
+offerPreviousSession();

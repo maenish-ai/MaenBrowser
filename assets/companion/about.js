@@ -35,3 +35,6 @@ $('export').onclick=()=>{if(!snapshot)return;$('report').value=JSON.stringify(sn
 $('downloadReport').onclick=()=>{if(snapshot)try{downloadReport(snapshot,'MaenBrowser-technical-report.json');}catch(e){message($('status'),e);}};
 document.addEventListener('maen-language',render);
 refresh();
+
+const credits=$("project-credits");
+if(credits){const h=document.createElement("h2");h.textContent="Project credits / عن المشروع";credits.append(h);for(const [language,copy] of [["en","MaenBrowser is a free browser project, created from the project owner’s idea and developed with assistance from ChatGPT by OpenAI. Donations are optional. ChatGPT is an AI assistant, not a co-owner or official OpenAI endorsement."],["ar","MaenBrowser مشروع متصفح مجاني للجميع، انطلق من فكرة صاحب المشروع وطُوّر بمساعدة ChatGPT من OpenAI. التبرع اختياري ولا يُشترط لاستخدام المتصفح."]]){const paragraph=document.createElement("p");paragraph.lang=language;if(language==="ar")paragraph.dir="rtl";paragraph.textContent=copy;credits.append(paragraph);}}

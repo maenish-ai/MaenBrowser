@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(p,'utf8');
+const pref=read('src/app/browser_preferences.cpp');
+assert.match(pref,/session\.restore_on_startup/);
+assert.match(pref,/SetInt\(5\)/);
+const start=read('assets/companion/start.js');
+assert.match(start,/chrome\.sessions\.getRecentlyClosed/);
+assert.match(start,/addEventListener\('click'/);
+assert.match(start,/chrome\.sessions\.restore/);
+const bg=read('assets/companion/background.js');
+assert.match(bg,/onCreatedNavigationTarget/);
+assert.match(bg,/sensitivePopupHosts/);
+assert.match(bg,/chrome\.tabs\.move/);
+assert.match(bg,/periodInMinutes:5/);
+console.log('Startup preference, opt-in restore, popup reparenting and reduced polling guards passed');
