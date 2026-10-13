@@ -158,6 +158,12 @@ foreach ($needle in $installerRequired) {
   if (-not $nsi.Contains($needle)) { throw "Installer integration missing: $needle" }
 }
 
+# Installed Apps must show the actual installed footprint in Windows Settings.
+# This is a per-user installation, so its uninstall metadata belongs under HKCU.
+foreach ($needle in @('"EstimatedSize"', '${GetSize} "$INSTDIR" "/S=0K"')) {
+  if (-not $nsi.Contains($needle)) { throw "Installed Apps size metadata missing: $needle" }
+}
+
 # Unified lightweight policy regression guards.
 $resource = (Get-Content "src/app/resource_mode.cpp" -Raw) + (Get-Content "src/app/resource_policy.h" -Raw)
 foreach ($needle in @("Mode::Lite","Mode::Balanced","Mode::Performance","Prerender2")) {

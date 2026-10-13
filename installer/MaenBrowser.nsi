@@ -85,9 +85,9 @@ Section "MaenBrowser" SEC_MAIN
 
   ; Windows shell integration.
   CreateDirectory "$SMPROGRAMS\MaenBrowser"
-  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
   CreateShortcut "$SMPROGRAMS\MaenBrowser\Uninstall MaenBrowser.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
-  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
+  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
   ; Stable shell identity used by the running process/taskbar grouping.
 
   ; Installed Apps / Apps & features.
@@ -98,6 +98,14 @@ Section "MaenBrowser" SEC_MAIN
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\maenbrowser.ico"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
+  ; Windows Installed Apps reads EstimatedSize in KiB (REG_DWORD).
+  ; Calculate it from the installed files, including the CEF runtime, rather
+  ; than reporting the compressed installer download size or a fixed estimate.
+  ; FileFunc GetSize returns a size in KiB with /S=0K.
+  ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+  ${If} $0 != "error"
+    WriteRegDWORD HKCU "${UNINSTALL_KEY}" "EstimatedSize" $0
+  ${EndIf}
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
 
