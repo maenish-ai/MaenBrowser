@@ -5,12 +5,21 @@ export class NativeConnectionError extends Error {
 }
 export async function nativeApi(op = 'get', extra = {}) {
   let response,data;
-  try {
-    response = await fetch('https://maen.browser/api', {
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(op==='updateAdFilters'?20000:8000)
-    });
-  }catch{throw new NativeConnectionError('PROTECTION_NETWORK');}
+  // Only the read-only status request may be retried. Never replay a write:
+  // the native service could have committed it before transport failure.
+  const attempts=op==='get'?2:1;
+  for(let attempt=0;attempt<attempts;attempt++){
+    try {
+      response = await fetch('https://maen.browser/api', {
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(op==='updateAdFilters'?20000:8000)
+      });
+      break;
+    }catch{
+      if(attempt+1===attempts)throw new NativeConnectionError('PROTECTION_NETWORK');
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+  }
   if(!response.ok)throw new NativeConnectionError('PROTECTION_HTTP_'+response.status);
   try{data=await response.json();}catch{throw new NativeConnectionError('PROTECTION_RESPONSE');}
   if(!data||typeof data.ok!=='boolean')throw new NativeConnectionError('PROTECTION_RESPONSE');

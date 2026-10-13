@@ -14,6 +14,15 @@ const before=requests.length;
 globalThis.fetch=async()=>{requests.push('failed');throw new Error('Network unavailable');};
 await assert.rejects(api('save'),/PROTECTION_NETWORK/);
 assert.equal(requests.length,before+1,'Failed writes must never be replayed');
+let readAttempts=0;
+globalThis.fetch=async()=>{readAttempts++;if(readAttempts===1)throw Error('temporary network failure');return {ok:true,json:async()=>({ok:true,ads:true,family:false,exceptions:[],language:'en'})};};
+assert.equal((await api('get')).ads,true);
+assert.equal(readAttempts,2,'Transient read failure should retry exactly once');
+readAttempts=0;
+globalThis.fetch=async()=>{readAttempts++;throw Error('network down');};
+await assert.rejects(api('get'),/PROTECTION_NETWORK/);
+assert.equal(readAttempts,2,'Persistent read failure should stop after two attempts');
+
 globalThis.fetch=async()=>({ok:false,status:403});
 await assert.rejects(api(),/PROTECTION_HTTP_403/);
 globalThis.fetch=async()=>({ok:true,json:async()=>({ok:true})});
