@@ -31,8 +31,8 @@ async function refresh(){
   }catch(e){previous=null;message($('status'),e);}finally{$('refresh').disabled=false;}
 }
 $('refresh').onclick=refresh;
-$('export').onclick=()=>{if(!snapshot)return;$('report').value=JSON.stringify(snapshot,null,2);$('report').hidden=false;$('report').select();};
-$('downloadReport').onclick=()=>{if(snapshot)try{downloadReport(snapshot,'MaenBrowser-technical-report.json');}catch(e){message($('status'),e);}};
+$('export').onclick=()=>{if(!snapshot)return;$('report').value=JSON.stringify(snapshot,null,2);$('report').hidden=false;$('report').select();message($('status'),'Technical report ready to copy.');};
+$('downloadReport').onclick=()=>{if(snapshot)try{downloadReport(snapshot,'MaenBrowser-technical-report.json');message($('status'),'Technical report download requested.');}catch(e){message($('status'),e);}};
 document.addEventListener('maen-language',render);
 refresh();
 
