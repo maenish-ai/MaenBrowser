@@ -927,6 +927,14 @@ export const translations = {
     "About MaenBrowser",
     "حول متصفح معن"
   ],
+  "MaenBrowser Technical Details": [
+    "MaenBrowser Technical Details",
+    "التفاصيل التقنية لمتصفح معن"
+  ],
+  "MaenBrowser uses the Chromium engine. Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.": [
+    "MaenBrowser uses the Chromium engine. Snapshots refresh only when requested. Memory and CPU cover the main browser process, excluding renderers and WebView2. CPU seconds are cumulative. Refresh twice to measure average CPU utilization, normalized to all logical processors.",
+    "يستخدم متصفح معن محرك Chromium. تُحدّث البيانات عند الطلب فقط. تشمل بيانات الذاكرة والمعالج العملية الرئيسية للمتصفح دون عمليات عرض الصفحات وWebView2. وقت المعالج تراكمي بالثواني. حدّث مرتين لقياس متوسط استخدام المعالج بالنسبة لجميع المعالجات المنطقية."
+  ],
   "Technical Details": [
     "Technical Details",
     "التفاصيل التقنية"
