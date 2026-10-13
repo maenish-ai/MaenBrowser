@@ -32,23 +32,43 @@ document.getElementById("mediaCheck").addEventListener("click",()=>{
 });
 paint();
 
-// Session recovery is opt-in. Do not eagerly create tabs or reopen a window.
+// Restore a closed session into the *current* Chrome Runtime window.
+// the sessions restore API recreates an independent window, which is
+// deliberately not what the Restore previous tabs button promises.
+let restoringPrevious=false;
 async function offerPreviousSession(){
  const panel=document.getElementById('previousSession');
- if(!chrome.sessions?.getRecentlyClosed)return;
+ if(!chrome.sessions?.getRecentlyClosed||!chrome.tabs?.create)return;
  try{
   const entries=await chrome.sessions.getRecentlyClosed({maxResults:10});
-  const previous=entries.find(entry=>entry.window?.tabs?.length||entry.tab?.url);
+  const previous=entries.find(entry=>entry.window?.tabs?.some(t=>/^https?:\/\//i.test(t.url||''))||/^https?:\/\//i.test(entry.tab?.url||''));
   if(!previous)return;
+  const tabs=(previous.window?.tabs||[previous.tab]).filter(t=>/^https?:\/\//i.test(t?.url||'')).slice(0,100);
+  if(!tabs.length)return;
   panel.hidden=false;
   const arabic=(navigator.language||'').toLowerCase().startsWith('ar');
   document.getElementById('sessionPrompt').textContent=arabic?'يمكنك استعادة التبويبات السابقة اختيارياً.':'You can restore your previous tabs if you wish.';
   document.getElementById('restorePrevious').textContent=arabic?'استعادة التبويبات السابقة':'Restore previous tabs';
   document.getElementById('restorePrevious').addEventListener('click',async()=>{
+   if(restoringPrevious)return;
+   restoringPrevious=true;
    const button=document.getElementById('restorePrevious');button.disabled=true;
-   try{await chrome.sessions.restore(previous.window?.sessionId||previous.tab?.sessionId);panel.hidden=true;}
-   catch{document.getElementById('sessionFeedback').textContent=arabic?'تعذرت الاستعادة.':'Could not restore tabs.';button.disabled=false;}
-  },{once:false});
+   let created=0;
+   try{
+    const current=await chrome.windows.getCurrent();
+    if(!Number.isInteger(current?.id)||current.type&&current.type!=='normal')throw new Error('No normal browser window');
+    for(const tab of tabs){
+     const target=created===0?tab.url:chrome.runtime.getURL('deferred.html')+'#'+encodeURIComponent(tab.url);
+     await chrome.tabs.create({windowId:current.id,url:target,active:created===0,pinned:!!tab.pinned});
+     created++;
+    }
+    panel.hidden=true;
+   }catch{
+    document.getElementById('sessionFeedback').textContent=arabic
+      ?`تمت استعادة ${created} تبويبات؛ تعذر إكمال البقية.`
+      :`Restored ${created} tabs; could not finish restoring the others.`;
+   }finally{button.disabled=false;restoringPrevious=false;}
+  });
  }catch{/* Sessions API may be unavailable in some CEF builds. */}
 }
 offerPreviousSession();

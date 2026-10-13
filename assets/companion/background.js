@@ -7,14 +7,20 @@ async function updateAlarm(){
   if(sleepEnabled)await chrome.alarms.create('safe-idle-tabs',{periodInMinutes:2});
   else await chrome.alarms.clear('safe-idle-tabs');
 }
+let lastProtectionBadge=null;
+async function setProtectionBadge(value){
+  if(lastProtectionBadge===value)return;
+  await chrome.action.setBadgeText({text:value});
+  lastProtectionBadge=value;
+}
 async function syncProtectionBadge(){
   try {
     const s=await api();
-    await chrome.action.setBadgeText({text:s.listError?'!':s.ads?'✓':'—'});
+    await setProtectionBadge(s.listError?'!':s.ads?'✓':'—');
     return s;
   } catch {
     // Unknown is not the same as disabled. Never display an incorrect OFF state.
-    await chrome.action.setBadgeText({text:'?'}).catch(()=>{});
+    await setProtectionBadge('?').catch(()=>{});
     return null;
   }
 }
@@ -26,6 +32,7 @@ async function initialize(){
 }
 chrome.runtime.onInstalled.addListener(()=>initialize());
 chrome.runtime.onStartup.addListener(()=>initialize());
+chrome.runtime.onInstalled.addListener(()=>{lastProtectionBadge=null;});
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.sleepEnabled)updateAlarm();});
 async function pageIsSafe(tabId){
   let timeout;
@@ -106,7 +113,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
     if(request.op==='settingsChanged'){
       const s=await api();await enforceFamily(s.family,s.family&&!request.wasFamily);await updateAlarm();return {ok:true};
     }
-    if(request.op==='restoreSession')return restoreSession(request.id);
+    if(request.op==='restoreSession')return restoreSession(request.id, sender.tab?.windowId ?? null);
     if(request.op==='saveSession'){
       const tabs=await chrome.tabs.query({currentWindow:true});const {sessions=[]}=await chrome.storage.local.get('sessions');
       const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(tabs)};

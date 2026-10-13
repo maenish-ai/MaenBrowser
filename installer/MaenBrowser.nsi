@@ -85,9 +85,9 @@ Section "MaenBrowser" SEC_MAIN
 
   ; Windows shell integration.
   CreateDirectory "$SMPROGRAMS\MaenBrowser"
-  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
+  CreateShortcut "$SMPROGRAMS\MaenBrowser\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
   CreateShortcut "$SMPROGRAMS\MaenBrowser\Uninstall MaenBrowser.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
-  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\maenbrowser.ico" 0
+  CreateShortcut "$DESKTOP\MaenBrowser.lnk" "$INSTDIR\${PRODUCT_EXE}" "" "$INSTDIR\${PRODUCT_EXE}" 0
   ; Stable shell identity used by the running process/taskbar grouping.
 
   ; Installed Apps / Apps & features.

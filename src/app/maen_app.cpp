@@ -102,7 +102,9 @@ void MaenApp::OnContextInitialized() {
   // Also used by CI to exercise real WebView2 playback. This flag is local
   // startup input only and follows the same URL/family checks as the menu.
   const auto media_url = CefCommandLine::GetGlobalCommandLine()->GetSwitchValue("maen-media-url");
-  if (!media_url.empty()) media::OpenMediaWindow(media_url.ToWString());
+  // Diagnostic media window is deliberately opt-in and disabled in normal use.
+  if (CefCommandLine::GetGlobalCommandLine()->HasSwitch("maen-enable-media-diagnostics") &&
+      !media_url.empty()) media::OpenMediaWindow(media_url.ToWString());
 }
 
 }  // namespace maenbrowser
