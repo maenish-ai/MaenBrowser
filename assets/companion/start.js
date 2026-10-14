@@ -1,5 +1,9 @@
 import {t} from './i18n.js';
 
+// Old/low-thread PCs use the exact same features with cheaper painting.
+// This only changes decorative effects on the New Tab page.
+if((navigator.hardwareConcurrency||8)<=4)document.documentElement.classList.add('maen-low-resource');
+
 const engines={
  google:q=>"https://www.google.com/search?q="+encodeURIComponent(q),
  bing:q=>"https://www.bing.com/search?q="+encodeURIComponent(q),
@@ -40,6 +44,11 @@ async function offerPreviousSession(){
  const panel=document.getElementById('previousSession');
  if(!chrome.sessions?.getRecentlyClosed||!chrome.tabs?.create)return;
  try{
+  // Session restore is a startup affordance, not work every New Tab should repeat.
+  // chrome.storage.session is memory-only and resets with the browser session.
+  const shown=await chrome.storage.session.get('previousSessionPromptShown');
+  if(shown.previousSessionPromptShown)return;
+  await chrome.storage.session.set({previousSessionPromptShown:true});
   const entries=await chrome.sessions.getRecentlyClosed({maxResults:10});
   const previous=entries.find(entry=>entry.window?.tabs?.some(t=>/^https?:\/\//i.test(t.url||''))||/^https?:\/\//i.test(entry.tab?.url||''));
   if(!previous)return;

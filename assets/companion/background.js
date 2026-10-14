@@ -4,7 +4,7 @@ import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
 async function updateAlarm(){
   const {sleepEnabled=true}=await chrome.storage.local.get('sleepEnabled');
-  if(sleepEnabled)await chrome.alarms.create('safe-idle-tabs',{periodInMinutes:2});
+  if(sleepEnabled)await chrome.alarms.create('safe-idle-tabs',{periodInMinutes:5});
   else await chrome.alarms.clear('safe-idle-tabs');
 }
 let lastProtectionBadge=null;
@@ -26,7 +26,7 @@ async function syncProtectionBadge(){
 }
 async function initialize(){
   await updateAlarm();
-  await chrome.alarms.create('protection-state-sync',{periodInMinutes:5});
+  await chrome.alarms.create('protection-state-sync',{periodInMinutes:15});
   const s=await syncProtectionBadge();
   if(s?.family)await enforceFamily(true,false);
 }
@@ -34,6 +34,22 @@ chrome.runtime.onInstalled.addListener(()=>initialize());
 chrome.runtime.onStartup.addListener(()=>initialize());
 chrome.runtime.onInstalled.addListener(()=>{lastProtectionBadge=null;});
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.sleepEnabled)updateAlarm();});
+
+// Reading native process/memory counters on every idle alarm wastes energy on
+// constrained laptops. Keep a short-lived session cache (RAM only, no disk).
+async function technicalSample(){
+  const now=Date.now();
+  try{
+    const cached=await chrome.storage.session.get('technicalSample');
+    const item=cached.technicalSample;
+    if(item&&now-Number(item.at)<10*60*1000&&item.value)return item.value;
+  }catch{}
+  try{
+    const value=await api('technical');
+    try{await chrome.storage.session.set({technicalSample:{at:now,value}});}catch{}
+    return value;
+  }catch{return {};}
+}
 async function pageIsSafe(tabId){
   let timeout;
   try{
@@ -47,7 +63,7 @@ async function pageIsSafe(tabId){
       // observe a site's private MediaStream/RTCPeerConnection objects.
       try{for(const name of ['microphone','camera']){const p=await navigator.permissions.query({name});if(p.state==='granted')return false;}}catch{return false;}
       return true;
-    }}),new Promise(resolve=>{timeout=setTimeout(()=>resolve([]),5000);})]);
+    }}),new Promise(resolve=>{timeout=setTimeout(()=>resolve([]),2500);})]);
     return results.length>0&&results.every(r=>r.result===true);
   }catch{return false;}finally{clearTimeout(timeout);}
 }
@@ -71,9 +87,12 @@ chrome.alarms.onAlarm.addListener(async alarm=>{
   try{
     const p=await chrome.storage.local.get({sleepEnabled:true,sleepMinutes:30,keepAwake:[]});if(!p.sleepEnabled)return;
     if((await chrome.downloads.search({state:'in_progress',limit:1})).length)return;
-    let sample={};try{sample=await api('technical');}catch{}
-    const policy=idlePolicy(p,sample);
     const tabs=await chrome.tabs.query({});if(!tabs.length)return;
+    // Avoid native sampling when every tab is recent/active. Five minutes is the
+    // shortest pressure threshold, so newer tabs can never be released anyway.
+    if(!tabs.some(tab=>candidate(tab,Date.now(),5,p.keepAwake)))return;
+    const sample=await technicalSample();
+    const policy=idlePolicy(p,sample);
     const {scanOffset=0}=await chrome.storage.session.get('scanOffset');
     let inspected=0,visited=0;
     for(;visited<tabs.length&&inspected<policy.batch;visited++){

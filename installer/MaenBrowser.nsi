@@ -31,32 +31,89 @@ VIAddVersionKey "LegalCopyright" "MaenBrowser contributors"
 !define MUI_ABORTWARNING
 !define MUI_ICON "..\assets\maenbrowser.ico"
 !define MUI_UNICON "..\assets\maenbrowser.ico"
+
+; Always ask which setup/browser language to use before the wizard starts.
+!define MUI_LANGDLL_WINDOWTITLE "MaenBrowser Setup Language / لغة تثبيت MaenBrowser"
+
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch MaenBrowser"
+!define MUI_FINISHPAGE_RUN_TEXT "$(LaunchMaenBrowser)"
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_UNPAGE_FINISH
-!insertmacro MUI_LANGUAGE "English"
 
-Function .onInit
-  SetShellVarContext current
+!insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_LANGUAGE "Arabic"
+
+LangString LaunchMaenBrowser ${LANG_ENGLISH} "Launch MaenBrowser"
+LangString LaunchMaenBrowser ${LANG_ARABIC} "تشغيل MaenBrowser"
+LangString ClosingBrowser ${LANG_ENGLISH} "MaenBrowser is running. Setup will close it safely and continue the update."
+LangString ClosingBrowser ${LANG_ARABIC} "MaenBrowser قيد التشغيل. سيغلقه برنامج التثبيت بأمان ثم يتابع التحديث."
+LangString CouldNotClose ${LANG_ENGLISH} "Setup could not close MaenBrowser automatically. Please close all MaenBrowser windows, then click Retry."
+LangString CouldNotClose ${LANG_ARABIC} "تعذر على برنامج التثبيت إغلاق MaenBrowser تلقائياً. أغلق جميع نوافذ MaenBrowser ثم اضغط إعادة المحاولة."
+LangString PreservingData ${LANG_ENGLISH} "Updating MaenBrowser while preserving your profile and data..."
+LangString PreservingData ${LANG_ARABIC} "جارٍ تحديث MaenBrowser مع الاحتفاظ بملفك الشخصي وبياناتك..."
+
+; Ask the running browser to close through its normal top-level windows. This
+; avoids force-killing CEF and gives the profile/session a chance to flush.
+Function CloseRunningBrowser
+  close_retry:
+  nsExec::ExecToStack 'cmd /C tasklist /FI "IMAGENAME eq ${PRODUCT_EXE}" /NH | find /I "${PRODUCT_EXE}" >nul'
+  Pop $0
+  Pop $1
+  ${If} $0 != 0
+    Return
+  ${EndIf}
+
+  DetailPrint "$(ClosingBrowser)"
+  ; CloseMainWindow sends the normal WM_CLOSE path to every top-level browser
+  ; process. Child CEF processes normally exit after the browser process exits.
+  nsExec::ExecToStack 'powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-Process -Name MaenBrowser -ErrorAction SilentlyContinue | Where-Object { $$_.MainWindowHandle -ne 0 } | ForEach-Object { [void]$$_.CloseMainWindow() }; for ($$i=0; $$i -lt 40; $$i++) { if (-not (Get-Process -Name MaenBrowser -ErrorAction SilentlyContinue)) { exit 0 }; Start-Sleep -Milliseconds 250 }; exit 1"'
+  Pop $0
+  Pop $1
+
+  ; Re-check independently. We never use taskkill /F because an update must not
+  ; risk corrupting the user's Chromium/CEF profile or unsaved session state.
   nsExec::ExecToStack 'cmd /C tasklist /FI "IMAGENAME eq ${PRODUCT_EXE}" /NH | find /I "${PRODUCT_EXE}" >nul'
   Pop $0
   Pop $1
   ${If} $0 == 0
-    MessageBox MB_ICONEXCLAMATION|MB_OK "MaenBrowser is currently running.$\r$\nClose all MaenBrowser windows, then run Setup again."
-    Abort
+    MessageBox MB_ICONEXCLAMATION|MB_RETRYCANCEL "$(CouldNotClose)" IDRETRY close_retry IDCANCEL close_cancel
   ${EndIf}
+  Return
+
+  close_cancel:
+  Abort
+FunctionEnd
+
+Function SaveSelectedBrowserLanguage
+  ; MaenBrowser already reads this file before CEF initialization, so the
+  ; installer language becomes the browser language on first launch.
+  CreateDirectory "$LOCALAPPDATA\MaenBrowser"
+  FileOpen $0 "$LOCALAPPDATA\MaenBrowser\ui-language.txt" w
+  ${If} $LANGUAGE == ${LANG_ARABIC}
+    FileWrite $0 "ar"
+  ${Else}
+    FileWrite $0 "en"
+  ${EndIf}
+  FileClose $0
+FunctionEnd
+
+Function .onInit
+  SetShellVarContext current
+  ; Show the English/Arabic choice every time Setup is launched. The selected
+  ; language controls both this installer UI and MaenBrowser's first launch.
+  !insertmacro MUI_LANGDLL_DISPLAY
+  Call CloseRunningBrowser
 FunctionEnd
 
 Function CleanOldProgramFiles
   ; Clean application/runtime only. Preserve $LOCALAPPDATA\MaenBrowser user profile.
   IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 no_old_install
-  DetailPrint "Removing previous MaenBrowser program files while preserving user data..."
+  DetailPrint "$(PreservingData)"
   Delete "$DESKTOP\MaenBrowser.lnk"
   RMDir /r "$SMPROGRAMS\MaenBrowser"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
@@ -67,7 +124,7 @@ Function CleanOldProgramFiles
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\MaenBrowser.exe"
   RMDir /r "$INSTDIR"
   IfFileExists "$INSTDIR\${PRODUCT_EXE}" 0 +3
-    MessageBox MB_ICONSTOP|MB_OK "The previous MaenBrowser installation could not be removed completely. Close MaenBrowser and try Setup again."
+    MessageBox MB_ICONSTOP|MB_OK "$(CouldNotClose)"
     Abort
   no_old_install:
 FunctionEnd
@@ -79,6 +136,10 @@ Section "MaenBrowser" SEC_MAIN
   File /r "..\dist\*.*"
   File /oname=maenbrowser.ico "..\assets\maenbrowser.ico"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+  ; Save the installer's selected language after files are in place and before
+  ; the Finish page can launch the browser.
+  Call SaveSelectedBrowserLanguage
 
   ; Standard browsing and media use CEF. The optional compatibility window
   ; uses an existing WebView2 Runtime, with no background bootstrapper install.

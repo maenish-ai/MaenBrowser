@@ -20,7 +20,7 @@ ResourceProfile DetectResourceProfile() {
   // deliberately does not guess GPU capability or force unsupported GPU
   // features; Chromium's own GPU blocklist/fallback logic remains authoritative.
   p.constrained_hardware =
-      (p.physical_mb > 0 && p.physical_mb <= 6144) || p.logical_processors <= 4;
+      (p.physical_mb > 0 && p.physical_mb <= 8192) || p.logical_processors <= 4;
 
   std::string selected;
   std::ifstream mode_file(std::filesystem::path(storage::GetAppDataRoot()) / L"resource-mode.txt");
@@ -58,14 +58,15 @@ void ApplyResourcePolicy(CefRefPtr<CefCommandLine> cmd,
     // 4 GiB-class systems need tighter caches than 6 GiB systems. These are
     // cache ceilings, not hard limits on a page/game renderer.
     if (p.mode == Mode::UltraLite) {
-      cmd->AppendSwitchWithValue("disk-cache-size", "33554432");
-      cmd->AppendSwitchWithValue("media-cache-size", "16777216");
-    } else if (p.physical_mb > 0 && p.physical_mb <= 4096) {
+      // Keep enough cache for normal browsing while avoiding large disk/cache
+      // churn on 4 GiB-class machines.
+      cmd->AppendSwitchWithValue("disk-cache-size", "25165824");  // 24 MiB
+      cmd->AppendSwitchWithValue("media-cache-size", "12582912"); // 12 MiB
+    } else {
+      // Lite now covers 8 GiB-class PCs too. A single bounded cache profile
+      // avoids extra cache growth without limiting JavaScript heap or renderers.
       cmd->AppendSwitchWithValue("disk-cache-size", "67108864");   // 64 MiB
       cmd->AppendSwitchWithValue("media-cache-size", "33554432"); // 32 MiB
-    } else {
-      cmd->AppendSwitchWithValue("disk-cache-size", "100663296");  // 96 MiB
-      cmd->AppendSwitchWithValue("media-cache-size", "50331648");  // 48 MiB
     }
   } else if (p.mode == Mode::Balanced) {
     cmd->AppendSwitchWithValue("disable-features", "Prerender2");
