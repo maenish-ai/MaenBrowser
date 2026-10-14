@@ -93,7 +93,7 @@ foreach ($needle in @("MediaDiagnosticsUrl", "H.264 / MP4", "AAC / MP4", "VP9 / 
 
 # Adaptive performance/media regression guards.
 $resourceAdaptive = Get-Content "src/app/resource_mode.cpp" -Raw
-foreach ($needle in @("logical_processors", "67108864", "33554432", "100663296", "50331648")) {
+foreach ($needle in @("logical_processors", "25165824", "12582912", "67108864", "33554432")) {
   if (-not $resourceAdaptive.Contains($needle)) { throw "Adaptive low-memory policy missing: $needle" }
 }
 foreach ($forbidden in @("ignore-gpu-blocklist", "disable-gpu", "disable-accelerated-video-decode", "disable-webgl")) {
