@@ -23,6 +23,8 @@
 #include "include/cef_scheme.h"
 #include "src/media/webview2_media_router.h"
 #include "src/protection/identity.h"
+#include "src/protection/control_origin.h"
+#include "include/base/cef_logging.h"
 #include "src/storage/local_profile.h"
 
 namespace maenbrowser::protection {
@@ -274,7 +276,12 @@ class Resource final : public CefResourceRequestHandler {
   Resource(std::string source, bool document, bool internal, bool trusted, bool media)
       : source_(std::move(source)), document_(document), internal_(internal), trusted_(trusted), media_(media) {}
   ReturnValue OnBeforeResourceLoad(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest> r, CefRefPtr<CefCallback>) override {
-    if (internal_) return RV_CONTINUE;
+    if (internal_) {
+      // CEF can sanitize an extension initiator into Origin:null. Repair only
+      // a request already authenticated from CEF metadata, never null alone.
+      if (trusted_) r->SetHeaderByName("Origin", kExtensionOrigin, true);
+      return RV_CONTINUE;
+    }
     denied_ = Block(r->GetURL().ToString(), source_, document_);
     if (denied_) return document_ ? RV_CONTINUE : RV_CANCEL;
     auto url = Rewrite(r->GetURL().ToString());
@@ -308,20 +315,20 @@ class Resource final : public CefResourceRequestHandler {
   std::string source_; bool document_, internal_, trusted_, media_, denied_ = false;
   IMPLEMENT_REFCOUNTING(Resource);
 };
-void RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context);
 class Context final : public CefRequestContextHandler {
  public:
   void OnRequestContextInitialized(CefRefPtr<CefRequestContext> context) override {
     RegisterLocalEndpoint(context);
   }
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(CefRefPtr<CefBrowser> browser,
-      CefRefPtr<CefFrame>, CefRefPtr<CefRequest> r, bool navigation, bool download,
+      CefRefPtr<CefFrame> frame, CefRefPtr<CefRequest> r, bool navigation, bool download,
       const CefString& initiator, bool& disable) override {
     const auto u = ParseUrl(r->GetURL().ToString());
     const bool internal = u.host == "maen.browser";
     if (internal) disable = true;  // Never send control traffic to the public network.
     std::string source = initiator.ToString();
-    const bool trusted = source == kExtensionOrigin;
+    const bool trusted = internal && TrustedControlSource(source,
+        frame ? frame->GetURL().ToString() : std::string(), r->GetHeaderByName("Origin").ToString());
     // Only site ad exceptions need the top-level URL. Avoid frame lookups on
     // every image/script/download request for the normal empty-exception case.
     const auto settings = Current();
@@ -348,18 +355,27 @@ class NoNetworkFactory final : public CefSchemeHandlerFactory {
     // Service workers may have no frame-associated CefRequestContextHandler.
     // Origin is a browser-controlled forbidden Fetch header. No web page can
     // select the companion's chrome-extension origin. There is no HTTP server.
-    const bool trusted = request->GetHeaderByName("Origin") == kExtensionOrigin;
+    const auto origin = request->GetHeaderByName("Origin").ToString();
+    const bool trusted = TrustedControlSource("",
+        frame ? frame->GetURL().ToString() : std::string(), origin);
+    // No request bodies, URLs, tokens, or raw headers in diagnostics.
+    static std::atomic<unsigned> rejected{0};
+    if (!trusted && rejected.fetch_add(1) < 4)
+      LOG(WARNING) << "MAEN_API factory rejected source; frame=" << bool(frame)
+                   << "; origin=" << (origin.empty() ? "missing" : origin == "null" ? "null" : "other");
     CefRefPtr<Resource> handler = new Resource("", false, true, trusted, false);
     return handler->GetResourceHandler(browser, frame, request);
   }
   IMPLEMENT_REFCOUNTING(NoNetworkFactory);
 };
-void RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context) {
-  // Register on every actual context, including worker-only requests and new
-  // profiles. Shared storage does not substitute for context initialization.
-  context->RegisterSchemeHandlerFactory("https", "maen.browser", new NoNetworkFactory());
-}
 }  // namespace
+
+bool RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context) {
+  const bool registered = context && context->RegisterSchemeHandlerFactory(
+      "https", "maen.browser", new NoNetworkFactory());
+  if (!registered) LOG(ERROR) << "MAEN_API local endpoint registration failed";
+  return registered;
+}
 
 Url ParseUrl(const std::string& url) {
   CefURLParts p; Url out;

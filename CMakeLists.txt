@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.9 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.10 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -221,3 +221,12 @@ if(EXISTS "${CEF_ROOT}/CREDITS.html")
     COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/CREDITS.html" "${MAEN_OUT_DIR}/notices/CEF-CREDITS.html"
   )
 endif()
+
+add_executable(MaenControlOriginTests tests/control_origin_test.cpp)
+target_include_directories(MaenControlOriginTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+if(MSVC)
+  target_compile_options(MaenControlOriginTests PRIVATE /UNDEBUG)
+else()
+  target_compile_options(MaenControlOriginTests PRIVATE -UNDEBUG)
+endif()
+add_test(NAME control_origin COMMAND MaenControlOriginTests)

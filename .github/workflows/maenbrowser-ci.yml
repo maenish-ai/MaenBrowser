@@ -124,6 +124,7 @@ jobs:
           path: |
             build/Testing/Temporary/LastTest.log
             build/Release/debug.log
+            build/diagnostics/*.json
           if-no-files-found: ignore
 
       - name: Stamp MaenBrowser icon
@@ -145,6 +146,7 @@ jobs:
           Remove-Item "dist\MaenExternalTests.exe" -ErrorAction SilentlyContinue
           Remove-Item "dist\MaenFilterTests.exe" -ErrorAction SilentlyContinue
           Remove-Item "dist\MaenResourceTests.exe" -ErrorAction SilentlyContinue
+          Remove-Item "dist\MaenControlOriginTests.exe" -ErrorAction SilentlyContinue
           Get-ChildItem dist -Recurse -File -Include *.pdb,*.lib,*.exp,*.ilk | Remove-Item -Force
           New-Item -ItemType Directory -Force -Path "dist\notices" | Out-Null
           Copy-Item assets/filters/sources/*LICENSE* dist/notices
@@ -153,7 +155,7 @@ jobs:
           Copy-Item "$env:CEF_ROOT/MAEN_MEDIA_PROVENANCE.json" dist/notices
           if (Test-Path "$env:CEF_ROOT/CREDITS.html") { Copy-Item "$env:CEF_ROOT/CREDITS.html" dist/notices/CEF-CREDITS.html }
           Remove-Item "dist\filters\sources" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.9.9.js" } | Remove-Item -Force
+          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.9.10.js" } | Remove-Item -Force
 
       - name: Build NSIS installer
         shell: pwsh

@@ -56,8 +56,17 @@ void MaenApp::OnContextInitialized() {
 
   protection::Initialize();
 
-  auto context = CefRequestContext::CreateContext(
-      CefRequestContext::GetGlobalContext(), protection::ContextHandler());
+  // Chrome extension fetches can use the global profile even when the visible
+  // browser shares its storage through a separate request-context object.
+  auto global = CefRequestContext::GetGlobalContext();
+  auto context = CefRequestContext::CreateContext(global, protection::ContextHandler());
+  if (!protection::RegisterLocalEndpoint(global) ||
+      !protection::RegisterLocalEndpoint(context)) {
+    MessageBoxW(nullptr, ui::Text(L"The browser's internal service could not start.",
+        L"تعذر بدء الخدمة الداخلية للمتصفح."), L"MaenBrowser", MB_OK | MB_ICONERROR);
+    CefQuitMessageLoop();
+    return;
+  }
   preferences::ApplyLocalBrowserPreferences(
       context);
 

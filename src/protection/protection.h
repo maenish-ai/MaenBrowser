@@ -44,6 +44,8 @@ bool BlockNavigation(const std::string& url);
 std::string Rewrite(const std::string& url);
 std::string Api(const std::string& body);
 CefRefPtr<CefRequestContextHandler> ContextHandler();
+// Register before loading extension pages; returns false on registration failure.
+bool RegisterLocalEndpoint(CefRefPtr<CefRequestContext> context);
 std::wstring DownloadPath(const std::wstring& suggested_name);
 bool FamilyEnabled();
 }

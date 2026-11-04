@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {controlNetworkEvent as event,waitForControlApi} from './browser_diagnostics.mjs';
+const tracked=new Set();
+assert.equal(event('Network.requestWillBeSent',{requestId:'other',request:{url:'https://example.org/private'}},tracked),null);
+const result=event('Network.requestWillBeSent',{requestId:'one',request:{url:'https://maen.browser/api?token=secret',method:'POST',headers:{Origin:'null',Cookie:'private'},postData:'pin=secret'}},tracked);
+assert.deepEqual(result,{event:'request',method:'POST',origin:'null'});
+assert(!JSON.stringify(result).includes('secret'));
+assert.deepEqual(event('Network.loadingFailed',{requestId:'one',errorText:'net::ERR_FAILED',corsErrorStatus:{corsError:'AllowOriginMismatch'}},tracked),{event:'failure',error:'net::ERR_FAILED',blockedReason:undefined,corsError:'AllowOriginMismatch'});
+assert.equal(tracked.size,0);
+let calls=0;
+await waitForControlApi(async()=>{if(++calls<3)throw Error('starting');return {status:200,data:{ok:true}}},{delay:async()=>{}});
+assert.equal(calls,3);
+calls=0;
+await assert.rejects(waitForControlApi(async()=>{calls++;return {status:403}},{delay:async()=>{}}),/403/);
+assert.equal(calls,1);
+await assert.rejects(waitForControlApi(async()=>{throw Error('offline')},{attempts:2,delay:async()=>{}}),/offline/);
+console.log('Browser diagnostics: endpoint-only metadata, no secrets, bounded read readiness and rejection checks passed');

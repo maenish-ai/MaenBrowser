@@ -1,4 +1,4 @@
-# MaenBrowser 1.9.9 — codec-enabled CEF in normal Windows builds
+# MaenBrowser 1.9.10 — codec-enabled CEF in normal Windows builds
 
 Normal builds automatically fetch a pinned **CEF 154 Windows x64 H.264/AAC**
 distribution. No runtime secrets or self-hosted Chromium build are needed.
@@ -6,7 +6,7 @@ Stock-CEF fallback is removed. A successful Setup build must pass actual in-tab
 codec playback tests, including H.264/AAC MP4, pause and seek.
 
 - [Arabic upload/build/release instructions](UPLOAD_AND_RELEASE_AR.md)
-- [Release changes and limits](docs/RELEASE_1.9.9.md)
+- [Internal API fix and validation limits](docs/RELEASE_1.9.10.md)
 - [Research and dependency provenance](docs/MEDIA_RUNTIME_SOURCES.md)
 - [Exact runtime URL and SHA-256](config/media-runtime.lock.json)
 
@@ -19,7 +19,7 @@ match the new exact version and media marker.
 The workflow downloads headers/libraries/runtime together, verifies SHA-256,
 version, archive layout and Windows x64 architecture, builds with sandboxing,
 runs native tests and real codec playback, then packages Setup and a checksum.
-Pushing `v1.9.9` creates a draft GitHub release only after those gates pass.
+Pushing `v1.9.10` creates a draft GitHub release only after those gates pass.
 Application profiles are preserved by the existing installer upgrade behavior.
 
 Local checks: `python tools/run-checks.py` (Node and a C++ compiler recommended).

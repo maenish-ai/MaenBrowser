@@ -7,6 +7,7 @@ import os from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createServer} from 'node:http';
 import {strict as assert} from 'node:assert';
+import {controlNetworkEvent,waitForControlApi} from './browser_diagnostics.mjs';
 import {revealVideoControls} from '../assets/companion/video-controls.js';
 const exe=path.resolve(process.argv[2]);
 const formats=JSON.parse(fs.readFileSync(new URL('./fixtures/formats.json',import.meta.url)));
@@ -19,6 +20,12 @@ let processHandle=launch();
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 let fixture;
 let ws;let serial=0;const pending=new Map();
+const networkEvents=[],trackedRequests=new Set();
+const diagnosticPath=path.resolve('build/diagnostics/browser-smoke.json');
+const recordEvent=(method,params)=>{
+  const entry=controlNetworkEvent(method,params,trackedRequests);
+  if(entry&&networkEvents.length<200)networkEvents.push(entry);
+};
 function send(method,params={}){return new Promise((resolve,reject)=>{const n=++serial;const timer=setTimeout(()=>{pending.delete(n);reject(new Error('CDP timeout: '+method));},20000);pending.set(n,{resolve:v=>{clearTimeout(timer);resolve(v);},reject:e=>{clearTimeout(timer);reject(e);}});ws.send(JSON.stringify({id:n,method,params}));});}
 async function evaluate(expression){const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;}
 async function navigate(url) {
@@ -49,11 +56,13 @@ async function connectBrowser(){
   assert(target,'Bundled extension/start page did not load in real CEF');
   ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
-  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}};
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method)recordEvent(m.method,m.params||{});if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);}};
+  await send('Network.enable');
   return target;
 }
 try{
   const target=await connectBrowser();
+  await waitForControlApi(()=>rawCall({op:'get'}));
   const technical=await call({op:'technical'});
   assert.equal(technical.status,200);assert.equal(technical.data.ok,true);
   assert(technical.data.engine.startsWith('CEF '));
@@ -314,6 +323,11 @@ try{
   console.log('PASS: encrypted ad preference survives real browser restart');
   console.log('MaenBrowser Windows integration smoke passed');
 }finally{
+  try{
+    fs.mkdirSync(path.dirname(diagnosticPath),{recursive:true});
+    fs.writeFileSync(diagnosticPath,JSON.stringify({schema:1,events:networkEvents},null,2));
+    console.log('Internal API network diagnostics:',JSON.stringify(networkEvents.slice(-12)));
+  }catch{}
   if(ws)ws.close();
   if(fixture){fixture.closeAllConnections();fixture.close();}
   if(process.platform==='win32'){try{execFileSync('taskkill',['/PID',String(processHandle.pid),'/T','/F'],{stdio:'ignore'});}catch{}}
