@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const ctx=vm.createContext({setTimeout:fn=>fn()});
+vm.runInContext(`var hits=0,ready=0;var window={};window.ga=function(){};window.ga.q=[['send','event',{hitCallback:()=>hits++}]];window.googletag={cmd:[()=>ready++]};`,ctx);
+vm.runInContext(readFileSync('assets/shims/google-analytics_analytics.js','utf8'),ctx);
+vm.runInContext(readFileSync('assets/shims/googletagservices_gpt.js','utf8'),ctx);
+assert.equal(vm.runInContext('hits',ctx),1);
+assert.equal(vm.runInContext('ready',ctx),1);
+assert(vm.runInContext('window.ga.loaded && window.googletag.apiReady',ctx));
+assert.equal(vm.runInContext('window.googletag.pubads().getSlots().length',ctx),0);
+assert.equal(vm.runInContext('window.googletag.defineSlot().addService(window.googletag.pubads()).getResponseInformation()',ctx),null);
+assert.equal(vm.runInContext('typeof fetch',ctx),'undefined');
+console.log('Pinned ad shims: queued callbacks complete without ad delivery, requests or impressions');

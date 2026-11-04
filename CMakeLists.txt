@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.10 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.10.0 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -171,10 +171,14 @@ COPY_FILES("MaenBrowser" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${MAEN_O
 
 add_custom_command(TARGET MaenBrowser POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E make_directory "${MAEN_OUT_DIR}/notices"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/config/agent-capabilities.json" "${MAEN_OUT_DIR}/maen-agent-capabilities.json"
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${MAEN_OUT_DIR}/tools"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tools/start-agent-browser.ps1" "${MAEN_OUT_DIR}/tools/start-agent-browser.ps1"
   COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/LICENSE.txt" "${MAEN_OUT_DIR}/notices/CEF-LICENSE.txt"
   COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/MAEN_MEDIA_PROVENANCE.json" "${MAEN_OUT_DIR}/notices/MAEN_MEDIA_PROVENANCE.json"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/companion" "${MAEN_OUT_DIR}/companion"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/filters" "${MAEN_OUT_DIR}/filters"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/shims" "${MAEN_OUT_DIR}/shims"
 )
 
 enable_testing()
@@ -230,3 +234,16 @@ else()
   target_compile_options(MaenControlOriginTests PRIVATE -UNDEBUG)
 endif()
 add_test(NAME control_origin COMMAND MaenControlOriginTests)
+
+foreach(pair "MaenAgentProfileTests;tests/agent_profile_test.cpp" "MaenPopupPolicyTests;tests/popup_policy_test.cpp" "MaenSettingsStampTests;tests/settings_stamp_test.cpp" "MaenAdShimTests;tests/ad_shim_policy_test.cpp")
+  list(GET pair 0 test_target)
+  list(GET pair 1 test_source)
+  add_executable(${test_target} ${test_source})
+  target_include_directories(${test_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  if(MSVC)
+    target_compile_options(${test_target} PRIVATE /UNDEBUG)
+  else()
+    target_compile_options(${test_target} PRIVATE -UNDEBUG)
+  endif()
+  add_test(NAME ${test_target} COMMAND ${test_target})
+endforeach()

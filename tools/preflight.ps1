@@ -184,18 +184,17 @@ if (-not ($clientH.Contains("OnBeforePopup") -or $clientCpp.Contains("OnBeforePo
 }
 # Inspect the callback body rather than rejecting every `return true`.
 # CEF uses true to cancel a popup, which is appropriate only for narrowly
-# guarded same-origin navigation; false must remain available for auth/payment.
+# guarded user-click navigation; false must remain available for auth/payment.
 $popupStart = $clientCpp.IndexOf("bool MaenClient::OnBeforePopup")
 $popupEnd = $clientCpp.IndexOf("bool MaenClient::DoClose", $popupStart)
 if ($popupStart -lt 0 -or $popupEnd -le $popupStart) { throw "Popup callback boundaries not found." }
 $popupBody = $clientCpp.Substring($popupStart, $popupEnd - $popupStart)
 if (-not $popupBody.Contains("return false;") -or
     -not $popupBody.Contains("user_gesture") -or
-    -not $popupBody.Contains("source.host != destination.host") -or
-    -not $popupBody.Contains("source.scheme != destination.scheme") -or
+    -not $popupBody.Contains("ShouldPreservePopup(source.host, destination.host") -or
     -not $popupBody.Contains("protection::BlockNavigation") -or
     -not $popupBody.Contains("LoadURL(next_url)")) {
-  throw "Popup policy must preserve OAuth/payment/login popups and restrict same-origin redirects."
+  throw "Popup policy must preserve OAuth/payment/login popups and require a user gesture plus protection checks."
 }
 $beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")
 $updatedStart = $clientCpp.IndexOf("void MaenClient::OnDownloadUpdated")

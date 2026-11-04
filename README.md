@@ -1,35 +1,40 @@
-# MaenBrowser 1.9.10 — codec-enabled CEF in normal Windows builds
+# MaenBrowser 1.10.0
 
-Normal builds automatically fetch a pinned **CEF 154 Windows x64 H.264/AAC**
-distribution. No runtime secrets or self-hosted Chromium build are needed.
-Stock-CEF fallback is removed. A successful Setup build must pass actual in-tab
-codec playback tests, including H.264/AAC MP4, pause and seek.
+Builds on the user's successful CEF 154 H.264/AAC release. Adds broader media/image
+acceptance coverage, 145,368 local ad domains, two pinned ad-library compatibility
+shims, refreshed family data, same-tab ordinary links with OAuth/payment exceptions,
+and opt-in YourAssistantAgent integration with isolated cookies and family guards.
 
-- [Arabic upload/build/release instructions](UPLOAD_AND_RELEASE_AR.md)
-- [Internal API fix and validation limits](docs/RELEASE_1.9.10.md)
-- [Research and dependency provenance](docs/MEDIA_RUNTIME_SOURCES.md)
-- [Exact runtime URL and SHA-256](config/media-runtime.lock.json)
+- [Arabic upload/build instructions](UPLOAD_AND_RELEASE_AR.md)
+- [Release changes and precise limits](docs/RELEASE_1.10.0.md)
+- [YourAssistantAgent companion patch instructions](docs/AGENT_COMPATIBILITY_AR.md)
+- [Performance scope](docs/PERFORMANCE_1.10.0.md)
+- [Pinned codec runtime](config/media-runtime.lock.json)
+- [Pinned filter sources](config/filter-sources.lock.json)
+- [Pinned compatibility resources](config/ad-shims.lock.json)
 
-Upload the extracted source contents, including `.github`, to the repository
-root. Push main or run **Build MaenBrowser Windows Setup**. If old
-`MAEN_CEF_ARCHIVE_URL` / `MAEN_CEF_ARCHIVE_SHA256` secrets select CEF 152, remove
-both to select the committed codec runtime. Overrides remain optional and must
-match the new exact version and media marker.
+Upload extracted source contents including `.github`, `assets/filters` and
+`assets/shims`. Push main or run **Build MaenBrowser Windows Setup**. No codec
+secrets or self-hosted Chromium builder are required. The Windows workflow keeps
+sandboxing, native tests and real playback/image/shim tests; only a successful
+build produces Setup. Pushing `v1.10.0` creates a draft release after those gates.
 
-The workflow downloads headers/libraries/runtime together, verifies SHA-256,
-version, archive layout and Windows x64 architecture, builds with sandboxing,
-runs native tests and real codec playback, then packages Setup and a checksum.
-Pushing `v1.9.10` creates a draft GitHub release only after those gates pass.
-Application profiles are preserved by the existing installer upgrade behavior.
+Agent compatibility needs BOTH this browser and the separate companion patch in
+maenish-ai/YourAssistantAgent, rebuilt and installed there. No third-party agent
+is started or given account access by installing the browser. Normal browsing
+has no new debugging port. Agent mode is explicit, loopback-only, uses a separate
+profile and is unavailable with Family Protection. Shared native settings cannot
+be written from agent pages, and parent-policy changes stop agent windows.
 
-Local checks: `python tools/run-checks.py` (Node and a C++ compiler recommended).
-Windows build: VS2022, CMake, Node22, Python3.12+, NSIS and the pinned WebView2 SDK;
-run `tools/package-nsis.ps1` after setting `WEBVIEW2_SDK_ROOT`. CEF can also be
-prepared with `python tools/media-runtime.py`; `--archive` accepts a downloaded
-copy of the pinned archive, and `--verify` checks a prepared root.
+Local checks: `python tools/run-checks.py`. Windows build: VS2022, CMake, Node22,
+Python3.12+, NSIS and the pinned WebView2 SDK; run `tools/package-nsis.ps1` with
+`WEBVIEW2_SDK_ROOT` set. Optional data maintenance uses
+`tools/refresh-bundled-filters.py`; it only accepts committed source hashes.
+Regenerate the new synthetic fixtures with `tools/generate-media-fixtures.py`
+and FFmpeg, never during normal browsing.
 
-This source package is not a Windows executable. The Linux preparation environment
-cannot establish Windows playback or site/device acceptance; those remain required
-CI and device tests. No universal codec, DRM, HEVC, site compatibility or low-memory
-performance guarantee is made. Sandbox, site isolation, TLS checks and current
-protection remain enabled. License/credit notices accompany the runtime.
+The source package is not a Windows executable. New Windows compilation and live
+Facebook/Adobe/device acceptance remain required. No universal codec/extension
+compatibility, invisible ad blocking, DRM/HEVC support or lightest-browser claim
+is made. Engine-internal branding/attribution remain truthful. Separate GPL data
+and scripts retain their licenses and source provenance in the package.

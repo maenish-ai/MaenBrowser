@@ -8,7 +8,7 @@ const $=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,disabled:fal
 let native={ok:true,revision:'1',ads:true,adult:true,violence:true,safeSearch:true,askDownload:true,httpsOnly:false,
  family:false,lockedFile:false,allowOnly:true,resourceModePreference:'auto',downloadDirectory:'C:\\Downloads',exceptions:[],allowed:[],blocked:[]};
 let writes=[];
-const ctx=vm.createContext({$,changedSettings,t:s=>s,errorText:String,currentLanguage:()=> 'en',diagnosticCode:e=>e.message,
+const ctx=vm.createContext({document:{querySelectorAll:()=>[]},$,changedSettings,t:s=>s,errorText:String,currentLanguage:()=> 'en',diagnosticCode:e=>e.message,
  console,confirm:()=>true,message:(n,s)=>{n.textContent=String(s);},api:async(op,extra)=>{
  if(op==='save'){
   writes.push(extra);

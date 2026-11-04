@@ -8,6 +8,7 @@
 
 #include "include/cef_client.h"
 #include "src/protection/protection.h"
+#include "src/storage/settings_stamp.h"
 #include "include/cef_display_handler.h"
 #include "include/cef_download_handler.h"
 #include "include/cef_life_span_handler.h"
@@ -16,6 +17,7 @@
 #include "include/cef_load_handler.h"
 #include "include/cef_context_menu_handler.h"
 #include "include/cef_keyboard_handler.h"
+#include "include/cef_focus_handler.h"
 
 namespace maenbrowser {
 
@@ -27,9 +29,16 @@ class MaenClient final : public CefClient,
                          public CefCommandHandler,
                          public CefLoadHandler,
                          public CefContextMenuHandler,
-                         public CefKeyboardHandler {
+                         public CefKeyboardHandler,
+                         public CefFocusHandler {
  public:
   MaenClient() = default;
+  void CheckAgentProtection();
+  bool NavigateExistingTab(const std::string& url);
+  CefRefPtr<CefFocusHandler> GetFocusHandler() override { return this; }
+  void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
+  void PrepareAgentProtection();
+  bool AgentPolicyUnchanged() const;
   CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() override { return this; }
   CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
   void OnBeforeContextMenu(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
@@ -95,6 +104,10 @@ class MaenClient final : public CefClient,
   };
 
 
+  int last_active_browser_ = 0;
+  bool agent_watch_running_ = false;
+  storage::SettingsStamp agent_settings_stamp_;
+  std::map<int, CefRefPtr<CefBrowser>> browser_instances_;
   // UI-thread-only: only GET navigations intercepted by the media router.
   std::map<int, std::wstring> media_navigations_;
   std::atomic<int> browser_count_{0};

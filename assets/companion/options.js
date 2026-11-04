@@ -20,8 +20,10 @@ async function load(){
   for(const k of ['exceptions','allowed','blocked'])$(k).value=state[k].join('\n');
   $('lists').textContent=t('Local lists: {ads} ad/tracker domains, {adult} adult domains, {violence} violence domains.',{ads:state.adDomains,adult:state.adultDomains,violence:state.violenceDomains});
   if(!state.familyListsLoaded)$('lists').textContent+=' '+t('Family lists load when Family Protection is enabled.');
-  $('fields').disabled=state.lockedFile;$('recovery').hidden=!state.lockedFile;
+  $('fields').disabled=state.lockedFile||state.agentMode===true;$('language').disabled=state.agentMode===true;$('recovery').hidden=!state.lockedFile;
   message($('status'),state.lockedFile?new Error('Protected settings could not be read. Family browsing remains restricted. Restore the profile backup or reinstall with a new profile.'):state.listError?new Error('Filter files are missing or empty. Repair the installation.'):'Native settings loaded.');
+  for(const link of document.querySelectorAll?.('a[href^="chrome://"]')||[])link.hidden=state.family;
+  if(state.agentMode)message($('status'),'Settings cannot be changed from an agent-controlled browser. Open MaenBrowser normally.');
   $('details').textContent='';
   }catch(error){
     state=undefined;message($('status'),error);
@@ -118,3 +120,15 @@ $('restoreBackup').onclick=async()=>{
 };
 
 if(typeof window!=='undefined')window.addEventListener('focus',()=>{if(!dirty&&!$('save').disabled)load();});
+
+// Chromium privileged destinations should use the extension navigation API.
+for(const link of document.querySelectorAll?.('a[href^="chrome://"]')||[]){
+  link.addEventListener('click',async event=>{
+    event.preventDefault();
+    try{
+      const tab=await chrome.tabs.getCurrent();
+      if(!Number.isInteger(tab?.id))throw new Error('Open settings in a browser tab first.');
+      await chrome.tabs.update(tab.id,{url:link.getAttribute('href')});
+    }catch(error){message($('status'),error);}
+  });
+}

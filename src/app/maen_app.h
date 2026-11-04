@@ -27,6 +27,7 @@ class MaenApp final : public CefApp,
       CefRefPtr<CefCommandLine> command_line) override;
 
   void OnContextInitialized() override;
+  bool OnAlreadyRunningAppRelaunch(CefRefPtr<CefCommandLine> command_line, const CefString& current_directory) override;
 
  private:
   CefRefPtr<MaenClient> client_;

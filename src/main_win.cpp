@@ -63,6 +63,9 @@ int RunMain(HINSTANCE instance, void* sandbox_info) {
   }
 
   if (!CefInitialize(main_args, settings, app, sandbox_info)) {
+    // A second URL launch forwarded to the existing profile is normal, not an
+    // initialization failure. Do not display a misleading Chromium error box.
+    if (CefGetExitCode() == CEF_RESULT_CODE_NORMAL_EXIT_PROCESS_NOTIFIED) return 0;
     MessageBoxW(nullptr,
                 maenbrowser::ui::Text(L"MaenBrowser could not initialize Chromium.", L"تعذر بدء محرك المتصفح."),
                 L"MaenBrowser",

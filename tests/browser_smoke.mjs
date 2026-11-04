@@ -12,6 +12,9 @@ import {revealVideoControls} from '../assets/companion/video-controls.js';
 const exe=path.resolve(process.argv[2]);
 const formats=JSON.parse(fs.readFileSync(new URL('./fixtures/formats.json',import.meta.url)));
 const formatBytes=new Map(formats.map(f=>[f.file,fs.readFileSync(new URL('./fixtures/'+f.file,import.meta.url))]));
+const images=JSON.parse(fs.readFileSync(new URL('./fixtures/images.json',import.meta.url)));
+const imageBytes=new Map(images.map(f=>[f.file,fs.readFileSync(new URL('./fixtures/'+f.file,import.meta.url))]));
+const codecResults=[];
 const h264Fixture=fs.readFileSync(new URL('./fixtures/h264-aac.mp4',import.meta.url));
 const id=fs.readFileSync('src/protection/identity.h','utf8').match(/kExtensionId\[\] = "([a-p]+)"/)[1];
 const testProfile=fs.mkdtempSync(path.join(os.tmpdir(),'maen-integration-'));
@@ -85,6 +88,12 @@ try{
   // Exercise ad interception from an ordinary page, not a privileged extension
   // document whose CSP would reject this request before native filtering.
   fixture=createServer((request,response)=>{
+    if(request.url.startsWith('/image/')) {
+      const name=request.url.slice('/image/'.length),format=images.find(f=>f.file===name);
+      if(!format){response.writeHead(404);response.end();return;}
+      const bytes=imageBytes.get(name);
+      response.writeHead(200,{'Content-Type':format.mime,'Content-Length':bytes.length});response.end(bytes);return;
+    }
     if(request.url.startsWith('/format/')) {
       const name=request.url.slice('/format/'.length),format=formats.find(f=>f.file===name);
       if(!format){response.writeHead(404);response.end();return;}
@@ -120,8 +129,27 @@ try{
   await new Promise((resolve,reject)=>{fixture.once('error',reject);fixture.listen(0,'127.0.0.1',resolve);});
   const fixtureUrl=`http://127.0.0.1:${fixture.address().port}/`;
   const controlUrl=target.url;
+  const relaunchUrl=fixtureUrl+'relaunch';
+  const relaunched=spawn(exe,[relaunchUrl],{cwd:path.dirname(exe),stdio:'ignore',env:{...process.env,MAEN_BROWSER_TEST_PROFILE:testProfile}});
+  await new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>{relaunched.kill();reject(Error('Relaunch did not hand off to the existing profile'));},15000);
+    relaunched.once('error',error=>{clearTimeout(timeout);reject(error);});
+    relaunched.once('exit',code=>{clearTimeout(timeout);code===0?resolve():reject(Error('Relaunch exit code '+code));});
+  });
+  let reused=false;
+  for(let n=0;n<60;n++){
+    try{reused=await evaluate(`location.href===${JSON.stringify(relaunchUrl)}&&document.readyState==='complete'`);}catch{}
+    if(reused)break;await pause(100);
+  }
+  assert(reused,'External URL launch did not reuse the existing tab');
+  await navigate(controlUrl);
+  console.log('PASS: second process URL launch reuses the existing tab without an initialization error');
+
   const before=Number(result.data.blockedRequests);
   await navigate(fixtureUrl);
+  const shim=await evaluate(`new Promise(resolve=>{window.GoogleAnalyticsObject='maen_ga_probe';const script=document.createElement('script');script.src='https://www.google-analytics.com/analytics.js';script.crossOrigin='anonymous';script.onload=()=>resolve({loaded:window.maen_ga_probe?.loaded===true});script.onerror=()=>resolve({loaded:false});document.head.append(script);})`);
+  assert.equal(shim.loaded,true,'Native ad compatibility shim did not load');
+  console.log('PASS: blocked analytics script replaced locally with a compatibility shim');
   const controls = await evaluate(`(() => {
     const video=document.createElement('video'); document.body.append(video);
     const count=(${revealVideoControls.toString()})();
@@ -188,8 +216,16 @@ try{
       if(state.error||state.time>0.5)break;
       await pause(100);
     }
-    assert(!state.error&&state.time>0.5&&(!format.video||state.width===160),'Codec playback failed '+format.file+': '+JSON.stringify(state));
-    console.log('PASS: actual codec decode/time advancement',format.file);
+    const passed=!state.error&&state.time>0.5&&(!format.video||state.width===160);
+    codecResults.push({file:format.file,required:format.required!==false,passed,...state});
+    if(format.required!==false)assert(passed,'Codec playback failed '+format.file+': '+JSON.stringify(state));
+    console.log(passed?'PASS: actual codec playback':'UNAVAILABLE: optional legacy codec',format.file);
+  }
+  for(const format of images){
+    const result=await evaluate(`(async()=>{const img=new Image();img.src=${JSON.stringify(fixtureUrl)}+'image/'+${JSON.stringify(format.file)};try{await img.decode();return {width:img.naturalWidth,height:img.naturalHeight};}catch{return {width:0,height:0};}})()`);
+    assert.equal(result.width,format.width,'Image decode failed: '+format.file);
+    assert.equal(result.height,format.height);
+    console.log('PASS: actual image decode',format.file);
   }
   await navigate(fixtureUrl);
   const probe=await evaluate(`fetch('https://doubleclick.net/maen-smoke?run='+Date.now(), {
@@ -326,6 +362,7 @@ try{
   try{
     fs.mkdirSync(path.dirname(diagnosticPath),{recursive:true});
     fs.writeFileSync(diagnosticPath,JSON.stringify({schema:1,events:networkEvents},null,2));
+    fs.writeFileSync(path.join(path.dirname(diagnosticPath),'media-formats.json'),JSON.stringify({schema:1,formats:codecResults},null,2));
     console.log('Internal API network diagnostics:',JSON.stringify(networkEvents.slice(-12)));
   }catch{}
   if(ws)ws.close();

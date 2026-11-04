@@ -142,16 +142,18 @@ chrome.storage.onChanged.addListener((changes,area)=>{
 // Chrome runtime may open target=_blank links in a separate browser window.
 // Reparent ordinary link targets into the opener's tab strip. Keep popup-based
 // authentication and payment flows intact (they often require window.opener).
-const sensitivePopupHosts=['accounts.google.com','login.microsoftonline.com','login.live.com',
+const sensitivePopupHosts=['auth0.com','okta.com','clerk.accounts.dev','cloudflareaccess.com','claude.ai','anthropic.com','accounts.google.com','login.microsoftonline.com','login.live.com',
  'appleid.apple.com','paypal.com','www.paypal.com','checkout.stripe.com'];
 const relocatingTabs=new Set();
 chrome.webNavigation?.onCreatedNavigationTarget?.addListener(async ({sourceTabId,tabId,url})=>{
  if(relocatingTabs.has(tabId)||!/^https?:\/\//i.test(url||''))return;
  try{
   const host=new URL(url).hostname.toLowerCase();
-  if(sensitivePopupHosts.some(h=>host===h||host.endsWith('.'+h)))return;
+  if(sensitivePopupHosts.some(h=>host===h||host.endsWith('.'+h))||/\/(oauth|auth|authorize|login|log-in|signin|sign-in|sso|oidc|callback|consent|connect)(?:[/?#]|$)|(?:[?&])(redirect_uri|client_id|code_challenge|response_type)=/i.test(url))return;
   const [source,target]=await Promise.all([chrome.tabs.get(sourceTabId),chrome.tabs.get(tabId)]);
   if(!source?.windowId||!target?.windowId||source.windowId===target.windowId)return;
+  const openerHost=new URL(source.url).hostname.toLowerCase();
+  if(sensitivePopupHosts.some(h=>openerHost===h||openerHost.endsWith('.'+h)))return;
   const targetWindow=await chrome.windows.get(target.windowId);
   // Only move single-tab popup windows, never a user's independent window.
   const siblings=await chrome.tabs.query({windowId:target.windowId});

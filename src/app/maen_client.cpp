@@ -14,6 +14,8 @@
 #include "include/wrapper/cef_closure_task.h"
 #include "src/app/internal_navigation.h"
 #include "src/app/external_protocol.h"
+#include "src/app/popup_policy.h"
+#include "src/storage/local_profile.h"
 #include "include/wrapper/cef_helpers.h"
 #include "src/media/webview2_media_router.h"
 #include "src/media/webview2_embedded.h"
@@ -72,6 +74,11 @@ bool MaenClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent&
 
 bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id, cef_window_open_disposition_t) {
   CEF_REQUIRE_UI_THREAD();
+  const int options_id = cef_id_for_command_id_name("IDC_OPTIONS");
+  if (options_id > 0 && command_id == options_id && browser && browser->GetMainFrame()) {
+    browser->GetMainFrame()->LoadURL(protection::ControlsUrl("options.html"));
+    return true;
+  }
   const int about_id = cef_id_for_command_id_name("IDC_ABOUT");
   if (about_id > 0 && command_id == about_id && browser && browser->GetMainFrame()) {
     browser->GetMainFrame()->LoadURL(protection::ControlsUrl("about.html"));
@@ -116,6 +123,12 @@ void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   if (!browser) return;
 
   ApplyMaenWindowIcon(browser->GetHost()->GetWindowHandle());
+  browser_instances_[browser->GetIdentifier()] = browser;
+  if (storage::IsAgentMode() && !agent_watch_running_) {
+    agent_watch_running_ = true;
+    CefPostDelayedTask(TID_UI, CefCreateClosureTask(base::BindOnce(
+        [](CefRefPtr<MaenClient> client) { client->CheckAgentProtection(); }, CefRefPtr<MaenClient>(this))), 1000);
+  }
 
   if (browser->IsPopup()) {
     std::lock_guard<std::mutex> lock(downloads_mutex_);
@@ -124,8 +137,51 @@ void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   }
 }
 
+void MaenClient::OnGotFocus(CefRefPtr<CefBrowser> browser) {
+  CEF_REQUIRE_UI_THREAD();
+  if (browser) last_active_browser_ = browser->GetIdentifier();
+}
+bool MaenClient::NavigateExistingTab(const std::string& url) {
+  CEF_REQUIRE_UI_THREAD();
+  if(!url.empty()&&protection::BlockNavigation(url))return true;
+  CefRefPtr<CefBrowser> target;
+  auto found=browser_instances_.find(last_active_browser_);
+  if(found!=browser_instances_.end()&&found->second->IsValid())target=found->second;
+  if(!target)for(const auto& [id,browser]:browser_instances_)
+    if(browser->IsValid()&&!browser->IsPopup()){target=browser;break;}
+  if(!target||!target->GetMainFrame())return false;
+  if(!url.empty())target->GetMainFrame()->LoadURL(protection::Rewrite(url));
+  const auto hwnd=target->GetHost()->GetWindowHandle();
+  if(hwnd){ShowWindow(hwnd,SW_RESTORE);SetForegroundWindow(hwnd);}
+  return true;
+}
+
+void MaenClient::PrepareAgentProtection() {
+  agent_settings_stamp_ = storage::ReadSettingsStamp(std::filesystem::path(storage::GetAppDataRoot()) / L"controls.dat");
+}
+bool MaenClient::AgentPolicyUnchanged() const {
+  const auto now = storage::ReadSettingsStamp(std::filesystem::path(storage::GetAppDataRoot()) / L"controls.dat");
+  return !storage::SettingsChanged(agent_settings_stamp_, now);
+}
+void MaenClient::CheckAgentProtection() {
+  CEF_REQUIRE_UI_THREAD();
+  if (browser_instances_.empty()) { agent_watch_running_ = false; return; }
+  const auto now = storage::ReadSettingsStamp(std::filesystem::path(storage::GetAppDataRoot()) / L"controls.dat");
+  if (storage::SettingsChanged(agent_settings_stamp_, now)) {
+    // Parent settings changed in another normal browser process. Stop agent
+    // browsing instead of continuing under a stale family/ad policy snapshot.
+    agent_watch_running_ = false;
+    const auto browsers = browser_instances_;
+    for (const auto& [id, browser] : browsers)
+      if (browser->IsValid()) browser->GetHost()->CloseBrowser(true);
+    return;
+  }
+  CefPostDelayedTask(TID_UI, CefCreateClosureTask(base::BindOnce(
+      [](CefRefPtr<MaenClient> client) { client->CheckAgentProtection(); }, CefRefPtr<MaenClient>(this))), 1000);
+}
+
 bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
-                               CefRefPtr<CefFrame>,
+                               CefRefPtr<CefFrame> frame,
                                int,
                                const CefString& target_url,
                                const CefString&,
@@ -141,15 +197,15 @@ bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   client = this;
   if (!browser || !browser->GetMainFrame()) return false;
 
-  // Route only explicit, same-origin HTTP(S) link clicks into the existing
-  // tab. Cross-origin popups may be required for sign-in or payment flows.
-  // Never navigate on script-generated popups without a user gesture.
+  // User-clicked ordinary links stay in the opener. OAuth/payment flows
+  // preserve their popup and window.opener semantics.
   const auto destination = protection::ParseUrl(target_url.ToString());
-  const auto source = protection::ParseUrl(browser->GetMainFrame()->GetURL().ToString());
+  const auto source = protection::ParseUrl(frame ? frame->GetURL().ToString() : browser->GetMainFrame()->GetURL().ToString());
+  if (protection::BlockNavigation(target_url.ToString())) return true;
   if (!user_gesture || !source.valid || !destination.valid ||
       (destination.scheme != "https" && destination.scheme != "http") ||
-      source.scheme != destination.scheme || source.host != destination.host ||
-      protection::BlockNavigation(target_url.ToString())) {
+      ShouldPreservePopup(source.host, destination.host,
+          browser->GetMainFrame()->GetURL().ToString(), target_url.ToString())) {
     return false;
   }
   const std::string url = target_url.ToString();
@@ -168,6 +224,7 @@ bool MaenClient::DoClose(CefRefPtr<CefBrowser>) {
 
 void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
+  if (browser) browser_instances_.erase(browser->GetIdentifier());
   if (browser) {
     const int id = browser->GetIdentifier();
     media::CloseEmbeddedWebView2(id);
@@ -189,6 +246,14 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   if (!browser || !frame || !frame->IsMain() || !request) return false;
   const std::wstring url = request->GetURL().ToWString();
 
+  if (IsSettingsAlias(request->GetURL().ToString())) {
+    CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(
+        [](CefRefPtr<CefBrowser> target) {
+          if (target->IsValid() && target->GetMainFrame())
+            target->GetMainFrame()->LoadURL(protection::ControlsUrl("options.html"));
+        }, browser)));
+    return true;
+  }
   if (IsAboutAlias(request->GetURL().ToString())) {
     // Defer replacement until the canceled navigation callback has returned.
     CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(

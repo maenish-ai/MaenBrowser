@@ -1206,5 +1206,53 @@ export const translations = {
   "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.": [
     "MaenBrowser 1.9.6 experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.",
     "إصدار معن براوزر 1.9.6 التجريبي. تقلل الحماية المخاطر ولا تضمن الأمان أو تستبدل إشراف الوالدين. تُحدّث قوائم الإعلانات يدويًا وقوائم العائلة مع إصدارات البرنامج المراجعة."
+  ],
+  "Check decode capabilities": [
+    "Check decode capabilities",
+    "فحص قدرات فك الترميز"
+  ],
+  "These 1080p reports are engine estimates, not a playback benchmark.": [
+    "These 1080p reports are engine estimates, not a playback benchmark.",
+    "تقارير 1080p تقديرات من المحرك وليست قياساً لتشغيل فيديو فعلي."
+  ],
+  "Decode capability reports are unavailable.": [
+    "Decode capability reports are unavailable.",
+    "تقارير قدرات فك الترميز غير متاحة."
+  ],
+  "Supported": [
+    "Supported",
+    "مدعوم"
+  ],
+  "Smooth": [
+    "Smooth",
+    "سلس"
+  ],
+  "Power efficient": [
+    "Power efficient",
+    "موفر للطاقة"
+  ],
+  "Settings cannot be changed from an agent-controlled browser. Open MaenBrowser normally.": [
+    "Settings cannot be changed from an agent-controlled browser. Open MaenBrowser normally.",
+    "لا يمكن تغيير الإعدادات من متصفح يتحكم به الوكيل. افتح MaenBrowser بالطريقة العادية."
+  ],
+  "MaenBrowser experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.": [
+    "MaenBrowser experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Ad filters can be updated manually. Family filters ship with reviewed releases.",
+    "إصدار MaenBrowser تجريبي. تقلل الحماية المخاطر ولا تضمن السلامة أو تغني عن إشراف الوالدين. يمكن تحديث قوائم الإعلانات يدوياً وتصدر قوائم الأسرة مع تحديثات مراجعة."
+  ],
+  "Uses local domain lists from multiple sources. No browsing history is uploaded. First-party ads, some video ads and anti-adblock detection are not fully covered.": [
+    "Uses local domain lists from multiple sources. No browsing history is uploaded. First-party ads, some video ads and anti-adblock detection are not fully covered.",
+    "يستخدم قوائم نطاقات محلية من عدة مصادر. لا يتم رفع سجل التصفح. لا يشمل كل إعلانات الموقع والفيديو ولا يضمن تجاوز كشف مانع الإعلانات."
+  ],
+  "Site permissions": [
+    "Site permissions",
+    "أذونات المواقع"
+  ],
+  "Advanced privacy settings": [
+    "Advanced privacy settings",
+    "إعدادات الخصوصية المتقدمة"
+  ],
+  "Additional ad domains use the HaGeZi Light list. Two local compatibility shims from uBlock Origin keep common advertising-library callbacks usable without delivering ads or impressions. These do not guarantee that a site cannot detect filtering.": [
+    "Additional ad domains use the HaGeZi Light list. Two local compatibility shims from uBlock Origin keep common advertising-library callbacks usable without delivering ads or impressions. These do not guarantee that a site cannot detect filtering.",
+    "تستخدم نطاقات الإعلانات الإضافية قائمة HaGeZi Light. يحافظ بديلان محليان من uBlock Origin على عمل استدعاءات مكتبات شائعة دون عرض إعلانات أو إرسال مرات ظهور. لا يضمن ذلك منع الموقع من اكتشاف الحجب."
   ]
 };

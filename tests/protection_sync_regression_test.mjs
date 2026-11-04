@@ -9,6 +9,7 @@ assert(worker.includes('await syncProtectionBadge();return;'));
 assert(worker.includes('changes.protectionRevision)syncProtectionBadge()'));
 for(const source of [worker,api,popup])assert(source.includes("listError?'!'"));
 assert(client.includes('if (!user_gesture || !source.valid || !destination.valid'));
-assert(client.includes('source.scheme != destination.scheme || source.host != destination.host'));
+assert(client.includes('ShouldPreservePopup(source.host, destination.host,'));
+assert(client.includes('if (protection::BlockNavigation(target_url.ToString())) return true;'));
 assert(client.includes('opener->GetMainFrame()->LoadURL(next_url)'));
 console.log('Protection state synchronization and same-origin popup guards present');

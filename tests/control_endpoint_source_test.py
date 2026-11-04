@@ -7,7 +7,7 @@ assert app.index('RegisterLocalEndpoint(context)') < app.index('CefBrowserHost::
 s=(r/'src/protection/protection.cpp').read_text(encoding='utf-8')
 assert 'frame ? frame->GetURL().ToString()' in s
 assert 'if (trusted_) r->SetHeaderByName("Origin", kExtensionOrigin, true)' in s
-assert '"Access-Control-Allow-Origin", kExtensionOrigin' in s
+assert 'ResponseCorsOrigin(cors_,public_script_)' in s
 assert '"Access-Control-Allow-Origin", "null"' not in s
 assert '"Access-Control-Allow-Origin", "*"' not in s
 assert 'RegisterSchemeHandlerFactory(\n      "https", "maen.browser"' in s

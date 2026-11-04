@@ -62,3 +62,14 @@ class LocalizedPage(HTMLParser):
 for page in companion.glob('*.html'):
     LocalizedPage().feed(page.read_text(encoding='utf-8'))
 print('All static control text has English and Arabic entries')
+
+for item in json.loads((root / 'config/ad-shims.lock.json').read_text(encoding='utf-8'))['sources']:
+    path = root / 'assets/shims' / item['file']
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == item['sha256'], 'Ad shim hash mismatch'
+    subprocess.run(['node', '--check', str(path)], check=True)
+assert (root/'assets/shims/LICENSE.txt').is_file()
+print('Pinned local ad compatibility shims and license verified')
+
+agent=json.loads((root/'config/agent-capabilities.json').read_text(encoding='utf-8'))
+assert agent['version'] == manifest['version']
+assert agent['isolatedProfile'] and agent['familyGuard'] and agent['readOnlySettings']

@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "product": "MaenBrowser",
+  "version": "1.10.0",
+  "isolatedProfile": true,
+  "familyGuard": true,
+  "readOnlySettings": true,
+  "adapter": "loopback-cdp-v1"
+}

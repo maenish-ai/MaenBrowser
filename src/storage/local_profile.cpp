@@ -4,6 +4,8 @@
 #include <shlobj.h>
 
 #include <filesystem>
+#include "include/cef_command_line.h"
+#include "src/storage/agent_profile.h"
 
 namespace maenbrowser::storage {
 namespace {
@@ -42,9 +44,22 @@ std::wstring GetAppDataRoot() {
       std::filesystem::path(LocalAppData()) / L"MaenBrowser");
 }
 
+bool IsAgentMode() {
+  static const bool enabled=[] {
+    auto command=CefCommandLine::CreateCommandLine();
+    command->InitFromString(GetCommandLineW());
+    return command->HasSwitch("maen-agent-mode");
+  }();
+  return enabled;
+}
 std::wstring GetProfileRoot() {
-  return Ensure(
-      std::filesystem::path(GetAppDataRoot()) / L"User Data");
+  const auto normal=std::filesystem::path(GetAppDataRoot()) / L"User Data";
+  if(IsAgentMode()) {
+    auto command=CefCommandLine::CreateCommandLine();
+    command->InitFromString(GetCommandLineW());
+    return Ensure(AgentProfile(normal, std::filesystem::path(command->GetSwitchValue("user-data-dir").ToWString())));
+  }
+  return Ensure(normal);
 }
 
 std::wstring GetCachePath() {

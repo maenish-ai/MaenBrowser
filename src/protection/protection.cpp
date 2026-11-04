@@ -6,6 +6,7 @@
 #include <psapi.h>
 #include "src/app/resource_mode.h"
 #include "include/cef_version.h"
+#include "include/maenbrowser/version.h"
 #include <wincrypt.h>
 #include <shlobj.h>
 #include <algorithm>
@@ -24,6 +25,8 @@
 #include "src/media/webview2_media_router.h"
 #include "src/protection/identity.h"
 #include "src/protection/control_origin.h"
+#include "src/protection/ad_shim_policy.h"
+#include "src/protection/response_cors.h"
 #include "include/base/cef_logging.h"
 #include "src/storage/local_profile.h"
 
@@ -35,6 +38,8 @@ std::atomic<std::shared_ptr<const AdRules>> g_ad_rules{std::make_shared<const Ad
 std::atomic<uint64_t> g_blocked{0};
 std::mutex g_write;
 std::chrono::steady_clock::time_point g_retry{};
+struct AdShims { std::string analytics, publisher; };
+std::atomic<std::shared_ptr<const AdShims>> g_ad_shims{std::make_shared<const AdShims>()};
 
 
 std::string ReadFile(const std::filesystem::path& path, size_t max) {
@@ -104,6 +109,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
   d->SetString("revision", std::to_string(s.revision));
   d->SetString("resourceModePreference", s.resource_mode);
   d->SetString("language", ui::Arabic()?"ar":"en");
+  if (!secret) d->SetBool("agentMode", storage::IsAgentMode());
   d->SetBool("ads", s.ads); d->SetBool("family", s.family);
   d->SetBool("allowOnly", s.allow_only); d->SetBool("adult", s.adult);
   d->SetBool("violence", s.violence); d->SetBool("safeSearch", s.safe_search);
@@ -120,7 +126,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetInt("violenceDomains", s.categories ? static_cast<int>(s.categories->violence.Size()) : 0);
     d->SetString("listError", g_ad_rules.load()->error + (s.categories ? s.categories->error : ""));
     d->SetBool("familyListsLoaded", s.categories != nullptr);
-    d->SetString("version", "1.9.6");
+    d->SetString("version", kVersion);
   }
   return d;
 }
@@ -179,6 +185,13 @@ std::string LoadDomains(const char* name, DomainRules& rules) {
   rules.Assign(std::move(values));
   return rules.Size() == 0 ? std::string(name) + " missing or empty. " : "";
 }
+void MergeBundledAdRules(AdRules& ads) {
+  DomainRules extra;
+  ads.error += LoadDomains("ads-extra.txt", extra);
+  auto domains = ads.domains.Values();
+  domains.insert(domains.end(), extra.Values().begin(), extra.Values().end());
+  ads.domains.Assign(std::move(domains));
+}
 std::shared_ptr<const FamilyRules> LoadFamilyRules() {
   auto rules = std::make_shared<FamilyRules>();
   rules->error = LoadDomains("adult.txt", rules->adult);
@@ -226,8 +239,8 @@ bool Own(const Url& u) { return u.scheme == "chrome-extension" && u.host == kExt
 
 class Response final : public CefResourceHandler {
  public:
-  Response(std::string data, std::string mime, int status = 200, bool api = false, bool cors = false)
-      : data_(std::move(data)), mime_(std::move(mime)), status_(status), api_(api), cors_(cors) {}
+  Response(std::string data, std::string mime, int status = 200, bool api = false, bool cors = false, bool public_script = false)
+      : data_(std::move(data)), mime_(std::move(mime)), status_(status), api_(api), cors_(cors), public_script_(public_script) {}
   bool Open(CefRefPtr<CefRequest>, bool& handled, CefRefPtr<CefCallback>) override {
     if (api_) { data_ = Api(data_); api_ = false; }
     handled = true; return true;
@@ -237,8 +250,9 @@ class Response final : public CefResourceHandler {
     r->SetHeaderByName("Cache-Control", "no-store", true);
     r->SetHeaderByName("X-Content-Type-Options", "nosniff", true);
     r->SetHeaderByName("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'", true);
+    if (const auto* origin=ResponseCorsOrigin(cors_,public_script_))
+      r->SetHeaderByName("Access-Control-Allow-Origin", origin, true);
     if (cors_) {
-      r->SetHeaderByName("Access-Control-Allow-Origin", kExtensionOrigin, true);
       r->SetHeaderByName("Access-Control-Allow-Headers", "Content-Type", true);
       r->SetHeaderByName("Access-Control-Allow-Methods", "POST, OPTIONS", true);
     }
@@ -250,7 +264,7 @@ class Response final : public CefResourceHandler {
   }
   void Cancel() override {}
  private:
-  std::string data_, mime_; int status_; bool api_, cors_; size_t offset_ = 0;
+  std::string data_, mime_; int status_; bool api_, cors_, public_script_; size_t offset_ = 0;
   IMPLEMENT_REFCOUNTING(Response);
 };
 std::string BlockedPage() {
@@ -283,7 +297,17 @@ class Resource final : public CefResourceRequestHandler {
       return RV_CONTINUE;
     }
     denied_ = Block(r->GetURL().ToString(), source_, document_);
-    if (denied_) return document_ ? RV_CONTINUE : RV_CANCEL;
+    if (denied_) {
+      const auto u=ParseUrl(r->GetURL().ToString());
+      const auto state=Current();
+      shims_=g_ad_shims.load();
+      switch(SelectAdShim(state->family,state->ads,true,r->GetResourceType()==RT_SCRIPT,u.scheme,u.host,u.path)) {
+        case AdShim::Analytics: shim_=&shims_->analytics;break;
+        case AdShim::PublisherTag: shim_=&shims_->publisher;break;
+        default:break;
+      }
+      return document_||(shim_&&!shim_->empty()) ? RV_CONTINUE : RV_CANCEL;
+    }
     auto url = Rewrite(r->GetURL().ToString());
     if (url != r->GetURL().ToString()) r->SetURL(url);
     return RV_CONTINUE;
@@ -304,6 +328,11 @@ class Resource final : public CefResourceRequestHandler {
       }
       return new Response(body, "application/json", 200, true, true);
     }
+    // Recheck live policy: a parent may have enabled Family Protection since
+    // interception, or the user may have disabled the advertising filter.
+    const auto live=Current();
+    if (shim_ && !shim_->empty() && !live->family && live->ads)
+      return new Response(*shim_, "application/javascript", 200, false, false, true);
     if (denied_) return new Response(BlockedPage(), "text/html", 403);
     // Commit a lightweight CEF document at the real media URL. This gives
     // Chrome's address bar/back stack the correct URL before attaching WebView2.
@@ -312,6 +341,8 @@ class Resource final : public CefResourceRequestHandler {
   }
   void OnProtocolExecution(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>, bool& allow) override { allow = false; }
  private:
+  std::shared_ptr<const AdShims> shims_;
+  const std::string* shim_ = nullptr;
   std::string source_; bool document_, internal_, trusted_, media_, denied_ = false;
   IMPLEMENT_REFCOUNTING(Resource);
 };
@@ -395,6 +426,10 @@ std::shared_ptr<const Settings> Current() { return g_settings.load(); }
 bool FamilyEnabled() { return Current()->family; }
 void Initialize() {
   CefRegisterSchemeHandlerFactory("https", "maen.browser", new NoNetworkFactory());
+  auto shims=std::make_shared<AdShims>();
+  shims->analytics=ReadFile(InstallDirectory()/L"shims"/L"google-analytics_analytics.js",16384);
+  shims->publisher=ReadFile(InstallDirectory()/L"shims"/L"googletagservices_gpt.js",16384);
+  g_ad_shims.store(shims);
   auto ads = std::make_shared<AdRules>();
   ads->error = LoadDomains("ads.txt", ads->domains);
   DomainRules updated;
@@ -406,6 +441,7 @@ void Initialize() {
       ads->domains = std::move(updated); ads->error.clear();
     }
   }
+  MergeBundledAdRules(*ads);
   g_ad_rules.store(ads);
   auto s = std::make_shared<Settings>();
   PWSTR dir = nullptr;
@@ -480,11 +516,13 @@ std::string Api(const std::string& body) {
   if (body.size() > 5 * 1024 * 1024) return Error("Request too large");
   auto d = Dictionary(body); if (!d) return Error("Invalid JSON");
   const auto op = d->GetString("op").ToString();
+  if (storage::IsAgentMode() && op != "get" && op != "technical")
+    return Error("Settings cannot be changed from an agent-controlled browser. Open MaenBrowser normally.");
   if (op != "updateAdFilters" && body.size() > 65536) return Error("Request too large");
   if (op == "technical") {
     auto out = CefDictionaryValue::Create();
     out->SetBool("ok", true);
-    out->SetString("version", "1.9.6");
+    out->SetString("version", kVersion);
     out->SetString("engine", "CEF " CEF_VERSION);
     out->SetString("mediaEngine", "CEF; automatic WebView2 routing disabled");
     const auto profile = resource::DetectResourceProfile();
@@ -556,6 +594,7 @@ std::string Api(const std::string& body) {
     auto rules = std::make_shared<AdRules>();
     const auto text = d->GetString("domains").ToString();
     if (!ParseAdSnapshot(text, rules->domains)) return Error("Invalid ad filter snapshot. Existing filters were kept.");
+    MergeBundledAdRules(*rules);
     if (!SaveAdSnapshot(text)) return Error("Could not save filters. Existing filters were kept.");
     g_ad_rules.store(rules);
     auto out = Export(*old, false); out->SetBool("ok", true); return Json(out);

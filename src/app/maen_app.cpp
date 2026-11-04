@@ -16,6 +16,7 @@
 #include "src/storage/local_profile.h"
 #include "src/protection/protection.h"
 #include "src/protection/identity.h"
+#include "src/app/popup_policy.h"
 #include <filesystem>
 
 namespace maenbrowser {
@@ -38,6 +39,11 @@ void MaenApp::OnBeforeCommandLineProcessing(
     return;
   }
 
+  if (storage::IsAgentMode()) {
+    command_line->AppendSwitchWithValue("remote-debugging-address", "127.0.0.1");
+    command_line->RemoveSwitch("remote-allow-origins");
+    command_line->RemoveSwitch("remote-debugging-pipe");
+  }
   // Resource policy is conservative: old PCs get Lite Mode without
   // weakening Chromium sandbox/site isolation.
   resource::ApplyResourcePolicy(command_line, resource::DetectResourceProfile());
@@ -51,10 +57,31 @@ void MaenApp::OnBeforeCommandLineProcessing(
   }
 }
 
+bool MaenApp::OnAlreadyRunningAppRelaunch(CefRefPtr<CefCommandLine> command_line, const CefString&) {
+  CEF_REQUIRE_UI_THREAD();
+  CefCommandLine::ArgumentList arguments;
+  command_line->GetArguments(arguments);
+  for(const auto& arg:arguments){
+    const auto url=arg.ToString();const auto parsed=protection::ParseUrl(url);
+    if(!parsed.valid||(parsed.scheme!="http"&&parsed.scheme!="https"))continue;
+    if(protection::BlockNavigation(url))return true;
+    if(AuthPopupHost(parsed.host)||AuthPopupUrl(url))return false;
+    return client_->NavigateExistingTab(url);
+  }
+  return client_->NavigateExistingTab("");
+}
+
 void MaenApp::OnContextInitialized() {
   CEF_REQUIRE_UI_THREAD();
 
+  if (storage::IsAgentMode()) client_->PrepareAgentProtection();
   protection::Initialize();
+  if (storage::IsAgentMode() && (protection::FamilyEnabled() || !client_->AgentPolicyUnchanged())) {
+    MessageBoxW(nullptr, ui::Text(L"Agent control is unavailable while Family Protection is enabled or its settings are changing.",
+        L"التحكم الآلي غير متاح أثناء تفعيل حماية الأسرة أو تغيير إعداداتها."), L"MaenBrowser", MB_OK | MB_ICONWARNING);
+    CefQuitMessageLoop();
+    return;
+  }
 
   // Chrome extension fetches can use the global profile even when the visible
   // browser shares its storage through a separate request-context object.

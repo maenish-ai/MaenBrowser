@@ -16,3 +16,20 @@ CREDITS.html (when present), together with the download provenance receipt, are
 copied to the installer payload notices directory. No upstream build scripts are
 incorporated or executed by the downloader. Source/release links and patent-license
 limits are documented in docs/MEDIA_RUNTIME_SOURCES.md.
+
+## 1.10.0 separate filter datasets and compatibility scripts
+
+HaGeZi Light data is pinned to commit eb7db8ed27237af2f3c0cb79c9c735e3e076dbad
+of https://github.com/hagezi/dns-blocklists, under GPL-3.0; its license is bundled
+in filters/sources/HaGeZi-LICENSE.txt (and copied to installer notices). Data is
+normalized to sorted domain lines. Exact source/output hashes are in the filter
+lock and manifest. The StevenBlack adult dataset was refreshed at pinned commit
+6d56ab44f2b3d27de062b5194eb51bcd8115a773, retaining existing MIT source notices.
+
+The two local JavaScript compatibility resources come from Raymond Hill's uBlock
+Origin, https://github.com/gorhill/uBlock, commit
+cc0da2303b66154acf293c807ba0c5026e4834ba, GPL-3.0-or-later. Their original copyright
+headers, corresponding editable sources and full license are distributed in the
+shims directory. config/ad-shims.lock.json records source links and packaged file
+hashes. They are separate scripts, not the whole uBlock extension; no endorsement
+or universal anti-adblock capability is claimed.

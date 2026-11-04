@@ -1,0 +1,44 @@
+[
+  {
+    "file": "pattern.png",
+    "mime": "image/png",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.jpg",
+    "mime": "image/jpeg",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.webp",
+    "mime": "image/webp",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.gif",
+    "mime": "image/gif",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.bmp",
+    "mime": "image/bmp",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.svg",
+    "mime": "image/svg+xml",
+    "width": 160,
+    "height": 90
+  },
+  {
+    "file": "pattern.avif",
+    "mime": "image/avif",
+    "width": 160,
+    "height": 90
+  }
+]

@@ -38,5 +38,50 @@
     "file": "sample.m4a",
     "mime": "audio/mp4",
     "video": false
+  },
+  {
+    "file": "h264-main.mp4",
+    "mime": "video/mp4",
+    "video": true
+  },
+  {
+    "file": "h264-high.mp4",
+    "mime": "video/mp4",
+    "video": true
+  },
+  {
+    "file": "opus.ogg",
+    "mime": "audio/ogg",
+    "video": false
+  },
+  {
+    "file": "alac.m4a",
+    "mime": "audio/mp4",
+    "video": false,
+    "required": false
+  },
+  {
+    "file": "sample.aiff",
+    "mime": "audio/aiff",
+    "video": false,
+    "required": false
+  },
+  {
+    "file": "sample.wma",
+    "mime": "audio/x-ms-wma",
+    "video": false,
+    "required": false
+  },
+  {
+    "file": "h264.mkv",
+    "mime": "video/x-matroska",
+    "video": true,
+    "required": false
+  },
+  {
+    "file": "mpeg2.mpg",
+    "mime": "video/mpeg",
+    "video": true,
+    "required": false
   }
 ]

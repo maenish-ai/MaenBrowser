@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "file": "google-analytics_analytics.js",
+      "source": "https://github.com/gorhill/uBlock/blob/cc0da2303b66154acf293c807ba0c5026e4834ba/src/web_accessible_resources/google-analytics_analytics.js",
+      "sha256": "6b4621868cac589a603fe1263aad242f67262ef971bdacaccc1a515cd0488466",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "file": "googletagservices_gpt.js",
+      "source": "https://github.com/gorhill/uBlock/blob/cc0da2303b66154acf293c807ba0c5026e4834ba/src/web_accessible_resources/googletagservices_gpt.js",
+      "sha256": "ae2b5bc9f94b7e612e74e340106c3f238a1cb9cce7b549fcd40ea515b26c695d",
+      "license": "GPL-3.0-or-later"
+    }
+  ]
+}

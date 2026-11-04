@@ -16,3 +16,13 @@ with FFmpeg for VP8/Vorbis, VP9/Opus, AV1/Opus, MP3, FLAC, PCM WAV, Ogg Vorbis,
 and AAC/M4A. They contain no third-party recordings. Windows browser_smoke.mjs
 requires actual playback/time advancement, and video dimensions for video files.
 This does not replace audible-output, DRM, device, call or hardware-performance tests.
+
+## 1.10.0 expanded synthetic probes
+
+`tools/generate-media-fixtures.py` reproduces new H.264 Main/High MP4, Opus/Ogg,
+optional ALAC, AIFF, WMA, H.264/Matroska and MPEG-2 files, plus test-pattern PNG,
+JPEG, WebP, GIF, BMP, SVG and AVIF images. All audio is a generated sine wave;
+no user recordings or third-party footage are included. Required and optional
+formats are explicit in formats.json. Optional failures are recorded honestly
+in the Windows media-formats.json report rather than declared supported.
+Muted time advancement does not verify audible output or hardware decoding.

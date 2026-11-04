@@ -1,6 +1,7 @@
 """Export full source and changed-file ZIPs; never claims to build Windows binaries."""
 import argparse
-import difflib
+import os
+import tempfile
 import hashlib
 from pathlib import Path
 import subprocess
@@ -33,12 +34,13 @@ for label, names in [('Full-Source',files), ('Changed-Files-Upload',changed)]:
         assert archive.testzip() is None
         assert '.github/workflows/maenbrowser-ci.yml' in archive.namelist()
     artifacts.append(target)
-patch=git('diff','--binary','HEAD')
-for name in git('ls-files','--others','--exclude-standard','-z').decode().split('\0'):
-    if not name: continue
-    # New source assets in this release are UTF-8 text.
-    body=(root/name).read_text(encoding='utf-8').splitlines(keepends=True)
-    patch+=('diff --git a/'+name+' b/'+name+'\nnew file mode 100644\n'+''.join(difflib.unified_diff([],body,fromfile='/dev/null',tofile='b/'+name))).encode()
+# A temporary index includes text AND binary fixtures without touching the
+# user's real index, staging state, branch or commit history.
+with tempfile.TemporaryDirectory(prefix='maen-export-index-') as temporary:
+    environment={**os.environ,'GIT_INDEX_FILE':str(Path(temporary)/'index')}
+    subprocess.run(['git','read-tree','HEAD'],cwd=root,env=environment,check=True)
+    subprocess.run(['git','add','--all','--','.'],cwd=root,env=environment,check=True)
+    patch=subprocess.check_output(['git','diff','--cached','--binary','HEAD'],cwd=root,env=environment)
 patch_file=out/f'MaenBrowser-{version}.patch'
 patch_file.write_bytes(patch);artifacts.append(patch_file)
 (out/'SHA256SUMS.txt').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in artifacts))
