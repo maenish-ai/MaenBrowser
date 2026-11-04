@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.8 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.9 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -33,6 +33,17 @@ if(NOT EXISTS "${WEBVIEW2_INCLUDE}/WebView2.h")
 endif()
 if(NOT EXISTS "${WEBVIEW2_STATIC_LOADER}")
   message(FATAL_ERROR "WebView2 x64 static loader missing under WEBVIEW2_SDK_ROOT")
+endif()
+
+# Verify the selected archive identity and extracted files before compiling.
+# A successful C++ build alone does not establish H.264 support.
+find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/media-runtime.py" --verify "${CEF_ROOT}"
+  RESULT_VARIABLE MAEN_MEDIA_VERIFY_RESULT
+)
+if(NOT MAEN_MEDIA_VERIFY_RESULT EQUAL 0)
+  message(FATAL_ERROR "CEF media provenance/layout verification failed. Run tools/fetch-cef.ps1.")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CEF_ROOT}/cmake")
@@ -159,6 +170,9 @@ COPY_FILES("MaenBrowser" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${MAEN_OUT_D
 COPY_FILES("MaenBrowser" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${MAEN_OUT_DIR}")
 
 add_custom_command(TARGET MaenBrowser POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${MAEN_OUT_DIR}/notices"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/LICENSE.txt" "${MAEN_OUT_DIR}/notices/CEF-LICENSE.txt"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/MAEN_MEDIA_PROVENANCE.json" "${MAEN_OUT_DIR}/notices/MAEN_MEDIA_PROVENANCE.json"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/companion" "${MAEN_OUT_DIR}/companion"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets/filters" "${MAEN_OUT_DIR}/filters"
 )
@@ -201,3 +215,9 @@ foreach(test_target MaenDomainTests MaenMediaTests MaenNavigationTests MaenExter
     target_compile_options(${test_target} PRIVATE -UNDEBUG)
   endif()
 endforeach()
+
+if(EXISTS "${CEF_ROOT}/CREDITS.html")
+  add_custom_command(TARGET MaenBrowser POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CEF_ROOT}/CREDITS.html" "${MAEN_OUT_DIR}/notices/CEF-CREDITS.html"
+  )
+endif()

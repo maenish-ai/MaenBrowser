@@ -4,6 +4,7 @@ import {spawn,execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {pathToFileURL} from 'node:url';
 import {createServer} from 'node:http';
 import {strict as assert} from 'node:assert';
 import {revealVideoControls} from '../assets/companion/video-controls.js';
@@ -147,6 +148,7 @@ try{
 
   // Also exercise Chromium's direct MP4 document, not only an embedded player.
   await navigate(fixtureUrl+'clip.mp4');
+  await evaluate(`(()=>{const v=document.querySelector('video');if(v){v.muted=true;return v.play().catch(()=>{});}})()`);
   let directState;
   for(let n=0;n<60;n++){
     directState=await evaluate(`(()=>{const v=document.querySelector('video');return v?{controls:v.controls,width:v.videoWidth,time:v.currentTime,error:v.error?.code||0}:null})()`);
@@ -155,6 +157,19 @@ try{
   }
   assert(directState?.controls&&directState.time>1&&directState.width===160,'Direct MP4 did not play in the active CEF tab: '+JSON.stringify(directState));
   console.log('PASS: direct MP4 document plays in the same CEF tab');
+  // The reported failure also affects downloaded MP4s. Exercise file:// without
+  // relaxing web security or file-access flags in the shipping browser.
+  await navigate(pathToFileURL(path.resolve('tests/fixtures/h264-aac.mp4')).href);
+  await evaluate(`(()=>{const v=document.querySelector('video');v.muted=true;return v.play().catch(()=>{});})()`);
+  let localMedia;
+  for(let n=0;n<60;n++){
+    localMedia=await evaluate(`(()=>{const v=document.querySelector('video');return v?{time:v.currentTime,width:v.videoWidth,error:v.error?.code||0}:null})()`);
+    if(localMedia?.error||localMedia?.time>0.5&&localMedia?.width===160)break;
+    await pause(100);
+  }
+  assert(localMedia&&!localMedia.error&&localMedia.time>0.5&&localMedia.width===160,'Local MP4 failed: '+JSON.stringify(localMedia));
+  console.log('PASS: downloaded/local H.264 MP4 plays without security overrides');
+
   for(const format of formats) {
     await navigate(fixtureUrl);
     await evaluate(`(()=>{const p=document.createElement('video');p.id='codec';p.muted=true;p.controls=true;p.src=${JSON.stringify(fixtureUrl)}+'format/'+${JSON.stringify(format.file)};document.body.append(p);p.play().catch(()=>{});})()`);

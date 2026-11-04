@@ -1,15 +1,15 @@
 param(
   [string]$DownloadDir = "C:\maen-cef-build",
-  [string]$Branch = "7977",
+  [string]$Branch = "8037",
   [string]$OutputDir = "C:\maen-cef-output",
-  [string]$Checkout = "708dc14"
+  [string]$Checkout = "14c5a08"
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 & "$PSScriptRoot\check-media-builder.ps1" -BuildRoot $DownloadDir
-$ExpectedCef='152.0.6+g708dc14+chromium-152.0.7977.83'
-$ExpectedBranch='7977'
-$ExpectedCheckout='708dc14'
+$ExpectedCef='154.0.34+g14c5a08+chromium-154.0.8037.98'
+$ExpectedBranch='8037'
+$ExpectedCheckout='14c5a08'
 if($Branch -ne $ExpectedBranch){throw "Wrong CEF branch: $Branch"}
 if($Checkout -ne $ExpectedCheckout){throw "Wrong CEF checkout: $Checkout"}
 
@@ -20,7 +20,7 @@ $automateDir=Join-Path $DownloadDir 'automate'
 $automate=Join-Path $automateDir 'automate-git.py'
 if(!(Test-Path $automate)){
   New-Item -ItemType Directory -Force -Path $automateDir | Out-Null
-  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/chromiumembedded/cef/master/tools/automate/automate-git.py' -OutFile $automate
+  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/chromiumembedded/cef/14c5a08/tools/automate/automate-git.py' -OutFile $automate
 }
 $args=@("--download-dir=$DownloadDir","--x64-build","--branch=$Branch","--checkout=$Checkout","--no-debug-build","--minimal-distrib","--client-distrib","--force-distrib")
 python $automate @args
@@ -33,18 +33,18 @@ if(-not $dist){throw 'CEF minimal Windows x64 distribution not found.'}
 $vh=Join-Path $dist.FullName 'include\cef_version.h'
 if(!(Test-Path $vh)){throw 'cef_version.h missing.'}
 $vt=Get-Content $vh -Raw
-if(-not $vt.Contains('CEF_VERSION "152.0.6+g708dc14+chromium-152.0.7977.83"')){throw "CEF version mismatch."}
+if(-not $vt.Contains('CEF_VERSION "154.0.34+g14c5a08+chromium-154.0.8037.98"')){throw "CEF version mismatch."}
 
 $marker=Join-Path $dist.FullName 'MAEN_MEDIA_RUNTIME.txt'
 @('MaenBrowser CEF media runtime',"cef_version=$ExpectedCef","branch=$ExpectedBranch","checkout=$ExpectedCheckout",'platform=windows64','is_official_build=true','is_component_build=false','proprietary_codecs=true','ffmpeg_branding=Chrome','chrome_pgo_phase=0') |
   Set-Content $marker -Encoding ASCII
 
-$zip=Join-Path $OutputDir 'maen-cef-152-media-windows64.zip'
+$zip=Join-Path $OutputDir 'maen-cef-154-media-windows64.zip'
 Remove-Item $zip -Force -ErrorAction SilentlyContinue
 Compress-Archive -Path $dist.FullName -DestinationPath $zip -CompressionLevel Optimal
 $sha=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content "$zip.sha256" $sha -NoNewline
 @('MaenBrowser CEF media runtime',"cef_line=$ExpectedCef","branch=$ExpectedBranch","checkout=$ExpectedCheckout",'platform=windows64','is_official_build=true','is_component_build=false','proprietary_codecs=true','ffmpeg_branding=Chrome','chrome_pgo_phase=0',"sha256=$sha") |
-  Set-Content (Join-Path $OutputDir 'maen-cef-152-media-build-manifest.txt') -Encoding ASCII
+  Set-Content (Join-Path $OutputDir 'maen-cef-154-media-build-manifest.txt') -Encoding ASCII
 Write-Host "MEDIA_CEF_ARCHIVE=$zip"
 Write-Host "MEDIA_CEF_SHA256=$sha"

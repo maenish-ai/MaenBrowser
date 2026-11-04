@@ -13,3 +13,9 @@ cmake=(r/'CMakeLists.txt').read_text()
 assert 'target_compile_options(${test_target} PRIVATE /UNDEBUG)' in cmake
 assert 'MaenResourceTests)' in cmake
 print('Media release gates: version, codecs, tested build, draft and checksum checks passed')
+
+assert 'stock-CEF-preview' not in s
+assert 'media_ready=false' not in s
+assert 'setup-python@v5' in s
+assert 'media-runtime.py' in s
+assert '--verify "${CEF_ROOT}"' in cmake

@@ -1,0 +1,29 @@
+{
+  "kind": "locked-upstream",
+  "url": "https://github.com/psmux/godwinmix-cef/releases/download/cef-154.0.34/cef_binary_154.0.34%2Bg14c5a08%2Bchromium-154.0.8037.98_windows64_minimal.tar.bz2",
+  "sha256": "af1f188711b4e9220c87e2a90377d5bddd70e163909070dd81f6f3bb2fc884ce",
+  "cef_version": "154.0.34+g14c5a08+chromium-154.0.8037.98",
+  "files": {
+    "Release/libcef.dll": "6350d3239c139c2d5673cd2957acc34be47ea066e3b051953ebf84ac52f0dfce",
+    "Release/libcef.lib": "65dd7e13a0dbd2246ebd602fc6f0d1a06cbd92cef1fa18deb71d6aff586a797e",
+    "Release/bootstrap.exe": "5e8f9636d5ce52de8db7cb7877c142a3149e4a7b441ce4ee3dacf6a032710546",
+    "include/cef_version.h": "c9022cedf000a04f2e4e047777f1c31a19e0da61bfd5572b05bb470fbd29741f",
+    "cmake/FindCEF.cmake": "134a292cf6f58a0a6724d97d0ad68241588014ef1cd903129c79bb28984d475e",
+    "LICENSE.txt": "058c3827ffb827ff3edda471ae7e1bb1d1aa5931985f0126043ccd33409e792f",
+    "Resources/icudtl.dat": "495c45cc7a65562ec461f860c310c6b66e006acd96833f61d1aa31f77fe18cf1",
+    "Resources/resources.pak": "62e6e3ce2423424e46b461e6293b2f6a3c6180151a5677d5fb93e76ecd1eaba6",
+    "CREDITS.html": "340c4839034d8130fa2c197fa4308caf01abf9f237d8373cd8604b7a18338d51",
+    "Release/chrome_elf.dll": "19eb3bb17fcaab54450d6b8419d9da25f481a53123d63de48e0e819bc1badc4f",
+    "Release/d3dcompiler_47.dll": "2c5bc040d1b3f7ca73fdb52f1624f005866b79d496b848216a898b59859b8035",
+    "Release/v8_context_snapshot.bin": "4cfa19d8bed5d24f0567f165f3396f5e06c4676ebb913249d317e93e539ea384",
+    "Release/vk_swiftshader.dll": "d7d40a30a44eb4d879fc3b4876f30e2c24ae2f54505e194ef5a37ac23815e979",
+    "Release/vk_swiftshader_icd.json": "32d83ff113fef532a9f97e0d2831f8656628ab1c99e9060f0332b1532839afd9",
+    "Release/vulkan-1.dll": "6b6ea03931c84883a5a21bbea75d5c84ab9116cc2f18c2821c88158a88324935",
+    "Release/dxil.dll": "41e09513152044ce7fee3c6e2b3418d90640cb9aa52139c26f2fa68311b1c1a3",
+    "Release/dxcompiler.dll": "27083925e266f0437b793064a4cdecf02c6b6c12ed6d5238ac77e5a48d626d1b",
+    "Resources/chrome_100_percent.pak": "04fe059b62e211571307ef2937b2c966e6a7b0e58e9d2149ffda618679e65fad",
+    "Resources/chrome_200_percent.pak": "4b0802784c08feaa31dc3dca8953be8e217cf2e7f53d5ab8751ba998f391eecf",
+    "Resources/locales/en-US.pak": "283f125719e3954d24de78a41329840a281e5b255379daf77cb66cbf2887a920",
+    "Resources/locales/ar.pak": "0befe8bd70559417bcdc703c69caadb8584a5a4fe17cdd0c78ba8e5c251fba29"
+  }
+}

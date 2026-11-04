@@ -1,73 +1,35 @@
-# MaenBrowser 1.9.8 — chat safeguards and verified media release
+# MaenBrowser 1.9.9 — codec-enabled CEF in normal Windows builds
 
-See [upload and release instructions (Arabic)](UPLOAD_AND_RELEASE_AR.md) and
-[1.9.8 release notes](docs/RELEASE_1.9.8.md). Source package only: Windows
-codec binaries and Setup must be built and tested on the Windows runner.
+Normal builds automatically fetch a pinned **CEF 154 Windows x64 H.264/AAC**
+distribution. No runtime secrets or self-hosted Chromium build are needed.
+Stock-CEF fallback is removed. A successful Setup build must pass actual in-tab
+codec playback tests, including H.264/AAC MP4, pause and seek.
 
-## Previous 1.9.6 baseline
+- [Arabic upload/build/release instructions](UPLOAD_AND_RELEASE_AR.md)
+- [Release changes and limits](docs/RELEASE_1.9.9.md)
+- [Research and dependency provenance](docs/MEDIA_RUNTIME_SOURCES.md)
+- [Exact runtime URL and SHA-256](config/media-runtime.lock.json)
 
-Windows x64 C++20 / CEF Chrome Runtime browser. This is the complete **source
-project**, not a prebuilt Setup. Portable checks passed during preparation;
-**Windows compilation, real CEF integration, device performance and external-site
-acceptance remain pending**. See [validation](docs/VALIDATION_1.9.6.md).
+Upload the extracted source contents, including `.github`, to the repository
+root. Push main or run **Build MaenBrowser Windows Setup**. If old
+`MAEN_CEF_ARCHIVE_URL` / `MAEN_CEF_ARCHIVE_SHA256` secrets select CEF 152, remove
+both to select the committed codec runtime. Overrides remain optional and must
+match the new exact version and media marker.
 
-## Start here
-- [Arabic upload/build guide](START_HERE_AR.md)
-- [Changes and precise scope](docs/RELEASE_1.9.6.md)
-- [Windows acceptance checklist](docs/ACCEPTANCE_1.9.6.md)
-- [Custom CEF media runtime](docs/CUSTOM_CEF_MEDIA_BUILD.md)
+The workflow downloads headers/libraries/runtime together, verifies SHA-256,
+version, archive layout and Windows x64 architecture, builds with sandboxing,
+runs native tests and real codec playback, then packages Setup and a checksum.
+Pushing `v1.9.9` creates a draft GitHub release only after those gates pass.
+Application profiles are preserved by the existing installer upgrade behavior.
 
-## Changes
-- Clean search homepage; ad blocking remains controlled by the bundled extension.
-- Native revision checks reject stale or revisionless writes; settings panels send
-  only changed fields. Badge/popup state refreshes on settings events.
-- UltraLite profile for 2 GB-class hardware; manual resource override after restart.
-  Bounded idle-tab scans react to memory pressure, keeping existing safety exclusions.
-- Explicit saved-session restore loads one site, leaving other tabs as local placeholders.
-- Family domain lists load only when family protection is enabled.
-- Manual, bounded HTTPS ad-filter refresh from the existing StevenBlack source;
-  validated atomic replacement with last-good/bundled fallback.
-- DPAPI-protected settings backup; explicit PIN recovery keeps family protection on.
-- Sandbox-required startup/build, explicit confirmation for a small external-protocol
-  allowlist, shared window icons and reuse of the native request handler.
-- Synthetic codec fixtures extend the Windows playback test to VP8/Vorbis,
-  VP9/Opus, AV1/Opus, MP3, FLAC, WAV, Ogg Vorbis and AAC alongside H.264.
+Local checks: `python tools/run-checks.py` (Node and a C++ compiler recommended).
+Windows build: VS2022, CMake, Node22, Python3.12+, NSIS and the pinned WebView2 SDK;
+run `tools/package-nsis.ps1` after setting `WEBVIEW2_SDK_ROOT`. CEF can also be
+prepared with `python tools/media-runtime.py`; `--archive` accepts a downloaded
+copy of the pinned archive, and `--verify` checks a prepared root.
 
-## Build Windows Setup
-Extract the archive and upload its **contents** to the repository root, including
-`.github/workflows`. Uploading the ZIP alone does not update the application source.
-The workflow **Build MaenBrowser Windows Setup** creates an installable stock-CEF
-preview when the two optional media-runtime secrets are absent. That preview does
-not enable or verify H.264 playback. For a verified H.264 Setup, configure both
-repository secrets:
-
-- `MAEN_CEF_ARCHIVE_URL`: HTTPS URL of the verified, version-matched media CEF ZIP.
-- `MAEN_CEF_ARCHIVE_SHA256`: exact SHA-256 of that archive.
-
-The stock-CEF preview and H.264 Setup are uploaded as differently named artifacts.
-If only one secret is set or either value is malformed, configuration fails instead of
-silently selecting a runtime. The separate media runtime workflow needs an online
-Windows x64 self-hosted build runner. Source changes cannot supply the publisher's
-archive, credentials, codec licensing review or signing certificate.
-
-The Setup workflow performs source checks, sandboxed C++ build and native tests before
-creating `MaenBrowser-1.9.6-Setup.exe`. The in-tab playback test runs only with the
-verified custom CEF archive. A green stock-CEF preview workflow does not establish H.264
-support, device performance or all third-party service compatibility.
-No GitHub changes or workflow runs were made as part of preparing this source archive.
-
-## Local source checks
-```
-python tools/run-checks.py
-```
-On Windows, with VS 2022, CMake, Node 22, Python, NSIS, the CEF secrets in environment
-variables and `WEBVIEW2_SDK_ROOT` set, run `tools/package-nsis.ps1` from the repo root.
-Normal browsing/media uses CEF. The optional manual WebView2 window requires an
-already-installed WebView2 Runtime; Setup no longer silently installs it.
-
-## Limits
-Targets supported Windows x64 environments, not legacy Windows 7/8 or 32-bit Windows.
-Codec support is tested, not inferred from `canPlayType` alone. HEVC/DRM and service
-acceptance are separate platform/licensing concerns. No universal codec, extension,
-service or 2 GB performance guarantee is made. Filter updates are manual, not a
-background service. Security engine updates remain an ongoing release responsibility.
+This source package is not a Windows executable. The Linux preparation environment
+cannot establish Windows playback or site/device acceptance; those remain required
+CI and device tests. No universal codec, DRM, HEVC, site compatibility or low-memory
+performance guarantee is made. Sandbox, site isolation, TLS checks and current
+protection remain enabled. License/credit notices accompany the runtime.

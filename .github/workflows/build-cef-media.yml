@@ -1,4 +1,4 @@
-name: Build CEF 152 Maen Media Runtime
+name: Build CEF 154 Maen Media Runtime
 on:
   workflow_dispatch:
 permissions:
@@ -18,10 +18,10 @@ jobs:
       - name: Upload Maen media CEF archive
         uses: actions/upload-artifact@v4
         with:
-          name: maen-cef-152-media-windows64
+          name: maen-cef-154-media-windows64
           path: |
-            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip
-            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-windows64.zip.sha256
-            ${{ runner.temp }}\maen-cef-output\maen-cef-152-media-build-manifest.txt
+            ${{ runner.temp }}\maen-cef-output\maen-cef-154-media-windows64.zip
+            ${{ runner.temp }}\maen-cef-output\maen-cef-154-media-windows64.zip.sha256
+            ${{ runner.temp }}\maen-cef-output\maen-cef-154-media-build-manifest.txt
           if-no-files-found: error
           retention-days: 30

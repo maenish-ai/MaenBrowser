@@ -1,45 +1,35 @@
-# MaenBrowser custom CEF media build
+# MaenBrowser media runtime: ready-built default and optional custom build
 
-MaenBrowser's normal CI uses the official CEF binary distribution. Official/default CEF does not enable Chrome proprietary codecs. WhatsApp Web MP4/H.264 playback therefore cannot be made equivalent to Chrome merely by adding application command-line switches.
+As of 1.9.9, normal Windows builds use the ready-built codec-enabled CEF 154
+archive pinned in config/media-runtime.lock.json. It is fetched and verified by
+tools/media-runtime.py, called by fetch-cef.ps1 and verify-media-runtime.ps1.
+No secrets or full Chromium build are needed for the default path.
 
-For a version-matched custom CEF build, use the CEF automated build process for the Chromium 152 / CEF 152 release branch and build with:
+The application is rebuilt against the headers/import library from the same
+archive as libcef.dll, bootstrap.exe and resources. Never drop an unrelated
+FFmpeg/CEF DLL into a previous installation. CMake verifies download provenance
+and extracted critical-file hashes. Windows browser tests establish actual decode.
+
+## Optional build from source
+
+Use a suitably provisioned Windows x64 builder and tools/build-cef-media.ps1,
+or the separate Build CEF 154 Maen Media Runtime workflow. This is a full Chromium
+build and may require hundreds of GB of disk and hours. It is not needed for
+normal application CI using the prebuilt archive.
+
+The pinned source line is CEF 154.0.34+g14c5a08+chromium-154.0.8037.98, branch 8037,
+checkout 14c5a08. Required GN arguments include:
 
 ```
-GN_DEFINES=is_official_build=true proprietary_codecs=true ffmpeg_branding=Chrome chrome_pgo_phase=0
+is_official_build=true proprietary_codecs=true ffmpeg_branding=Chrome
 ```
 
-`tools/build-cef-media.ps1` records these required build arguments. Building Chromium/CEF requires substantial disk, RAM and build time and is intentionally not run on the normal 60-minute GitHub Windows application job.
+The script emits a ZIP with MAEN_MEDIA_RUNTIME.txt, SHA-256 and build manifest.
+Host it on trusted HTTPS storage, then set BOTH MAEN_CEF_ARCHIVE_URL and
+MAEN_CEF_ARCHIVE_SHA256 for an explicit custom override. Its header version and
+media marker must match. An old CEF 152 override will fail deliberately.
 
-## Integration
-
-Package the resulting CEF binary distribution with the same directory layout as a CEF binary distribution. Configure the application build with two environment variables:
-
-- `MAEN_CEF_ARCHIVE_URL`: HTTPS URL of the reviewed custom CEF archive.
-- `MAEN_CEF_ARCHIVE_SHA256`: exact 64-hex SHA-256 of that archive.
-
-`tools/fetch-cef.ps1` refuses an unverified custom archive. The CEF version must remain compatible with MaenBrowser's pinned `152.0.6+g708dc14+chromium-152.0.7977.83` line.
-
-## Release acceptance
-
-Before public distribution, test the exact runtime, not only `canPlayType()`:
-
-1. WhatsApp Web MP4/H.264 video displays a frame/thumbnail.
-2. Play/pause and seeking work and audio/video remain synchronized.
-3. Download works independently of playback.
-4. YouTube playback and controls work.
-5. VP9/AV1/WebM, MSE, WebRTC and WebCodecs remain functional.
-6. Hardware acceleration remains enabled where Chromium considers the GPU safe.
-7. Test low-memory/older hardware separately.
-
-## Licensing boundary
-
-Enabling `ffmpeg_branding=Chrome proprietary_codecs=true` changes the codec set and may create patent/licensing obligations for redistribution. Open-source source code does not itself remove those obligations. Obtain appropriate licensing/legal clearance before distributing such binaries publicly.
-
-## Maen Media Engine integration (1.5.24)
-
-MaenBrowser deliberately reuses the Chromium/CEF media architecture rather than embedding a second Gecko/Firefox engine. The custom runtime is built from the CEF/Chromium source line already used by MaenBrowser, with the Chrome FFmpeg branding and proprietary-codec build gates enabled. The browser keeps Chromium GPU selection, MSE, WebRTC, WebCodecs and software fallback behavior intact; no GPU blocklist bypass or security weakening is introduced.
-
-The media-runtime workflow also emits a build manifest and SHA-256. This proves the archive came from the intended build configuration; it is not a claim that a particular WhatsApp file has decoded successfully. Runtime acceptance still requires the real playback tests listed above.
-
-## 1.5.29 release rule
-The Windows Media Setup workflow no longer falls back to stock CEF. A media release requires a SHA-256 pinned custom CEF archive produced with `proprietary_codecs=true` and `ffmpeg_branding=Chrome`. The archive must contain the embedded `MAEN_MEDIA_RUNTIME.txt` marker and the exact CEF 152.0.6 / Chromium 152.0.7977.83 version header. This prevents a green Setup build from being mistaken for a codec-enabled build.
+The upstream prebuilt archive has upstream provenance, not a Maen custom-build
+marker. The downloader accepts it only through its specific committed SHA-256
+lock. It does not invent a custom-build marker or treat a marker as playback proof.
+See docs/MEDIA_RUNTIME_SOURCES.md for dependency research and licensing boundaries.

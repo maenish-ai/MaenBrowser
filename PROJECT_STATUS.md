@@ -1,8 +1,11 @@
-# Current project status: 1.9.8 source candidate
+# Current project status: 1.9.9 source candidate
 
-See UPLOAD_AND_RELEASE_AR.md and docs/RELEASE_1.9.8.md.
-Portable checks passed in Linux; Windows build, codec runtime and device performance
-acceptance are pending. No Setup or codec DLLs were produced here.
-Archived apply_release.py/integrate_maenbrowser.py scripts target the previous
-1.9.6 baseline. They are historical patch exporters, not the 1.9.8 installation
-procedure. Use the complete source package and current release instructions.
+Normal Windows CI now downloads the pinned codec-enabled CEF 154 archive without
+runtime secrets. The stock-preview fallback is removed. See UPLOAD_AND_RELEASE_AR.md,
+docs/RELEASE_1.9.9.md and docs/MEDIA_RUNTIME_SOURCES.md.
+
+The upstream Windows archive was downloaded and SHA-256 verified in Linux.
+Windows compilation and real playback acceptance remain pending; Setup is gated
+on those tests. No Setup was produced or release published in this environment.
+Archived patch exporters target the older 1.9.6 baseline; do not apply them to
+this release. Use the full current source package or the changed-file upload ZIP.

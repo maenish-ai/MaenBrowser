@@ -28,4 +28,5 @@ Copy-Item "$releaseDir\*" $DistDir -Recurse -Force
 
 Get-ChildItem $DistDir -Recurse -File -Include *.pdb,*.lib,*.exp,*.ilk | Remove-Item -Force
 Get-ChildItem $DistDir -File -Filter "Maen*Tests.exe" | Remove-Item -Force
+Copy-Item "THIRD_PARTY_NOTICES.md" "$DistDir/notices"
 Write-Host "Release staged in $DistDir"

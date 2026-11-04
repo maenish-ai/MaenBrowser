@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "provider": "psmux/godwinmix-cef",
+  "release": "cef-154.0.34",
+  "source_commit": "acfb55b74f6b6b9212a94a59d201127cf32390a2",
+  "cef_version": "154.0.34+g14c5a08+chromium-154.0.8037.98",
+  "branch": "8037",
+  "checkout": "14c5a08",
+  "platform": "windows64",
+  "archive_name": "cef_binary_154.0.34+g14c5a08+chromium-154.0.8037.98_windows64_minimal.tar.bz2",
+  "url": "https://github.com/psmux/godwinmix-cef/releases/download/cef-154.0.34/cef_binary_154.0.34%2Bg14c5a08%2Bchromium-154.0.8037.98_windows64_minimal.tar.bz2",
+  "sha256": "af1f188711b4e9220c87e2a90377d5bddd70e163909070dd81f6f3bb2fc884ce",
+  "size_bytes": 173759232,
+  "codec_build_flags": [
+    "is_official_build=true",
+    "proprietary_codecs=true",
+    "ffmpeg_branding=Chrome"
+  ],
+  "source_url": "https://github.com/psmux/godwinmix-cef/tree/acfb55b74f6b6b9212a94a59d201127cf32390a2",
+  "release_url": "https://github.com/psmux/godwinmix-cef/releases/tag/cef-154.0.34"
+}
