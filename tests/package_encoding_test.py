@@ -12,4 +12,8 @@ if __name__ == "__main__":
     validator = Path(__file__).resolve().parents[1] / "tools" / "verify-package.py"
     with patch.object(Path, "read_text", windows_read_text):
         runpy.run_path(str(validator), run_name="__main__")
+        # Native source contains Arabic strings; exercise this guard under the
+        # same default that failed on the Windows Actions runner.
+        source_guard = validator.parent.parent / "tests" / "control_endpoint_source_test.py"
+        runpy.run_path(str(source_guard), run_name="__main__")
     print("Package validation passed with simulated Windows cp1252 defaults")
