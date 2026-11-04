@@ -1,3 +1,4 @@
+import {inspectIdlePage} from './idle-page-probe.js';
 import {idlePolicy} from './memory-policy.js';
 import {restoreSession} from './session-restore.js';
 import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
@@ -53,17 +54,7 @@ async function technicalSample(){
 async function pageIsSafe(tabId){
   let timeout;
   try{
-    const results=await Promise.race([chrome.scripting.executeScript({target:{tabId,allFrames:true},func:async()=>{
-      if(document.visibilityState==='visible'||document.hasFocus())return false;
-      if([...document.querySelectorAll('audio,video')].some(e=>!e.paused||e.srcObject))return false;
-      if(navigator.mediaSession?.playbackState==='playing')return false;
-      if(document.querySelector('[contenteditable="true"],iframe[src*="meet"],iframe[src*="call"]'))return false;
-      if([...document.querySelectorAll('input,textarea,select')].some(e=>!['hidden','button','submit','reset'].includes(e.type)&&(e.value||e.checked||e.value!==e.defaultValue&&['INPUT','TEXTAREA'].includes(e.tagName))))return false;
-      // Granted media permissions are treated conservatively even if we cannot
-      // observe a site's private MediaStream/RTCPeerConnection objects.
-      try{for(const name of ['microphone','camera']){const p=await navigator.permissions.query({name});if(p.state==='granted')return false;}}catch{return false;}
-      return true;
-    }}),new Promise(resolve=>{timeout=setTimeout(()=>resolve([]),2500);})]);
+    const results=await Promise.race([chrome.scripting.executeScript({target:{tabId,allFrames:true},func:inspectIdlePage}),new Promise(resolve=>{timeout=setTimeout(()=>resolve([]),2500);})]);
     return results.length>0&&results.every(r=>r.result===true);
   }catch{return false;}finally{clearTimeout(timeout);}
 }
@@ -130,7 +121,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
     if(request.op==='release')return releaseTab(request.tabId,true);
     if(request.op==='reader')return reader(request.tabId);
     if(request.op==='settingsChanged'){
-      const s=await api();await enforceFamily(s.family,s.family&&!request.wasFamily);await updateAlarm();return {ok:true};
+      const s=await syncProtectionBadge();if(!s)throw new Error('Protection state unavailable');await enforceFamily(s.family,s.family&&!request.wasFamily);await updateAlarm();return {ok:true};
     }
     if(request.op==='restoreSession')return restoreSession(request.id, sender.tab?.windowId ?? null);
     if(request.op==='saveSession'){

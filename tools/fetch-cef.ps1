@@ -15,7 +15,12 @@ $customSha256 = $env:MAEN_CEF_ARCHIVE_SHA256
 if ($RequireMedia -and [string]::IsNullOrWhiteSpace($customUrl)) {
   throw "Media release requires MAEN_CEF_ARCHIVE_URL; stock CEF fallback is forbidden."
 }
+if ($customSha256 -and -not $customUrl) { throw "CEF SHA256 requires its archive URL." }
 if ($customUrl) {
+  $archiveUri = $null
+  if (-not [Uri]::TryCreate($customUrl, [UriKind]::Absolute, [ref]$archiveUri) -or $archiveUri.Scheme -ne 'https' -or $archiveUri.UserInfo) {
+    throw "Custom CEF archive must use an absolute HTTPS URL without embedded credentials."
+  }
   if (-not $customSha256 -or $customSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
     throw "MAEN_CEF_ARCHIVE_URL requires a 64-hex MAEN_CEF_ARCHIVE_SHA256."
   }

@@ -132,6 +132,19 @@ try{
   assert(mediaState.h264&&mediaState.aac,'CEF runtime lacks H.264/AAC support: '+JSON.stringify(mediaState));
   assert(mediaState.time>1&&mediaState.width===160&&mediaState.frames>0,'CEF did not decode H.264 frames in the active tab: '+JSON.stringify(mediaState));
   console.log('PASS: H.264/AAC decoded and played in the same CEF tab with native controls',JSON.stringify(mediaState));
+  const pausedAt=await evaluate(`(()=>{const v=document.getElementById('h264');v.pause();return v.currentTime;})()`);
+  await pause(250);
+  assert(Math.abs(await evaluate(`document.getElementById('h264').currentTime`)-pausedAt)<0.1,'Pause did not stop media clock');
+  await evaluate(`(()=>{const v=document.getElementById('h264');v.currentTime=0.25;})()`);
+  let seeked=false;
+  for(let n=0;n<40;n++){
+    seeked=await evaluate(`(()=>{const v=document.getElementById('h264');return !v.seeking&&Math.abs(v.currentTime-0.25)<0.15&&v.readyState>=2;})()`);
+    if(seeked)break;await pause(100);
+  }
+  assert(seeked,'H.264 seek failed');
+  await evaluate(`document.getElementById('h264').play()`);
+  console.log('PASS: H.264 pause, seek and resume in the active tab');
+
   // Also exercise Chromium's direct MP4 document, not only an embedded player.
   await navigate(fixtureUrl+'clip.mp4');
   let directState;

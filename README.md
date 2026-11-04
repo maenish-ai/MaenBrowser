@@ -1,4 +1,10 @@
-# MaenBrowser 1.9.6 — stability, resource policy and media release gates
+# MaenBrowser 1.9.8 — chat safeguards and verified media release
+
+See [upload and release instructions (Arabic)](UPLOAD_AND_RELEASE_AR.md) and
+[1.9.8 release notes](docs/RELEASE_1.9.8.md). Source package only: Windows
+codec binaries and Setup must be built and tested on the Windows runner.
+
+## Previous 1.9.6 baseline
 
 Windows x64 C++20 / CEF Chrome Runtime browser. This is the complete **source
 project**, not a prebuilt Setup. Portable checks passed during preparation;

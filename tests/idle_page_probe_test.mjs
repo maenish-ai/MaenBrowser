@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {inspectIdlePage} from '../assets/companion/idle-page-probe.js';
+let media=[],controls=[],editor=false,grant='prompt';
+globalThis.document={visibilityState:'hidden',hasFocus:()=>false,querySelector:()=>editor?{}:null,querySelectorAll:s=>s==='audio,video'?media:controls};
+Object.defineProperty(globalThis,'navigator',{configurable:true,value:{permissions:{query:async()=>({state:grant})}}});
+assert(await inspectIdlePage());
+editor=true;assert(!await inspectIdlePage());editor=false;
+media=[{paused:false}];assert(!await inspectIdlePage());
+media=[{paused:true,srcObject:{}}];assert(!await inspectIdlePage());
+media=[];controls=[{tagName:'TEXTAREA',value:'',defaultValue:'draft'}];assert(!await inspectIdlePage());
+controls=[{type:'hidden',value:'csrf'}];assert(await inspectIdlePage());
+controls=Array(257).fill({});assert(!await inspectIdlePage());controls=[];
+grant='granted';assert(!await inspectIdlePage());grant='prompt';
+navigator.permissions.query=async()=>{throw Error('unsupported')};assert(!await inspectIdlePage());
+console.log('Idle inspection: chat/editor, live media, drafts, bounded forms and permissions protected');

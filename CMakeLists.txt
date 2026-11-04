@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.9.6 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.9.8 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -192,3 +192,12 @@ add_test(NAME filter_snapshot COMMAND MaenFilterTests)
 add_executable(MaenResourceTests tests/resource_policy_test.cpp)
 target_include_directories(MaenResourceTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME resource_policy COMMAND MaenResourceTests)
+
+# Release acceptance tests must execute their assertions even with NDEBUG.
+foreach(test_target MaenDomainTests MaenMediaTests MaenNavigationTests MaenExternalTests MaenFilterTests MaenResourceTests)
+  if(MSVC)
+    target_compile_options(${test_target} PRIVATE /UNDEBUG)
+  else()
+    target_compile_options(${test_target} PRIVATE -UNDEBUG)
+  endif()
+endforeach()

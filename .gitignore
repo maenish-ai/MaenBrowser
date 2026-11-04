@@ -11,3 +11,6 @@ third_party/
 *.lib
 *.dll
 !third_party/.gitkeep
+
+__pycache__/
+*.pyc

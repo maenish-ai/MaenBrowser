@@ -14,3 +14,7 @@ assert.deepEqual(restorableSession([base,{...base,incognito:true},{...base,url:'
 for(const path of ['movie.mp4','MOVIE.M4V','audio.m4a','audio.aac'])assert(!candidate({...base,url:'https://cdn.example/'+path+'?token=test'},now,30));
 assert(candidate({...base,url:'https://example.com/watch?file=movie.mp4'},now,30));
 console.log('Tab safeguards and session URL tests passed');
+for(const host of ['discord.com','app.slack.com','web.telegram.org','chat.google.com','photoshop.adobe.com','www.photopea.com','www.figma.com']){
+ assert(!candidate({...base,url:'https://'+host},now,30),host);
+ assert(candidate({...base,url:'https://'+host+'.evil.test'},now,30),host+' lookalike');
+}

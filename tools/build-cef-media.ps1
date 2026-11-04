@@ -6,6 +6,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+& "$PSScriptRoot\check-media-builder.ps1" -BuildRoot $DownloadDir
 $ExpectedCef='152.0.6+g708dc14+chromium-152.0.7977.83'
 $ExpectedBranch='7977'
 $ExpectedCheckout='708dc14'

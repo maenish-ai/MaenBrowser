@@ -5,7 +5,9 @@ export function candidate(tab, now, minutes, keepAwake=[]){
   // Playback in the native Windows surface is invisible to CEF DOM inspection.
   if(url.protocol==='https:' && /\.(mp4|m4v|m4a|aac)$/i.test(url.pathname))return false;
   const domain=url.hostname.toLowerCase();
-  const protectedHosts=['whatsapp.com','meet.google.com','zoom.us','teams.microsoft.com','teams.live.com',...(Array.isArray(keepAwake)?keepAwake:[])];
+  const protectedHosts=['whatsapp.com','meet.google.com','zoom.us','teams.microsoft.com','teams.live.com','discord.com','slack.com','messenger.com','telegram.org',
+    'chat.google.com','outlook.office.com','outlook.office365.com','mail.google.com',
+    'adobe.com','figma.com','photopea.com',...(Array.isArray(keepAwake)?keepAwake:[])];
   if(protectedHosts.some(h=>domain===h||domain.endsWith('.'+h)))return false;
   if(!Number.isFinite(tab.lastAccessed))return false;
   return now-tab.lastAccessed>=Math.max(5,minutes)*60000;
