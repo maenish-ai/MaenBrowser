@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
@@ -15,6 +15,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          # The action defaults to retired "tools platform-tools". Request only
+          # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
       - uses: gradle/actions/wrapper-validation@v4
       - name: Build and verify
         working-directory: android
@@ -37,7 +41,7 @@ jobs:
           if-no-files-found: error
 
   device-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -50,6 +54,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          # The action defaults to retired "tools platform-tools". Request only
+          # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

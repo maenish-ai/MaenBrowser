@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   signed-bundle:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -14,6 +14,10 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          # The action defaults to retired "tools platform-tools". Request only
+          # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
       - uses: gradle/actions/wrapper-validation@v4
       - name: Build with publisher upload key, never debug signing
         shell: bash

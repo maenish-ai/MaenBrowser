@@ -32,7 +32,8 @@ for label, names in [('Full-Source',files), ('Changed-Files-Upload',changed)]:
         for name in names: archive.write(root/name,name)
     with zipfile.ZipFile(target) as archive:
         assert archive.testzip() is None
-        assert '.github/workflows/maenbrowser-ci.yml' in archive.namelist()
+        if label == 'Full-Source':
+            assert '.github/workflows/maenbrowser-ci.yml' in archive.namelist()
     artifacts.append(target)
 # A temporary index includes text AND binary fixtures without touching the
 # user's real index, staging state, branch or commit history.
