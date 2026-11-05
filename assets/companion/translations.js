@@ -1554,5 +1554,9 @@ export const translations = {
   "Automatic weather shares approximate coordinates and your IP with MET Norway. You can turn it off in Weather settings.": [
     "Automatic weather shares approximate coordinates and your IP with MET Norway. You can turn it off in Weather settings.",
     "يرسل الطقس التلقائي إحداثيات تقريبية وعنوان الإنترنت إلى MET Norway. يمكنك إيقافه من إعدادات الطقس."
+  ],
+  "Reason: {code}": [
+    "Reason: {code}",
+    "السبب: {code}"
   ]
 };

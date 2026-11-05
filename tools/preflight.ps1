@@ -59,8 +59,11 @@ if ($beforeBody.Contains("CloseBrowser") -or $beforeBody.Contains("SW_HIDE")) {
 $updatedEnd = $clientCpp.IndexOf("}  // namespace maenbrowser", $updatedStart)
 $updatedBody = $clientCpp.Substring($updatedStart, $updatedEnd - $updatedStart)
 if ($updatedBody.Contains("MessageBoxW(")) { throw "Download completion must not block the browser UI." }
-foreach ($needle in @("IsInProgress()", "GetReceivedBytes()", "SW_HIDE", "CloseBrowser(false)")) {
-  if (-not $updatedBody.Contains($needle)) { throw "Safe background-download lifecycle guard missing: $needle" }
+foreach ($forbidden in @("->CloseBrowser(", "ShowWindow(", "->Cancel(")) {
+  if ($updatedBody.Contains($forbidden)) { throw "Download lifetime regression: $forbidden in OnDownloadUpdated" }
+}
+foreach ($needle in @("GetPercentComplete()", "GetFullPath()", "IsComplete()")) {
+  if (-not $updatedBody.Contains($needle)) { throw "Download progress tracking missing: $needle" }
 }
 
 
@@ -190,11 +193,9 @@ $popupEnd = $clientCpp.IndexOf("bool MaenClient::DoClose", $popupStart)
 if ($popupStart -lt 0 -or $popupEnd -le $popupStart) { throw "Popup callback boundaries not found." }
 $popupBody = $clientCpp.Substring($popupStart, $popupEnd - $popupStart)
 if (-not $popupBody.Contains("return false;") -or
-    -not $popupBody.Contains("user_gesture") -or
-    -not $popupBody.Contains("ShouldPreservePopup(source.host, destination.host") -or
     -not $popupBody.Contains("protection::BlockNavigation") -or
-    -not $popupBody.Contains("OpenUrlInNewTab(next_url,opener)")) {
-  throw "Popup policy must preserve OAuth/payment/login popups and require a user gesture plus protection checks."
+    $popupBody.Contains("OpenUrlInNewTab(") -or $popupBody.Contains("->LoadURL(")) {
+  throw "Popup requests must preserve their original context and retain family navigation checks."
 }
 $beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")
 $updatedStart = $clientCpp.IndexOf("void MaenClient::OnDownloadUpdated")

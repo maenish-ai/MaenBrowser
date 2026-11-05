@@ -152,8 +152,21 @@ chrome.storage.onChanged.addListener((changes,area)=>{
 const sensitivePopupHosts=['auth0.com','okta.com','clerk.accounts.dev','cloudflareaccess.com','claude.ai','anthropic.com','accounts.google.com','login.microsoftonline.com','login.live.com',
  'appleid.apple.com','paypal.com','www.paypal.com','checkout.stripe.com'];
 const relocatingTabs=new Set();
-chrome.webNavigation?.onCreatedNavigationTarget?.addListener(async ({sourceTabId,tabId,url})=>{
- if(relocatingTabs.has(tabId)||!/^https?:\/\//i.test(url||''))return;
+const pendingNavigationTargets=new Map();
+chrome.webNavigation?.onCreatedNavigationTarget?.addListener(({sourceTabId,tabId,url})=>{
+ if(!/^https?:\/\//i.test(url||''))return;
+ const now=Date.now();
+ for(const [id,entry] of pendingNavigationTargets)if(entry.deadline<now)pendingNavigationTargets.delete(id);
+ if(pendingNavigationTargets.size>=64)return;
+ pendingNavigationTargets.set(tabId,{sourceTabId,deadline:now+60000});
+});
+chrome.tabs.onRemoved.addListener(id=>pendingNavigationTargets.delete(id));
+chrome.webNavigation?.onCommitted?.addListener(async ({tabId,frameId,url})=>{
+ if(frameId!==0)return;
+ const entry=pendingNavigationTargets.get(tabId);if(!entry)return;
+ pendingNavigationTargets.delete(tabId);
+ if(entry.deadline<Date.now()||relocatingTabs.has(tabId)||!/^https?:\/\//i.test(url||''))return;
+ const {sourceTabId}=entry;
  try{
   const host=new URL(url).hostname.toLowerCase();
   if(sensitivePopupHosts.some(h=>host===h||host.endsWith('.'+h))||/\/(oauth|auth|authorize|login|log-in|signin|sign-in|sso|oidc|callback|consent|connect)(?:[/?#]|$)|(?:[?&])(redirect_uri|client_id|code_challenge|response_type)=/i.test(url))return;
@@ -162,7 +175,6 @@ chrome.webNavigation?.onCreatedNavigationTarget?.addListener(async ({sourceTabId
   const openerHost=new URL(source.url).hostname.toLowerCase();
   if(sensitivePopupHosts.some(h=>openerHost===h||openerHost.endsWith('.'+h)))return;
   const targetWindow=await chrome.windows.get(target.windowId);
-  // Only move single-tab popup windows, never a user's independent window.
   const siblings=await chrome.tabs.query({windowId:target.windowId});
   if(targetWindow.type!=='popup'&&siblings.length!==1)return;
   if(siblings.length!==1||siblings[0].id!==tabId)return;
@@ -170,6 +182,6 @@ chrome.webNavigation?.onCreatedNavigationTarget?.addListener(async ({sourceTabId
   await chrome.tabs.move(tabId,{windowId:source.windowId,index:-1});
   await chrome.tabs.update(tabId,{active:true});
   await chrome.windows.update(source.windowId,{focused:true});
- }catch{/* Preserve Chromium's default behavior on unsupported runtimes. */}
+ }catch{/* Keep the original request alive if reparenting is unsupported. */}
  finally{relocatingTabs.delete(tabId);}
 });

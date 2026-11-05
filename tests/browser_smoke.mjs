@@ -117,6 +117,19 @@ try{
       response.writeHead(200,{'Content-Type':'video/mp4','Accept-Ranges':'bytes','Content-Length':h264Fixture.length,'Cache-Control':'no-store'});
       response.end(h264Fixture);return;
     }
+    if(request.url==='/post-attachment'){
+      let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
+        if(request.method!=='POST'||body!=='token=one-time-download'||!request.headers.referer?.endsWith('/download-origin')){response.writeHead(403);response.end('Original download context required');return;}
+        response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-post-download.bin"'});response.end('post-download-context-intact');
+      });return;
+    }
+    if(request.url==='/redirect-attachment'){
+      response.writeHead(302,{'Location':'/redirected-attachment'});response.end();return;
+    }
+    if(request.url==='/redirected-attachment'){
+      if(!request.headers.referer?.endsWith('/download-origin')){response.writeHead(403);response.end('Missing download referrer');return;}
+      response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-redirect-download.bin"'});response.end('redirect-download-context-intact');return;
+    }
     if(request.url==='/download'){
       const chunk=Buffer.alloc(65536,0x6d);let count=0;
       response.writeHead(200,{'Content-Type':'text/plain','Content-Disposition':'attachment; filename="maen-download-test.txt"','Content-Length':String(chunk.length*32),'Cache-Control':'no-store'});
@@ -351,8 +364,30 @@ try{
   assert.equal(fs.statSync(download.filename).size,2097152);
   fs.unlinkSync(download.filename);
   await navigate(controlUrl);
+  // Exercise actual page-initiated _blank transfers. The old native popup
+  // redirect discarded POST/referrer context; downloads.download() cannot catch it.
+  for(const kind of ['post','redirect']){
+    const beforeIds=await evaluate(`chrome.downloads.search({}).then(items=>items.map(d=>d.id))`);
+    await navigate(fixtureUrl+'download-origin');
+    const destination=fixtureUrl+(kind==='post'?'post-attachment':'redirect-attachment');
+    const script=kind==='post'
+      ? `(()=>{const form=document.createElement('form');form.method='POST';form.target='_blank';form.action=${JSON.stringify(destination)};const input=document.createElement('input');input.name='token';input.value='one-time-download';form.append(input);document.body.append(form);form.submit();})()`
+      : `(()=>{const a=document.createElement('a');a.href=${JSON.stringify(destination)};a.target='_blank';document.body.append(a);a.click();})()`;
+    await send('Runtime.evaluate',{expression:script,userGesture:true});
+    await navigate(controlUrl);
+    let pageDownload;
+    for(let n=0;n<120;n++){
+      pageDownload=await evaluate(`chrome.downloads.search({}).then(items=>items.find(d=>!${JSON.stringify(beforeIds)}.includes(d.id)))`);
+      if(pageDownload?.state==='complete')break;
+      assert(pageDownload?.state!=='interrupted',kind+' popup download interrupted: '+pageDownload?.error);
+      await pause(100);
+    }
+    assert.equal(pageDownload?.state,'complete',kind+' page-initiated download did not complete');
+    assert.equal(fs.readFileSync(pageDownload.filename,'utf8'),kind==='post'?'post-download-context-intact':'redirect-download-context-intact');
+    fs.unlinkSync(pageDownload.filename);
+  }
   result=await call({op:'save',settings:{askDownload:true}});assert(result.data.ok);
-  console.log('PASS: real download, visible speed, completion and responsive UI');
+  console.log('PASS: direct, POST popup and redirected popup downloads complete with their original context');
 
   await navigate(fixtureUrl);
   const untrusted=await evaluate(`fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"op":"get"}'}).then(r=>r.status).catch(()=>0)`);

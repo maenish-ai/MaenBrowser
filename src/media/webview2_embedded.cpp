@@ -38,7 +38,7 @@ struct Surface {
   ComPtr<ICoreWebView2> webview;
   EventRegistrationToken permission_token{};
   EventRegistrationToken new_window_token{};
-  EventRegistrationToken navigation_token{}, resource_token{}, download_token{}, completed_token{}, failed_token{};
+  EventRegistrationToken navigation_token{}, resource_token{}, completed_token{}, failed_token{};
   std::function<void(const std::wstring&)> navigate, address_changed;
   bool parent_hook = false, root_hook = false, refresh_queued = false;
   HWND root_window = nullptr;
@@ -349,22 +349,10 @@ void ConfigureWebView(const std::shared_ptr<Surface>& surface) {
             return S_OK;
           }).Get(), &surface->resource_token);
 
-  ComPtr<ICoreWebView2_4> downloads;
-  if (SUCCEEDED(surface->webview.As(&downloads))) {
-    downloads->add_DownloadStarting(
-        Callback<ICoreWebView2DownloadStartingEventHandler>(
-            [weak = std::weak_ptr<Surface>(surface)](ICoreWebView2*, ICoreWebView2DownloadStartingEventArgs* args) -> HRESULT {
-              if (args) args->put_Cancel(TRUE);
-              // Downloading remains in the original CEF tab in this first
-              // compatibility release; do not move WebView2 COM objects to CEF.
-              if (auto current = weak.lock()) {
-                if (IsWindow(current->root_window)) SetWindowTextW(current->root_window,
-                    ui::Text(L"MaenBrowser — download from the original tab",
-                             L"MaenBrowser — نزّل الملف من التبويب الأصلي"));
-              }
-              return S_OK;
-            }).Get(), &surface->download_token);
-  }
+  // Leave download handling to WebView2's default UI and download manager.
+  // Do not cancel a transfer or replay its URL through CEF: generated media
+  // and authenticated files belong to this original request/profile.
+
 }
 
 void CreateControllerForSurface(const std::shared_ptr<Surface>& surface) {
@@ -518,8 +506,6 @@ void CloseEmbeddedWebView2(int browser_id) {
     surface->webview->remove_NavigationStarting(surface->navigation_token);
     surface->webview->remove_NavigationCompleted(surface->completed_token);
     surface->webview->remove_WebResourceRequested(surface->resource_token);
-    ComPtr<ICoreWebView2_4> downloads;
-    if (SUCCEEDED(surface->webview.As(&downloads))) downloads->remove_DownloadStarting(surface->download_token);
   }
   surface->webview.Reset();
   if (surface->controller) surface->controller->Close();

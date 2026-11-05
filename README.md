@@ -1,3 +1,12 @@
+# MaenBrowser1.12.2 — download reliability
+
+Preserve original popup download requests and transfer lifetime; defer normal-page reparenting until commit; show interruption reason codes.
+
+- [Arabic upload](docs/UPLOAD_1.12.2_AR.md)
+- [Changes and required Windows validation](docs/RELEASE_1.12.2.md)
+
+## Previous release context
+
 # MaenBrowser1.12.1
 
 Compact top status strip, automatic permission-aware forecast refresh, native menu branding and separate tabs for browser pages.

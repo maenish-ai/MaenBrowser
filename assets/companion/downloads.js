@@ -29,6 +29,7 @@ async function render(){
       detail+=' · '+(p.rate===null?t('Measuring speed…'):t('{speed}/s',{speed:formatBytes(p.rate)}));
       if(p.seconds!==null)detail+=' · '+t('{seconds} seconds remaining',{seconds:Math.ceil(p.seconds)});
     }
+    if(typeof d.error==='string'&&d.error)detail+=' · '+t('Reason: {code}',{code:d.error.slice(0,80)});
     setText(row.detail,detail);row.bar.hidden=d.state!=='in_progress';
     if(p.percent===null)row.bar.removeAttribute('value');else row.bar.value=p.percent;
     const signature=[d.state,d.paused,d.canResume,d.exists,document.documentElement.lang].join('|');

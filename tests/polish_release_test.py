@@ -8,7 +8,7 @@ assert 'makensis /INPUTCHARSET UTF8 MaenBrowser.nsi' in workflow
 client=(r/'src/app/maen_client.cpp').read_text(encoding='utf-8')
 assert 'ExecuteChromeCommand(command,CEF_WOD_NEW_FOREGROUND_TAB)' in client
 assert 'if(it->root!=root)continue;' in client
-assert 'self->OpenUrlInNewTab(next_url,opener)' in client
+assert 'onCommitted?.addListener' in (r/'assets/companion/background.js').read_text(encoding='utf-8')
 assert 'client->OpenUrlInNewTab(url,opener)' in client
 assert 'protection::BlockNavigation(next)' in client
 manifest=json.loads((r/'assets/companion/manifest.json').read_text(encoding='utf-8'))

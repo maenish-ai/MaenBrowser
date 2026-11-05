@@ -1,0 +1,19 @@
+{
+  "version": "1.12.2",
+  "base": "779daef",
+  "portableChecks": "passed",
+  "preflight": "passed",
+  "regressionTests": [
+    "request preservation guards",
+    "no automatic close/hide/cancel from download callbacks",
+    "committed-document-only popup reparent, OAuth exclusion and cleanup"
+  ],
+  "newWindowsSmokeCases": [
+    "POST popup attachment requiring original body/referrer",
+    "redirected popup attachment requiring referrer",
+    "verified downloaded file contents"
+  ],
+  "windowsExecution": "not run locally; requires GitHub after upload",
+  "newAndroidBuild": "not run; maintenance version only",
+  "remoteChanges": "none"
+}

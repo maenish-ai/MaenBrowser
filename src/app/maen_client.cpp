@@ -226,12 +226,12 @@ void MaenClient::CheckAgentProtection() {
 }
 
 bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
-                               CefRefPtr<CefFrame> frame,
+                               CefRefPtr<CefFrame>,
                                int,
                                const CefString& target_url,
                                const CefString&,
                                CefLifeSpanHandler::WindowOpenDisposition,
-                               bool user_gesture,
+                               bool,
                                const CefPopupFeatures&,
                                CefWindowInfo&,
                                CefRefPtr<CefClient>& client,
@@ -242,23 +242,12 @@ bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   client = this;
   if (!browser || !browser->GetMainFrame()) return false;
 
-  // User-clicked ordinary links open a new tab in the opener window. OAuth/payment flows
-  // preserve their popup and window.opener semantics.
-  const auto destination = protection::ParseUrl(target_url.ToString());
-  const auto source = protection::ParseUrl(frame ? frame->GetURL().ToString() : browser->GetMainFrame()->GetURL().ToString());
+  // Preserve the original WebContents, request method, upload body, referrer,
+  // opener and cookie context. Cancel-and-replay as LoadURL loses POST/blob/
+  // redirect state and may cancel a download that already started. The bundled
+  // extension reparents ordinary pages only after a real document commits.
   if (protection::BlockNavigation(target_url.ToString())) return true;
-  if (!user_gesture || !source.valid || !destination.valid ||
-      (destination.scheme != "https" && destination.scheme != "http") ||
-      ShouldPreservePopup(source.host, destination.host,
-          browser->GetMainFrame()->GetURL().ToString(), target_url.ToString())) {
-    return false;
-  }
-  const std::string url = target_url.ToString();
-  CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(
-      [](CefRefPtr<MaenClient> self,CefRefPtr<CefBrowser> opener,std::string next_url) {
-        self->OpenUrlInNewTab(next_url,opener);
-      }, CefRefPtr<MaenClient>(this),browser,url)));
-  return true;
+  return false;
 }
 
 bool MaenClient::DoClose(CefRefPtr<CefBrowser>) {
@@ -383,7 +372,7 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
                                   const CefString& suggested_name,
                                   CefRefPtr<CefBeforeDownloadCallback> callback) {
   CEF_REQUIRE_UI_THREAD();
-  if (!callback || !download_item) return true;
+  if (!callback || !download_item) return false;
 
   // Download reliability rule:
   // Do NOT close the initiating browser/popup from OnBeforeDownload.
@@ -425,56 +414,16 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
                                    CefRefPtr<CefDownloadItemCallback>) {
   CEF_REQUIRE_UI_THREAD();
   if (!item) return;
-
-  const uint32_t id = item->GetId();
-  CefRefPtr<CefBrowser> popup;
-  bool hide_popup = false;
-  bool close_popup = false;
-
-  {
-    std::lock_guard<std::mutex> lock(downloads_mutex_);
-    auto& state = downloads_[id];
-    const auto full_path = Utf16(item->GetFullPath());
-    if (!full_path.empty()) state.path = full_path;
-    state.last_percent = item->GetPercentComplete();
-
-    if (state.popup_browser_id != 0) {
-      auto it = popup_browsers_.find(state.popup_browser_id);
-      if (it != popup_browsers_.end()) popup = it->second;
-
-      // Chrome/Edge-style transient download window behavior:
-      // hide only AFTER Chromium confirms transfer activity. The browser stays
-      // alive in the background, so redirect-backed downloads are not canceled.
-      if (!state.popup_hidden && item->IsInProgress() &&
-          (item->GetReceivedBytes() > 0 || item->GetPercentComplete() >= 0)) {
-        state.popup_hidden = true;
-        hide_popup = true;
-      }
-    }
-
-    if (item->IsComplete() && !state.completed_notified) {
-      state.completed_notified = true;
-      close_popup = state.popup_browser_id != 0;
-    } else if (item->IsCanceled() || item->IsInterrupted()) {
-      // Never hide an error from the user forever; close only a transient popup
-      // that was already hidden after confirmed transfer activity.
-      close_popup = state.popup_browser_id != 0 && state.popup_hidden;
-    }
-
-    if (item->IsComplete() || item->IsCanceled() || item->IsInterrupted())
-      downloads_.erase(id);
-  }
-
-  if (hide_popup && popup) {
-    HWND hwnd = popup->GetHost()->GetWindowHandle();
-    if (hwnd) ShowWindow(hwnd, SW_HIDE);
-  }
-
-  // Closing is deliberately terminal-only. Never close at download start.
-  if (close_popup && popup) popup->GetHost()->CloseBrowser(false);
-
-  // Chrome Runtime owns non-modal download UI. Do not block its UI thread
-  // with a completion MessageBox or automatically open downloaded files.
+  // The download manager owns transfer lifetime. Never hide/close a window or
+  // tab here: it can contain another transfer, or have been moved into the
+  // main window while retaining its original popup identity.
+  std::lock_guard<std::mutex> lock(downloads_mutex_);
+  const uint32_t id=item->GetId();
+  auto& state=downloads_[id];
+  const auto path=Utf16(item->GetFullPath());
+  if(!path.empty())state.path=path;
+  state.last_percent=item->GetPercentComplete();
+  if(item->IsComplete()||item->IsCanceled()||item->IsInterrupted())downloads_.erase(id);
 }
 
 }  // namespace maenbrowser

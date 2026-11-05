@@ -1,0 +1,18 @@
+import {strict as assert} from 'node:assert';
+import fs from 'node:fs';import vm from 'node:vm';
+const source=fs.readFileSync('assets/companion/background.js','utf8');
+const handlers={},moves=[],updates=[];
+const chrome={webNavigation:{onCreatedNavigationTarget:{addListener:f=>handlers.created=f},onCommitted:{addListener:f=>handlers.committed=f}},tabs:{onRemoved:{addListener:f=>handlers.removed=f},get:async id=>({id,windowId:id===1?10:20,url:'https://site.example/'}),query:async()=>[{id:2}],move:async(id,options)=>moves.push({id,...options}),update:async(id,options)=>updates.push(options)},windows:{get:async()=>({type:'popup'}),update:async()=>{}}};
+vm.runInNewContext(source.slice(source.indexOf('const sensitivePopupHosts=')),{chrome,URL,Date});
+handlers.created({sourceTabId:1,tabId:2,url:'https://cdn.example/file.zip'});
+assert.equal(moves.length,0,'attachment request must remain untouched before a document commit');
+await handlers.committed({tabId:2,frameId:1,url:'https://cdn.example/frame'});assert.equal(moves.length,0);
+await handlers.committed({tabId:2,frameId:0,url:'https://site.example/article'});
+assert.equal(moves.length,1);assert.equal(moves[0].windowId,10);
+assert.equal(JSON.stringify(updates),JSON.stringify([{active:true}]));
+await handlers.committed({tabId:2,frameId:0,url:'https://site.example/article'});assert.equal(moves.length,1,'a committed page moves once');
+handlers.created({sourceTabId:1,tabId:2,url:'https://accounts.google.com/login'});
+await handlers.committed({tabId:2,frameId:0,url:'https://accounts.google.com/login'});assert.equal(moves.length,1,'OAuth popup must remain intact');
+handlers.created({sourceTabId:1,tabId:2,url:'https://cdn.example/file.zip'});handlers.removed(2);
+await handlers.committed({tabId:2,frameId:0,url:'https://site.example/article'});assert.equal(moves.length,1);
+console.log('Download context: no move before commit, iframe exclusion, one-time page reparent, OAuth preserved, cleanup on close');
