@@ -1254,5 +1254,29 @@ export const translations = {
   "Additional ad domains use the HaGeZi Light list. Two local compatibility shims from uBlock Origin keep common advertising-library callbacks usable without delivering ads or impressions. These do not guarantee that a site cannot detect filtering.": [
     "Additional ad domains use the HaGeZi Light list. Two local compatibility shims from uBlock Origin keep common advertising-library callbacks usable without delivering ads or impressions. These do not guarantee that a site cannot detect filtering.",
     "تستخدم نطاقات الإعلانات الإضافية قائمة HaGeZi Light. يحافظ بديلان محليان من uBlock Origin على عمل استدعاءات مكتبات شائعة دون عرض إعلانات أو إرسال مرات ظهور. لا يضمن ذلك منع الموقع من اكتشاف الحجب."
+  ],
+  "Performance — modern devices": [
+    "Performance — modern devices",
+    "أداء عالٍ — الأجهزة الحديثة"
+  ],
+  "Export sessions": [
+    "Export sessions",
+    "تصدير الجلسات"
+  ],
+  "Import sessions": [
+    "Import sessions",
+    "استيراد الجلسات"
+  ],
+  "Recover previous saved set": [
+    "Recover previous saved set",
+    "استعادة مجموعة الجلسات السابقة"
+  ],
+  "Exports contain page addresses and may include private link tokens. Cookies and passwords are never exported.": [
+    "Exports contain page addresses and may include private link tokens. Cookies and passwords are never exported.",
+    "تتضمن الصادرات عناوين الصفحات وقد تتضمن رموز روابط خاصة. لا تُصدّر ملفات الارتباط أو كلمات المرور."
+  ],
+  "Release candidate: the Windows codec engine is Chromium 154. It needs a newer verified engine before claiming current Chromium security fixes.": [
+    "Release candidate: the Windows codec engine is Chromium 154. It needs a newer verified engine before claiming current Chromium security fixes.",
+    "نسخة مرشحة: محرك الترميزات في Windows هو Chromium 154. يلزم محرك أحدث موثّق قبل الادعاء باحتوائه على إصلاحات Chromium الأمنية الحالية."
   ]
 };

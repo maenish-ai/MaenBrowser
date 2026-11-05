@@ -126,8 +126,15 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
     if(request.op==='restoreSession')return restoreSession(request.id, sender.tab?.windowId ?? null);
     if(request.op==='saveSession'){
       const tabs=await chrome.tabs.query({currentWindow:true});const {sessions=[]}=await chrome.storage.local.get('sessions');
-      const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(tabs)};
-      await chrome.storage.local.set({sessions:[saved,...sessions].slice(0,20)});return {ok:true};
+      const grouped=[];
+      for(const tab of tabs){
+        let group;
+        if(Number.isInteger(tab.groupId)&&tab.groupId>=0){try{const g=await chrome.tabGroups.get(tab.groupId);group={key:tab.groupId,title:g.title,color:g.color,collapsed:g.collapsed};}catch{}}
+        grouped.push({...tab,group});
+      }
+      const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(grouped)};
+      if(!saved.tabs.length)throw new Error('No ordinary tabs to save.');
+      await chrome.storage.local.set({sessionsPrevious:sessions,sessions:[saved,...sessions].slice(0,20)});return {ok:true};
     }
     return {ok:false,error:'Unknown action',code:'E101'};
   })().then(respond).catch(e=>respond({ok:false,error:e.message,...(e instanceof NativeConnectionError?{code:e.code}:{})}));return true;

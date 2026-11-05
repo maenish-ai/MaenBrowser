@@ -11,5 +11,6 @@ int main(){
  assert(ChooseMode(12288,8,"auto")==Mode::Balanced);
  assert(ChooseMode(2048,2,"balanced")==Mode::Balanced);
  assert(ChooseMode(16384,8,"ultra")==Mode::UltraLite);
+ assert(ChooseMode(2048,2,"performance")==Mode::Performance);
  assert(ChooseMode(4096,4,"invalid")==Mode::UltraLite);
 }

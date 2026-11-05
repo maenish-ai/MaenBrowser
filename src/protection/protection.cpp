@@ -148,7 +148,7 @@ bool Import(CefRefPtr<CefDictionaryValue> d, Settings& s) {
   if (d->HasKey("resourceModePreference")) {
     if (d->GetType("resourceModePreference") != VTYPE_STRING) return false;
     const auto mode = d->GetString("resourceModePreference").ToString();
-    if (mode != "auto" && mode != "ultra" && mode != "lite" && mode != "balanced") return false;
+    if (mode != "auto" && mode != "ultra" && mode != "lite" && mode != "balanced" && mode != "performance") return false;
     s.resource_mode = mode;
   }
   return ReadRules(d, "exceptions", s.exceptions) && ReadRules(d, "allowed", s.allowed) && ReadRules(d, "blocked", s.blocked);

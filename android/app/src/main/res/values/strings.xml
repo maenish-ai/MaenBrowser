@@ -1,0 +1,16 @@
+<resources>
+  <string name="address">Website address</string>
+  <string name="tabs_count">Tabs (%1$d/%2$d)</string>
+  <string name="new_tab">New tab</string>
+  <string name="close_tab">Close this tab</string>
+  <string name="settings">Settings &amp; protection</string>
+  <string name="about">About &amp; system WebView</string>
+  <string name="tabs_lazy">Tabs — unloaded until selected</string>
+  <string name="ads_off">Disable local ad blocking</string>
+  <string name="ads_on">Enable local ad blocking</string>
+  <string name="family_off">Disable family protection</string>
+  <string name="family_on">Enable family protection</string>
+  <string name="cookies_off">Disable third-party cookies</string>
+  <string name="cookies_on">Enable third-party cookies</string>
+  <string name="clear_data">Clear browsing data (blocked in family mode)</string>
+</resources>

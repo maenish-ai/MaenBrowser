@@ -1,4 +1,8 @@
-# MaenBrowser 1.10.0
+# MaenBrowser 1.11.0 — release candidate
+
+See [the numbered Arabic requirements and status](docs/release-1.11.0/REQUIREMENTS_AR.md), [actual changes and release blockers](docs/RELEASE_1.11.0.md), and [the new native Android app](android/README.md). Windows still uses the working codec-enabled CEF154 and needs a newer verified engine before claiming current Chromium security fixes. Android artifacts are a QA APK and unsigned AAB, not Play approval.
+
+## Previous 1.10.0 baseline
 
 Builds on the user's successful CEF 154 H.264/AAC release. Adds broader media/image
 acceptance coverage, 145,368 local ad domains, two pinned ad-library compatibility
@@ -17,7 +21,7 @@ Upload extracted source contents including `.github`, `assets/filters` and
 `assets/shims`. Push main or run **Build MaenBrowser Windows Setup**. No codec
 secrets or self-hosted Chromium builder are required. The Windows workflow keeps
 sandboxing, native tests and real playback/image/shim tests; only a successful
-build produces Setup. Pushing `v1.10.0` creates a draft release after those gates.
+build produces Setup. Pushing `v1.11.0` creates a draft prerelease after Windows and Android checks; it does not publish to Play.
 
 Agent compatibility needs BOTH this browser and the separate companion patch in
 maenish-ai/YourAssistantAgent, rebuilt and installed there. No third-party agent

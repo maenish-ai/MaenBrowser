@@ -6,6 +6,7 @@ inline Mode ChooseMode(unsigned long long memory_mb, unsigned processors, std::s
   if(preference=="ultra")return Mode::UltraLite;
   if(preference=="lite")return Mode::Lite;
   if(preference=="balanced")return Mode::Balanced;
+  if(preference=="performance")return Mode::Performance;
   // Auto mode is intentionally conservative on older PCs. 4 GiB-class
   // machines and 2-thread CPUs need the strictest policy; 8 GiB-class or
   // <=4-thread systems stay in Lite. Explicit user choices above still win.

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "unbuilt-candidate-not-production",
+  "checkedUtc": "2026-11-05",
+  "cef_version": "156.0.15+gcf671c0+chromium-156.0.8078.80",
+  "branch": "8078",
+  "checkout": "cf671c072925b27823a61181152f4f288e8e4306",
+  "automate_url": "https://raw.githubusercontent.com/chromiumembedded/cef/cf671c072925b27823a61181152f4f288e8e4306/tools/automate/automate-git.py",
+  "automate_sha256": "94d3ddd1e0d35482132f45dc101a593c9371b6eb2d8ff4af6cfe2734d2e48c6a",
+  "index": "https://cef-builds.spotifycdn.com/index.json"
+}

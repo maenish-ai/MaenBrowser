@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "checkedUtc": "2026-11-05T04:58:17.398688+00:00",
+  "pinnedChromium": "154.0.8037.98",
+  "latestChromeStable": "158.0.8127.18",
+  "latestCefStable": "156.0.15+gcf671c0+chromium-156.0.8078.80",
+  "latestCefChromium": "156.0.8078.80",
+  "currentAgainstChrome": false,
+  "currentAgainstCef": false,
+  "note": "A matching version is not proof that the binary is secure. Codec and sandbox runtime tests remain mandatory."
+}

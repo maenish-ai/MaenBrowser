@@ -2,9 +2,12 @@
 param(
   [string]$ExecutablePath = "$env:LOCALAPPDATA\Programs\MaenBrowser\MaenBrowser.exe",
   [string]$ProfilePath = "$env:LOCALAPPDATA\MaenBrowser\Agent User Data",
+  [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$')][string]$SessionName = 'default',
   [ValidateRange(1024,65535)][int]$Port = 9223
 )
 $ErrorActionPreference='Stop'
+# A separate durable cookie profile per named agent session.
+if ($SessionName -ne 'default') { $ProfilePath=Join-Path $ProfilePath $SessionName }
 $ExecutablePath=[IO.Path]::GetFullPath($ExecutablePath)
 if (!(Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) { throw 'Install MaenBrowser 1.10.0 or specify its executable.' }
 $markerPath=Join-Path (Split-Path $ExecutablePath) 'maen-agent-capabilities.json'

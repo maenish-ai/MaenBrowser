@@ -5,7 +5,7 @@ s=(r/'.github/workflows/maenbrowser-ci.yml').read_text()
 assert 'tags: ["v*"]' in s
 assert 'Release tag must match VERSION' in s
 assert 'preview releases are forbidden' in s
-assert 'needs: [configuration, build-setup]' in s
+assert 'needs: [configuration, build-setup, android-build]' in s
 assert '--verify-tag --draft' in s
 assert 'browser_smoke.mjs' in s
 assert 'Get-FileHash $setup -Algorithm SHA256' in s

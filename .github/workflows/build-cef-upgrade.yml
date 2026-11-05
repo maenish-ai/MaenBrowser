@@ -1,0 +1,22 @@
+name: Build pinned newer CEF codec candidate (not public release)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 720
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build upstream codec candidate on dedicated SSD builder
+        shell: pwsh
+        run: .\tools\build-cef-media.ps1 -DownloadDir 'C:\maen-cef-8078' -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
+      - name: Verify candidate manifest and archive
+        shell: pwsh
+        run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CEF156-codec-CANDIDATE-needs-integration-tests
+          path: ${{ runner.temp }}\cef-candidate\*
+          if-no-files-found: error

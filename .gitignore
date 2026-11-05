@@ -14,3 +14,11 @@ third_party/
 
 __pycache__/
 *.pyc
+
+# Android build caches and publisher secrets
+.gradle/
+android/local.properties
+*.jks
+*.keystore
+*.aab
+*.apk

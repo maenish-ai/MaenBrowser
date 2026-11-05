@@ -1,0 +1,32 @@
+{
+  "version": "1.11.0",
+  "sourceBase": "fe8e15a",
+  "portableChecks": {
+    "result": "passed",
+    "testFiles": {
+      "mjs": 26,
+      "py": 9,
+      "cpp": 11
+    }
+  },
+  "android": {
+    "build": "passed",
+    "compileSdk": 36,
+    "targetSdk": 36,
+    "minSdk": 29,
+    "javaUnitTests": 4,
+    "unitFailures": 0,
+    "lintErrors": 0,
+    "apkSignature": "Android Debug / preview ID only",
+    "releaseBundle": "unsigned; requires publisher signing",
+    "physicalDevices": "not run",
+    "emulatorInstrumentation": "compiled; queued only by future GitHub CI, not executed here"
+  },
+  "windows": {
+    "nativeBuild": "not run in Linux; GitHub Windows CI required",
+    "codecRuntime": "existing verified CEF154 retained",
+    "currentChromiumSecurityParity": false,
+    "newerCefCandidate": "pinned source/build files only, not compiled"
+  },
+  "remoteRepositoryChanges": "none"
+}

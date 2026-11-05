@@ -12,4 +12,14 @@ export function candidate(tab, now, minutes, keepAwake=[]){
   if(!Number.isFinite(tab.lastAccessed))return false;
   return now-tab.lastAccessed>=Math.max(5,minutes)*60000;
 }
-export function restorableSession(tabs){return tabs.filter(t=>!t.incognito&&webUrl(t.url)).slice(0,200).map(t=>({url:t.url,title:String(t.title||t.url).slice(0,300),pinned:!!t.pinned}));}
+export function restorableSession(tabs){
+  if(!Array.isArray(tabs))return [];
+  return tabs.filter(t=>t&&typeof t.url==='string'&&t.url.length<=8192&&!t.incognito&&webUrl(t.url)&&!new URL(t.url).username&&!new URL(t.url).password).slice(0,200).map(t=>{
+    const entry={url:t.url,title:String(t.title||t.url).slice(0,300),pinned:!!t.pinned};
+    if(!entry.pinned&&t.group&&Number.isInteger(t.group.key)&&t.group.key>=0){
+      const colors=['grey','blue','red','yellow','green','pink','purple','cyan','orange'];
+      entry.group={key:t.group.key,title:String(t.group.title||'').slice(0,100),color:colors.includes(t.group.color)?t.group.color:'grey',collapsed:!!t.group.collapsed};
+    }
+    return entry;
+  });
+}

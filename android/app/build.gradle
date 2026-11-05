@@ -1,0 +1,46 @@
+plugins { id 'com.android.application' }
+def releaseVersion = file('../../VERSION').text.trim()
+def filterAssets = tasks.register('prepareFilterAssets', Sync) {
+    from('../../assets/filters') { include 'ads.txt', 'ads-extra.txt', 'adult.txt', 'violence.txt', 'manifest.json' }
+    from('../../assets/filters/sources') { include '*LICENSE*' }
+    from('../../THIRD_PARTY_NOTICES.md')
+    into layout.buildDirectory.dir('generated/filterAssets/filters')
+}
+android {
+    namespace 'ai.maenish.maenbrowser'
+    buildFeatures { buildConfig true }
+    compileSdk 36
+    defaultConfig {
+        // Provisional until publisher confirms the permanent Play application ID.
+        applicationId 'ai.maenish.maenbrowser'
+        testInstrumentationRunner 'ai.maenish.maenbrowser.SmokeInstrumentation'
+        minSdk 29
+        targetSdk 36
+        versionCode 11100
+        versionName releaseVersion
+    }
+    signingConfigs {
+        if (System.getenv('MAEN_ANDROID_KEYSTORE')) {
+            publisher {
+                storeFile file(System.getenv('MAEN_ANDROID_KEYSTORE'))
+                storePassword System.getenv('MAEN_ANDROID_STORE_PASSWORD')
+                keyAlias System.getenv('MAEN_ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('MAEN_ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { applicationIdSuffix '.preview'; versionNameSuffix '-preview' }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            if (System.getenv('MAEN_ANDROID_KEYSTORE')) signingConfig signingConfigs.publisher
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/filterAssets')
+    testOptions { unitTests.returnDefaultValues = true }
+}
+tasks.named('preBuild') { dependsOn filterAssets }
+dependencies { testImplementation 'junit:junit:4.13.2' }

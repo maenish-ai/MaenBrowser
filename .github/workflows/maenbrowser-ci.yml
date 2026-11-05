@@ -15,6 +15,9 @@ env:
   MAEN_CEF_ARCHIVE_SHA256: ${{ secrets.MAEN_CEF_ARCHIVE_SHA256 }}
 
 jobs:
+  android-build:
+    uses: ./.github/workflows/android.yml
+
   configuration:
     runs-on: ubuntu-latest
     outputs:
@@ -156,7 +159,7 @@ jobs:
           Copy-Item "$env:CEF_ROOT/MAEN_MEDIA_PROVENANCE.json" dist/notices
           if (Test-Path "$env:CEF_ROOT/CREDITS.html") { Copy-Item "$env:CEF_ROOT/CREDITS.html" dist/notices/CEF-CREDITS.html }
           Remove-Item "dist\filters\sources" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.10.0.js" } | Remove-Item -Force
+          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.11.0.js" } | Remove-Item -Force
 
       - name: Build NSIS installer
         shell: pwsh
@@ -193,7 +196,7 @@ jobs:
 
   draft-release:
     if: startsWith(github.ref, 'refs/tags/v') && needs.configuration.outputs.media_ready == 'true'
-    needs: [configuration, build-setup]
+    needs: [configuration, build-setup, android-build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -203,9 +206,14 @@ jobs:
         with:
           name: MaenBrowser-Windows-x64-Setup-H264
           path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: MaenBrowser-Android-preview-and-UNSIGNED-bundle
+          path: release-assets/android-preview
       - name: Create draft GitHub release after validated build
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "$GITHUB_REF_NAME" release-assets/* --verify-tag --draft --title "MaenBrowser $GITHUB_REF_NAME" --notes-file "docs/RELEASE_${GITHUB_REF_NAME#v}.md"
+          shopt -s globstar nullglob
+          gh release create "$GITHUB_REF_NAME" release-assets/*.exe release-assets/*.sha256 release-assets/android-preview/**/*.apk release-assets/android-preview/**/*.aab --verify-tag --draft --prerelease --title "MaenBrowser $GITHUB_REF_NAME" --notes-file "docs/RELEASE_${GITHUB_REF_NAME#v}.md"

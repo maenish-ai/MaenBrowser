@@ -1,3 +1,4 @@
+import {restorableSession} from './tab-policy.js';
 import {scheduleRender} from './render-scheduler.js';
 import {t as i18nText,errorText} from './i18n.js';
 import {$,host,webUrl,message} from './api.js';
@@ -21,7 +22,7 @@ function render(){
 async function sessions(){
   const {sessions=[]}=await chrome.storage.local.get('sessions');$('sessions').replaceChildren();
   for(const s of sessions){const row=document.createElement('div');row.className='tab';const name=document.createElement('span');name.textContent=i18nText('{name} · {count} tabs',{name:s.name,count:s.tabs.length});const actions=document.createElement('div');actions.className='actions';
-    actions.append(button('Restore',async()=>{await call('restoreSession',{id:s.id});}),button('Delete',async()=>{await chrome.storage.local.set({sessions:sessions.filter(x=>x.id!==s.id)});await refresh();}));row.append(name,actions);$('sessions').append(row);}
+    actions.append(button('Restore',async()=>{await call('restoreSession',{id:s.id});}),button('Delete',async()=>{await chrome.storage.local.set({sessionsPrevious:sessions,sessions:sessions.filter(x=>x.id!==s.id)});await refresh();}));row.append(name,actions);$('sessions').append(row);}
   if(!sessions.length)$('sessions').textContent='No sessions saved yet.';
 }
 $('query').oninput=render;
@@ -34,3 +35,26 @@ chrome.tabs.onUpdated.addListener((_id,change)=>{if(change.title||change.status=
 refresh().catch(e=>message($('status'),e));
 
 document.addEventListener('maen-language',schedule);
+
+$('exportSessions').onclick=async()=>{try{
+  const {sessions=[]}=await chrome.storage.local.get('sessions');
+  const data={product:'MaenBrowser',schema:1,sessions:sessions.slice(0,20).map(s=>({name:String(s.name||'Session').slice(0,100),tabs:restorableSession(s.tabs)}))};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='MaenBrowser-sessions.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
+}catch(e){message($('status'),e);}};
+$('importSessions').onclick=()=>{$('sessionFile').click();};
+$('sessionFile').onchange=async()=>{try{
+  const file=$('sessionFile').files[0];if(!file)return;
+  if(file.size>1024*1024)throw new Error('Session file is too large.');
+  const data=JSON.parse(await file.text());
+  if(data.product!=='MaenBrowser'||data.schema!==1||!Array.isArray(data.sessions)||data.sessions.length>20)throw new Error('Invalid session file.');
+  const imported=data.sessions.map(s=>({id:crypto.randomUUID(),name:String(s.name||'Imported session').slice(0,100),created:Date.now(),tabs:restorableSession(s.tabs)})).filter(s=>s.tabs.length);
+  if(!imported.length)throw new Error('No safe web addresses in the file.');
+  const {sessions=[]}=await chrome.storage.local.get('sessions');
+  await chrome.storage.local.set({sessionsPrevious:sessions,sessions:[...imported,...sessions].slice(0,20)});await refresh();
+}catch(e){message($('status'),e);}finally{$('sessionFile').value='';}};
+$('recoverSessions').onclick=async()=>{try{
+  const {sessions=[],sessionsPrevious=[]}=await chrome.storage.local.get(['sessions','sessionsPrevious']);
+  if(!sessionsPrevious.length)throw new Error('No previous saved set.');
+  await chrome.storage.local.set({sessions:sessionsPrevious,sessionsPrevious:sessions});await refresh();
+}catch(e){message($('status'),e);}};
