@@ -36,7 +36,7 @@ class MaenClient final : public CefClient,
   MaenClient() = default;
   void CheckAgentProtection();
   bool NavigateExistingTab(const std::string& url);
-  bool OpenUrlInNewTab(const std::string& url, CefRefPtr<CefBrowser> opener = nullptr);
+  bool OpenUrlInNewTab(const std::string& url, CefRefPtr<CefBrowser> opener = nullptr, bool internal = false, bool foreground = true);
   CefRefPtr<CefFocusHandler> GetFocusHandler() override { return this; }
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
   void PrepareAgentProtection();

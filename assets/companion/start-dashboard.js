@@ -1,7 +1,7 @@
 import {t,currentLanguage} from './i18n.js';
 import {coordinates,weatherUrl,forecast} from './weather-policy.js';
 const $=id=>document.getElementById(id);
-let clockTimer,controller,activePoint=null,busy=false,locationRequest=0;
+let clockTimer,weatherTimer,controller,activePoint=null,busy=false,locationRequest=0;
 const read=key=>{try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}};
 const write=(key,value)=>{try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,JSON.stringify(value));}catch{}};
 function clock(){
@@ -15,14 +15,14 @@ function clock(){
 const cities=[['Amman',31.95,35.93],['Jerusalem',31.77,35.21],['Ramallah',31.9,35.2],['Cairo',30.04,31.24],['Beirut',33.89,35.5],['Damascus',33.51,36.29],['Baghdad',33.32,44.37],['Riyadh',24.71,46.68],['Dubai',25.2,55.27],['Doha',25.29,51.53],['Kuwait City',29.38,47.98],['Muscat',23.59,58.41],['Manama',26.22,50.59],['Sanaa',15.37,44.19],['Rabat',34.02,-6.84],['Algiers',36.75,3.06],['Tunis',36.81,10.18],['Tripoli',32.89,13.19],['Khartoum',15.5,32.56],['Istanbul',41.01,28.98],['London',51.51,-0.13],['Paris',48.86,2.35],['Berlin',52.52,13.41],['Oslo',59.91,10.75],['New York',40.71,-74.01],['Los Angeles',34.05,-118.24],['Toronto',43.65,-79.38],['Sao Paulo',-23.55,-46.63],['Cape Town',-33.93,18.42],['Nairobi',-1.29,36.82],['Delhi',28.61,77.21],['Beijing',39.9,116.41],['Tokyo',35.68,139.69],['Singapore',1.35,103.82],['Sydney',-33.87,151.21]];
 function cityOptions(){const value=$('weatherCity').value;$('weatherCity').replaceChildren();for(const [name]of cities){const o=document.createElement('option');o.value=name;o.textContent=t(name);$('weatherCity').append(o);}$('weatherCity').value=cities.some(c=>c[0]===value)?value:cities[0][0];}
 function show(value){$('weatherValue').textContent=t('{temperature} °C · {condition} · wind {wind} km/h',{...value,condition:t(value.condition)});$('weatherStatus').textContent=t('Forecast time: {time}',{time:new Date(value.time).toLocaleString(currentLanguage()==='ar'?'ar':navigator.language)});$('weatherAttribution').hidden=false;}
-function off(){locationRequest++;controller?.abort();activePoint=null;write('maen.weather.enabled',null);write('maen.weather.cache',null);$('weatherPlace').hidden=true;$('weatherDisable').hidden=true;$('weatherAttribution').hidden=true;$('weatherValue').textContent=t('Choose a city to see the forecast');$('weatherStatus').textContent=t('Optional: enabling weather shares the selected city coordinates and your IP address with MET Norway.');}
+function off(){clearTimeout(weatherTimer);write('maen.weather.disabled',true);locationRequest++;controller?.abort();activePoint=null;write('maen.weather.enabled',null);write('maen.weather.cache',null);$('weatherPlace').hidden=true;$('weatherDisable').hidden=true;$('weatherAttribution').hidden=true;$('weatherValue').textContent=t('Choose a city to see the forecast');$('weatherStatus').textContent=t('Automatic weather shares approximate coordinates and your IP with MET Norway. You can turn it off in Weather settings.');}
 async function load(point,remember=true){
- if(busy)return;busy=true;activePoint=point;$('weatherPlace').textContent=t(point.name||'Your approximate location');$('weatherPlace').hidden=false;controller=new AbortController();$('weatherEnable').disabled=true;$('weatherLocate').disabled=true;$('weatherDisable').hidden=false;
+ if(busy)return;clearTimeout(weatherTimer);write('maen.weather.disabled',null);busy=true;activePoint=point;$('weatherPlace').textContent=t(point.name||'Your approximate location');$('weatherPlace').hidden=false;controller=new AbortController();$('weatherEnable').disabled=true;$('weatherLocate').disabled=true;$('weatherDisable').hidden=false;
  let timeout;
  if(remember)write('maen.weather.enabled',point);
  try{
   const url=weatherUrl(point),cached=read('maen.weather.cache');
-  if(cached?.url===url&&Number.isFinite(cached.expires)&&cached.expires>Date.now()&&cached.expires<Date.now()+2*3600000){show(forecast(cached.data));return;}
+  if(cached?.url===url&&Number.isFinite(cached.expires)&&cached.expires>Date.now()&&cached.expires<Date.now()+3600000){show(forecast(cached.data));return;}
   $('weatherStatus').textContent=t('Loading weather…');
   timeout=setTimeout(()=>controller.abort(),10000);
   const response=await fetch(url,{credentials:'omit',redirect:'error',signal:controller.signal});
@@ -30,23 +30,35 @@ async function load(point,remember=true){
   const text=await response.text();if(text.length>500000)throw new Error('Weather response too large');
   const data=JSON.parse(text);const value=forecast(data);
   if(!activePoint)return;
-  write('maen.weather.cache',{url,data,expires:Date.now()+3600000});show(value);
+  const advertised=Date.parse(response.headers.get('Expires')||'');
+  const lifetime=Number.isFinite(advertised)?Math.max(15*60000,Math.min(3600000,advertised-Date.now())):15*60000;
+  write('maen.weather.cache',{url,data,expires:Date.now()+lifetime});show(value);
  }catch{if(activePoint){$('weatherValue').textContent=t('Weather unavailable');$('weatherStatus').textContent=t('Try again later or choose another city. Date, time and search still work.');}}
- finally{clearTimeout(timeout);busy=false;$('weatherEnable').disabled=false;$('weatherLocate').disabled=false;}
+ finally{clearTimeout(timeout);busy=false;$('weatherEnable').disabled=false;$('weatherLocate').disabled=false;if(activePoint&&!document.hidden)weatherTimer=setTimeout(()=>load(activePoint,false),15*60000);}
 }
-$('weatherEnable').onclick=()=>{const [name,lat,lon]=cities.find(c=>c[0]===$('weatherCity').value)||cities[0];load({...coordinates(lat,lon),name});};
+$('weatherEnable').onclick=()=>{const [name,lat,lon]=cities.find(c=>c[0]===$('weatherCity').value)||cities[0];load({...coordinates(lat,lon),name,manual:true});};
 $('weatherDisable').onclick=off;
-$('weatherLocate').onclick=()=>{
+function locate(fallback=null){
  const request=++locationRequest;
- if(!navigator.geolocation){$('weatherStatus').textContent=t('Location unavailable. Choose a city instead.');return;}
+ if(!navigator.geolocation){if(fallback)load(fallback);else $('weatherStatus').textContent=t('Location unavailable. Choose a city instead.');return;}
  $('weatherStatus').textContent=t('Waiting for location permission…');
- navigator.geolocation.getCurrentPosition(p=>{if(request===locationRequest)load({...coordinates(p.coords.latitude,p.coords.longitude),name:'Your approximate location'});},()=>{if(request===locationRequest)$('weatherStatus').textContent=t('Location unavailable. Choose a city instead.');},{enableHighAccuracy:false,maximumAge:3600000,timeout:10000});
-};
-document.addEventListener('visibilitychange',clock);
+ navigator.geolocation.getCurrentPosition(p=>{if(request===locationRequest){const point=coordinates(p.coords.latitude,p.coords.longitude);const nearby=cities.map(c=>({city:c,d:Math.hypot(point.lat-c[1],(point.lon-c[2])*Math.cos(point.lat*Math.PI/180))})).sort((a,b)=>a.d-b.d)[0];load({...point,name:nearby?.d<0.15?nearby.city[0]:'Your approximate location'});}},()=>{if(request===locationRequest){if(fallback)load(fallback);else $('weatherStatus').textContent=t('Location unavailable. Choose a city instead.');}},{enableHighAccuracy:false,maximumAge:15*60000,timeout:10000});
+}
+$('weatherLocate').onclick=()=>locate();
+document.addEventListener('visibilitychange',()=>{clock();clearTimeout(weatherTimer);if(!document.hidden&&activePoint)load(activePoint,false);});
 document.addEventListener('maen-language',()=>{clock();cityOptions();if(activePoint)$('weatherPlace').textContent=t(activePoint.name||'Your approximate location');const c=read('maen.weather.cache');if(activePoint&&c)try{show(forecast(c.data));}catch{}});
 window.addEventListener('storage',event=>{if(event.key==='maen.weather.enabled'&&!event.newValue)off();});
-window.addEventListener('pagehide',()=>{clearTimeout(clockTimer);controller?.abort();});
+window.addEventListener('pagehide',()=>{clearTimeout(clockTimer);clearTimeout(weatherTimer);controller?.abort();});
 cityOptions();clock();
-const enabled=read('maen.weather.enabled');if(enabled&&Number.isFinite(enabled.lat)&&Number.isFinite(enabled.lon)){
- try{coordinates(enabled.lat,enabled.lon);if(cities.some(c=>c[0]===enabled.name))$('weatherCity').value=enabled.name;load(enabled,false);}catch{off();}
+const enabled=read('maen.weather.enabled');
+const byZone={'Asia/Amman':'Amman','Asia/Jerusalem':'Jerusalem','Asia/Dubai':'Dubai','Asia/Riyadh':'Riyadh','Asia/Beirut':'Beirut','Asia/Damascus':'Damascus','Asia/Baghdad':'Baghdad','Asia/Qatar':'Doha','Africa/Cairo':'Cairo','Europe/London':'London','Europe/Paris':'Paris','Europe/Berlin':'Berlin','Europe/Oslo':'Oslo','America/New_York':'New York','America/Los_Angeles':'Los Angeles','Asia/Tokyo':'Tokyo','Australia/Sydney':'Sydney'};
+const city=cities.find(c=>c[0]===byZone[Intl.DateTimeFormat().resolvedOptions().timeZone]);
+const fallback=city?{...coordinates(city[1],city[2]),name:city[0]}:null;
+if(!read('maen.weather.disabled')) {
+ if(enabled?.manual===true&&Number.isFinite(enabled.lat)&&Number.isFinite(enabled.lon)){
+  try{coordinates(enabled.lat,enabled.lon);if(cities.some(c=>c[0]===enabled.name))$('weatherCity').value=enabled.name;load(enabled,false);}catch{locate(fallback);}
+ }else{
+  $('weatherValue').textContent=t('Automatic local weather');
+  locate(fallback);
+ }
 }

@@ -1,3 +1,12 @@
+# MaenBrowser1.12.1
+
+Compact top status strip, automatic permission-aware forecast refresh, native menu branding and separate tabs for browser pages.
+
+- [Arabic upload](docs/UPLOAD_1.12.1_AR.md)
+- [Change details and validation limits](docs/RELEASE_1.12.1.md)
+
+## Previous release context
+
 # MaenBrowser 1.12.0
 
 Readable desktop dashboard, local date/time, opt-in licensed MET Norway forecasts, UTF8 installer fixes, same-window new-tab links and updated CI actions.

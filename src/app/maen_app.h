@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "include/cef_app.h"
+#include "include/cef_resource_bundle_handler.h"
 #include "include/cef_browser_process_handler.h"
 
 #include "src/app/maen_client.h"
@@ -11,9 +12,14 @@
 namespace maenbrowser {
 
 class MaenApp final : public CefApp,
-                      public CefBrowserProcessHandler {
+                      public CefBrowserProcessHandler,
+                      public CefResourceBundleHandler {
  public:
   MaenApp();
+  CefRefPtr<CefResourceBundleHandler> GetResourceBundleHandler() override { return this; }
+  bool GetLocalizedString(int string_id,CefString& value) override;
+  bool GetDataResource(int,void*&,size_t&) override { return false; }
+  bool GetDataResourceForScale(int,ScaleFactor,void*&,size_t&) override { return false; }
 
   CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override {
     return this;

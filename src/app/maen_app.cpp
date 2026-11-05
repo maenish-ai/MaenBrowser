@@ -1,6 +1,7 @@
 #include "src/app/maen_app.h"
 
 #include "include/cef_browser.h"
+#include "include/cef_id_mappers.h"
 #include "include/cef_command_line.h"
 #include "include/cef_request_context.h"
 #include "include/cef_preference.h"
@@ -22,6 +23,28 @@
 namespace maenbrowser {
 
 MaenApp::MaenApp() : client_(new MaenClient()) {}
+
+bool MaenApp::GetLocalizedString(int id,CefString& value) {
+  // Version-safe CEF resource overrides, never binary/PAK edits. Leave engine,
+  // copyright, licensing and security diagnostics truthful.
+  struct Label { int id; const wchar_t* en; const wchar_t* ar; };
+  static const Label labels[]={
+    {cef_id_for_pack_string_name("IDS_PRODUCT_NAME"),L"MaenBrowser",L"MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_SHORT_PRODUCT_NAME"),L"MaenBrowser",L"MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_APP_MENU_YOUR_CHROME_HEADER"),L"Your MaenBrowser",L"متصفح MaenBrowser الخاص بك"},
+    {cef_id_for_pack_string_name("IDS_ABOUT"),L"About MaenBrowser",L"حول MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_SETTINGS_ABOUT_PROGRAM"),L"About MaenBrowser",L"حول MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_CUSTOMIZE_CHROME"),L"Customize MaenBrowser",L"تخصيص MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_NTP_CUSTOMIZE_BUTTON_LABEL"),L"Customize MaenBrowser",L"تخصيص MaenBrowser"},
+    {cef_id_for_pack_string_name("IDS_NTP_CUSTOMIZE_TOOLBAR_CATEGORY_YOUR_CHROME"),L"Your MaenBrowser",L"متصفح MaenBrowser الخاص بك"},
+    {cef_id_for_pack_string_name("IDS_SETTINGS_CUSTOMIZE_YOUR_CHROME_PROFILE"),L"Customize your MaenBrowser profile",L"تخصيص ملف MaenBrowser الشخصي"},
+    {cef_id_for_pack_string_name("IDS_SIDE_PANEL_CUSTOMIZE_CHROME_TITLE"),L"Customize MaenBrowser",L"تخصيص MaenBrowser"}
+  };
+  for(const auto& label:labels) {
+    if(label.id>0&&id==label.id){value=ui::Arabic()?label.ar:label.en;return true;}
+  }
+  return false;
+}
 
 CefRefPtr<CefClient> MaenApp::GetDefaultClient() {
   // Required by Chrome-style UI for additional tabs/windows.

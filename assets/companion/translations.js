@@ -1542,5 +1542,17 @@ export const translations = {
   "Forecast": [
     "Forecast",
     "توقعات الطقس"
+  ],
+  "Weather settings": [
+    "Weather settings",
+    "إعدادات الطقس"
+  ],
+  "Automatic local weather": [
+    "Automatic local weather",
+    "الطقس المحلي تلقائيًا"
+  ],
+  "Automatic weather shares approximate coordinates and your IP with MET Norway. You can turn it off in Weather settings.": [
+    "Automatic weather shares approximate coordinates and your IP with MET Norway. You can turn it off in Weather settings.",
+    "يرسل الطقس التلقائي إحداثيات تقريبية وعنوان الإنترنت إلى MET Norway. يمكنك إيقافه من إعدادات الطقس."
   ]
 };

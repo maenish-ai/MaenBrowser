@@ -1,0 +1,15 @@
+{
+  "version": "1.12.1",
+  "base": "9757b3fea81b6620dbae05665efd3140ee0415e4",
+  "portableChecks": "passed including compiled internal-navigation allowlist cases",
+  "preflight": "passed",
+  "realChromiumPageTests": "passed EN/AR desktop and AR mobile; automatic mocked geolocation/forecast,18px clock, no widget borders, hidden controls, persistent off choice",
+  "weatherDataInScreenshots": "synthetic test values, not live conditions",
+  "nativeBranding": "implemented via CEF resource bundle overrides; verify on Windows",
+  "menuTabs": "implemented with background disposition; verify Chrome Runtime selection on Windows",
+  "githubPriorRun": "42016872104: all Windows and Android jobs succeeded",
+  "githubWarningCause": "upload-artifact v5 declares Node20; migrated to v7; download v8; both metadata inspected for Node24",
+  "nativeWindowsBuild": "not run in this Linux environment",
+  "newAndroidBuild": "not run for this maintenance change",
+  "remoteChanges": "none"
+}

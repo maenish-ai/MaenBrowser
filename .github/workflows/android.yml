@@ -25,14 +25,14 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:assembleDebug :app:bundleRelease :app:assembleDebugAndroidTest --no-daemon
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: MaenBrowser-Android-validation
           path: |
             android/app/build/reports/
             android/app/build/test-results/
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: MaenBrowser-Android-preview-and-UNSIGNED-bundle
           path: |
@@ -70,7 +70,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: cd android && chmod +x gradlew && ./gradlew :app:connectedDebugAndroidTest --no-daemon
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Android-device-tests-API-${{ matrix.api }}

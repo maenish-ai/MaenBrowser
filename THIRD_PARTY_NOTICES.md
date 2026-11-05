@@ -40,7 +40,8 @@ Forecast data: MET Norway, https://www.met.no/ and https://api.met.no/ .
 Data licensed under Creative Commons Attribution 4.0:
 https://creativecommons.org/licenses/by/4.0/ . Values are rounded/reformatted
 for display; no endorsement is implied. Service terms:
-https://api.met.no/doc/TermsOfService . Weather is off by default. Selecting a
-city or consenting to approximate geolocation sends coordinates and the public
-IP to the provider; an hour-long local cache reduces traffic. No API key is
+https://api.met.no/doc/TermsOfService . Desktop weather starts automatically in1.12.1 unless disabled. Browser location
+permission is respected; a saved or timezone city can be used as a fallback.
+Approximate coordinates and the public IP reach the provider; a15–60minute
+local cache and visible-page-only refresh reduce traffic. No API key is
 bundled. The service is not guaranteed to be continuously available.

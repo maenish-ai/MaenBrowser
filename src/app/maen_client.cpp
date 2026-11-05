@@ -75,15 +75,19 @@ bool MaenClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent&
 
 bool MaenClient::OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id, cef_window_open_disposition_t) {
   CEF_REQUIRE_UI_THREAD();
-  const int options_id = cef_id_for_command_id_name("IDC_OPTIONS");
-  if (options_id > 0 && command_id == options_id && browser && browser->GetMainFrame()) {
-    browser->GetMainFrame()->LoadURL(protection::ControlsUrl("options.html"));
-    return true;
-  }
-  const int about_id = cef_id_for_command_id_name("IDC_ABOUT");
-  if (about_id > 0 && command_id == about_id && browser && browser->GetMainFrame()) {
-    browser->GetMainFrame()->LoadURL(protection::ControlsUrl("about.html"));
-    return true;
+  struct Page { const char* command; const char* url; const char* controls; };
+  const Page pages[]={
+    {"IDC_OPTIONS",nullptr,"options.html"},{"IDC_ABOUT",nullptr,"about.html"},
+    {"IDC_SHOW_HISTORY","chrome://history/",nullptr},
+    {"IDC_SHOW_DOWNLOADS","chrome://downloads/",nullptr},
+    {"IDC_SHOW_BOOKMARK_MANAGER","chrome://bookmarks/",nullptr}
+  };
+  for(const auto& page:pages) {
+    const int mapped=cef_id_for_command_id_name(page.command);
+    if(mapped>0&&command_id==mapped&&browser) {
+      OpenUrlInNewTab(page.controls?protection::ControlsUrl(page.controls):page.url,browser,true,false);
+      return true;
+    }
   }
   if (!protection::FamilyEnabled()) return false;
   for (const char* name : {"IDC_NEW_INCOGNITO_WINDOW", "IDC_DEV_TOOLS", "IDC_DEV_TOOLS_CONSOLE", "IDC_DEV_TOOLS_INSPECT", "IDC_MANAGE_EXTENSIONS"}) {
@@ -172,10 +176,11 @@ bool MaenClient::NavigateExistingTab(const std::string& url) {
   return true;
 }
 
-bool MaenClient::OpenUrlInNewTab(const std::string& url,CefRefPtr<CefBrowser> opener) {
+bool MaenClient::OpenUrlInNewTab(const std::string& url,CefRefPtr<CefBrowser> opener,bool internal,bool foreground) {
   CEF_REQUIRE_UI_THREAD();
   const auto parsed=protection::ParseUrl(url);
-  if(!parsed.valid||(parsed.scheme!="https"&&parsed.scheme!="http"))return false;
+  const bool permitted_internal=internal && IsTrustedInternalTab(url);
+  if(!permitted_internal&&(!parsed.valid||(parsed.scheme!="https"&&parsed.scheme!="http")))return false;
   if(protection::BlockNavigation(url))return true;
   if(!opener) {
     const auto found=browser_instances_.find(last_active_browser_);
@@ -190,8 +195,9 @@ bool MaenClient::OpenUrlInNewTab(const std::string& url,CefRefPtr<CefBrowser> op
   const HWND root=GetAncestor(opener->GetHost()->GetWindowHandle(),GA_ROOT);
   if(!root)return false;
   pending_tabs_.push_back({root,url,GetTickCount64()+20000});
-  opener->GetHost()->ExecuteChromeCommand(command,CEF_WOD_NEW_FOREGROUND_TAB);
-  ShowWindow(root,SW_RESTORE);SetForegroundWindow(root);
+  if(foreground)opener->GetHost()->ExecuteChromeCommand(command,CEF_WOD_NEW_FOREGROUND_TAB);
+  else opener->GetHost()->ExecuteChromeCommand(command,CEF_WOD_NEW_BACKGROUND_TAB);
+  if(foreground){ShowWindow(root,SW_RESTORE);SetForegroundWindow(root);}
   return true;
 }
 
