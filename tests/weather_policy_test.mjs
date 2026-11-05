@@ -1,0 +1,11 @@
+import {strict as assert} from 'node:assert';
+import {coordinates,weatherUrl,forecast} from '../assets/companion/weather-policy.js';
+assert.deepEqual(coordinates(31.95123,35.9321),{lat:31.95,lon:35.93});
+for(const [a,b]of [[91,0],[0,181],[NaN,0],[0,Infinity]])assert.throws(()=>coordinates(a,b));
+assert.equal(weatherUrl({lat:31.95,lon:35.93}),'https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=31.95&lon=35.93');
+const now=Date.now(),data={properties:{timeseries:[{time:new Date(now).toISOString(),data:{instant:{details:{air_temperature:19.7,wind_speed:3.2}}}}]}};
+assert.deepEqual(forecast(data,now),{temperature:20,wind:12,time:data.properties.timeseries[0].time,condition:'Forecast'});
+data.properties.timeseries[0].data.next_1_hours={summary:{symbol_code:'rainshowers_day'}};assert.equal(forecast(data,now).condition,'Rain');
+assert.throws(()=>forecast(data,now+24*3600000));assert.throws(()=>forecast({properties:{timeseries:[]}}));
+data.properties.timeseries[0].data.instant.details.air_temperature=NaN;assert.throws(()=>forecast(data,now));
+console.log('Weather: bounded rounded coordinates, fixed HTTPS provider, timestamp freshness and malformed data passed');

@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1]
 count=0
 for path in (root/'.github/workflows').glob('*.yml'):
     source=path.read_text(encoding='utf-8')
-    for match in re.finditer(r'(?m)^      - uses: android-actions/setup-android@v3\s*$',source):
+    for match in re.finditer(r'(?m)^      - uses: android-actions/setup-android@v4\s*$',source):
         following=source[match.end():]
         step=re.split(r'(?m)^      - ',following,maxsplit=1)[0]
         packages=re.search(r"(?m)^          packages: ['\"]([^'\"]+)['\"]$",step)

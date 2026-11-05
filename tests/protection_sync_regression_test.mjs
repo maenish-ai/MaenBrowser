@@ -11,5 +11,7 @@ for(const source of [worker,api,popup])assert(source.includes("listError?'!'"));
 assert(client.includes('if (!user_gesture || !source.valid || !destination.valid'));
 assert(client.includes('ShouldPreservePopup(source.host, destination.host,'));
 assert(client.includes('if (protection::BlockNavigation(target_url.ToString())) return true;'));
-assert(client.includes('opener->GetMainFrame()->LoadURL(next_url)'));
+assert(client.includes('self->OpenUrlInNewTab(next_url,opener)'));
+assert(client.includes('ExecuteChromeCommand(command,CEF_WOD_NEW_FOREGROUND_TAB)'));
+assert(client.includes('protection::BlockNavigation(next)'));
 console.log('Protection state synchronization and same-origin popup guards present');

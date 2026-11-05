@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <deque>
 #include <map>
 #include <set>
 #include <mutex>
@@ -35,6 +36,7 @@ class MaenClient final : public CefClient,
   MaenClient() = default;
   void CheckAgentProtection();
   bool NavigateExistingTab(const std::string& url);
+  bool OpenUrlInNewTab(const std::string& url, CefRefPtr<CefBrowser> opener = nullptr);
   CefRefPtr<CefFocusHandler> GetFocusHandler() override { return this; }
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
   void PrepareAgentProtection();
@@ -113,6 +115,8 @@ class MaenClient final : public CefClient,
   std::atomic<int> browser_count_{0};
   std::mutex downloads_mutex_;
   std::map<uint32_t, DownloadState> downloads_;
+  struct PendingTab { HWND root; std::string url; ULONGLONG deadline; };
+  std::deque<PendingTab> pending_tabs_;
   std::set<int> popup_browser_ids_;
   std::map<int, CefRefPtr<CefBrowser>> popup_browsers_;
 

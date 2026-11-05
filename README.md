@@ -1,3 +1,12 @@
+# MaenBrowser 1.12.0
+
+Readable desktop dashboard, local date/time, opt-in licensed MET Norway forecasts, UTF8 installer fixes, same-window new-tab links and updated CI actions.
+
+- [Arabic upload instructions](docs/UPLOAD_1.12.0_AR.md)
+- [Changes, validation and limits](docs/RELEASE_1.12.0.md)
+
+## Earlier release context
+
 # MaenBrowser 1.11.0 — release candidate
 
 See [the numbered Arabic requirements and status](docs/release-1.11.0/REQUIREMENTS_AR.md), [actual changes and release blockers](docs/RELEASE_1.11.0.md), and [the new native Android app](android/README.md). Windows still uses the working codec-enabled CEF154 and needs a newer verified engine before claiming current Chromium security fixes. Android artifacts are a QA APK and unsigned AAB, not Play approval.

@@ -16,6 +16,6 @@ print('Media release gates: version, codecs, tested build, draft and checksum ch
 
 assert 'stock-CEF-preview' not in s
 assert 'media_ready=false' not in s
-assert 'setup-python@v5' in s
+assert 'setup-python@v6' in s
 assert 'media-runtime.py' in s
 assert '--verify "${CEF_ROOT}"' in cmake

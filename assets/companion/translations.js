@@ -1278,5 +1278,269 @@ export const translations = {
   "Release candidate: the Windows codec engine is Chromium 154. It needs a newer verified engine before claiming current Chromium security fixes.": [
     "Release candidate: the Windows codec engine is Chromium 154. It needs a newer verified engine before claiming current Chromium security fixes.",
     "نسخة مرشحة: محرك الترميزات في Windows هو Chromium 154. يلزم محرك أحدث موثّق قبل الادعاء باحتوائه على إصلاحات Chromium الأمنية الحالية."
+  ],
+  "Local date and time": [
+    "Local date and time",
+    "التاريخ والوقت المحليان"
+  ],
+  "Weather": [
+    "Weather",
+    "الطقس"
+  ],
+  "Choose a city to see the forecast": [
+    "Choose a city to see the forecast",
+    "اختر مدينة لعرض توقعات الطقس"
+  ],
+  "Weather city": [
+    "Weather city",
+    "مدينة الطقس"
+  ],
+  "Show weather": [
+    "Show weather",
+    "عرض الطقس"
+  ],
+  "Use my location": [
+    "Use my location",
+    "استخدام موقعي"
+  ],
+  "Turn weather off": [
+    "Turn weather off",
+    "إيقاف الطقس"
+  ],
+  "Optional: enabling weather shares the selected city coordinates and your IP address with MET Norway.": [
+    "Optional: enabling weather shares the selected city coordinates and your IP address with MET Norway.",
+    "اختياري: تفعيل الطقس يشارك إحداثيات المدينة المختارة وعنوان الإنترنت مع هيئة الأرصاد النرويجية MET Norway."
+  ],
+  "Forecast:": [
+    "Forecast:",
+    "التوقعات:"
+  ],
+  "MET Norway": [
+    "MET Norway",
+    "MET Norway"
+  ],
+  "CC BY 4.0": [
+    "CC BY 4.0",
+    "CC BY 4.0"
+  ],
+  "·": [
+    "·",
+    "·"
+  ],
+  "Values formatted for display": [
+    "Values formatted for display",
+    "القيم منسقة للعرض"
+  ],
+  "{temperature} °C · wind {wind} km/h": [
+    "{temperature} °C · wind {wind} km/h",
+    "{temperature} °م · الرياح {wind} كم/س"
+  ],
+  "Forecast time: {time}": [
+    "Forecast time: {time}",
+    "وقت التوقعات: {time}"
+  ],
+  "Loading weather…": [
+    "Loading weather…",
+    "جارٍ تحميل الطقس…"
+  ],
+  "Weather unavailable": [
+    "Weather unavailable",
+    "الطقس غير متاح"
+  ],
+  "Try again later or choose another city. Date, time and search still work.": [
+    "Try again later or choose another city. Date, time and search still work.",
+    "حاول لاحقًا أو اختر مدينة أخرى. التاريخ والساعة والبحث تعمل دون الطقس."
+  ],
+  "Location unavailable. Choose a city instead.": [
+    "Location unavailable. Choose a city instead.",
+    "الموقع غير متاح. اختر مدينة بدلًا من ذلك."
+  ],
+  "Waiting for location permission…": [
+    "Waiting for location permission…",
+    "بانتظار إذن الموقع…"
+  ],
+  "Your approximate location": [
+    "Your approximate location",
+    "موقعك التقريبي"
+  ],
+  "Amman": [
+    "Amman",
+    "عمّان"
+  ],
+  "Jerusalem": [
+    "Jerusalem",
+    "القدس"
+  ],
+  "Ramallah": [
+    "Ramallah",
+    "رام الله"
+  ],
+  "Cairo": [
+    "Cairo",
+    "القاهرة"
+  ],
+  "Beirut": [
+    "Beirut",
+    "بيروت"
+  ],
+  "Damascus": [
+    "Damascus",
+    "دمشق"
+  ],
+  "Baghdad": [
+    "Baghdad",
+    "بغداد"
+  ],
+  "Riyadh": [
+    "Riyadh",
+    "الرياض"
+  ],
+  "Dubai": [
+    "Dubai",
+    "دبي"
+  ],
+  "Doha": [
+    "Doha",
+    "الدوحة"
+  ],
+  "Kuwait City": [
+    "Kuwait City",
+    "مدينة الكويت"
+  ],
+  "Muscat": [
+    "Muscat",
+    "مسقط"
+  ],
+  "Manama": [
+    "Manama",
+    "المنامة"
+  ],
+  "Sanaa": [
+    "Sanaa",
+    "صنعاء"
+  ],
+  "Rabat": [
+    "Rabat",
+    "الرباط"
+  ],
+  "Algiers": [
+    "Algiers",
+    "الجزائر"
+  ],
+  "Tunis": [
+    "Tunis",
+    "تونس"
+  ],
+  "Tripoli": [
+    "Tripoli",
+    "طرابلس"
+  ],
+  "Khartoum": [
+    "Khartoum",
+    "الخرطوم"
+  ],
+  "Istanbul": [
+    "Istanbul",
+    "إسطنبول"
+  ],
+  "London": [
+    "London",
+    "لندن"
+  ],
+  "Paris": [
+    "Paris",
+    "باريس"
+  ],
+  "Berlin": [
+    "Berlin",
+    "برلين"
+  ],
+  "Oslo": [
+    "Oslo",
+    "أوسلو"
+  ],
+  "New York": [
+    "New York",
+    "نيويورك"
+  ],
+  "Los Angeles": [
+    "Los Angeles",
+    "لوس أنجلوس"
+  ],
+  "Toronto": [
+    "Toronto",
+    "تورونتو"
+  ],
+  "Sao Paulo": [
+    "Sao Paulo",
+    "ساو باولو"
+  ],
+  "Cape Town": [
+    "Cape Town",
+    "كيب تاون"
+  ],
+  "Nairobi": [
+    "Nairobi",
+    "نيروبي"
+  ],
+  "Delhi": [
+    "Delhi",
+    "دلهي"
+  ],
+  "Beijing": [
+    "Beijing",
+    "بكين"
+  ],
+  "Tokyo": [
+    "Tokyo",
+    "طوكيو"
+  ],
+  "Singapore": [
+    "Singapore",
+    "سنغافورة"
+  ],
+  "Sydney": [
+    "Sydney",
+    "سيدني"
+  ],
+  "{temperature} °C · {condition} · wind {wind} km/h": [
+    "{temperature} °C · {condition} · wind {wind} km/h",
+    "{temperature} °م · {condition} · الرياح {wind} كم/س"
+  ],
+  "Thunderstorms": [
+    "Thunderstorms",
+    "عواصف رعدية"
+  ],
+  "Sleet": [
+    "Sleet",
+    "مطر وثلج"
+  ],
+  "Snow": [
+    "Snow",
+    "ثلج"
+  ],
+  "Rain": [
+    "Rain",
+    "أمطار"
+  ],
+  "Fog": [
+    "Fog",
+    "ضباب"
+  ],
+  "Partly cloudy": [
+    "Partly cloudy",
+    "غائم جزئيًا"
+  ],
+  "Cloudy": [
+    "Cloudy",
+    "غائم"
+  ],
+  "Clear sky": [
+    "Clear sky",
+    "سماء صافية"
+  ],
+  "Forecast": [
+    "Forecast",
+    "توقعات الطقس"
   ]
 };

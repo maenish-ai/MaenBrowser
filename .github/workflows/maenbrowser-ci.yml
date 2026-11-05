@@ -57,11 +57,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload validation logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MaenBrowser-validation-logs
           path: |
@@ -159,13 +159,13 @@ jobs:
           Copy-Item "$env:CEF_ROOT/MAEN_MEDIA_PROVENANCE.json" dist/notices
           if (Test-Path "$env:CEF_ROOT/CREDITS.html") { Copy-Item "$env:CEF_ROOT/CREDITS.html" dist/notices/CEF-CREDITS.html }
           Remove-Item "dist\filters\sources" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.11.0.js" } | Remove-Item -Force
+          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.12.0.js" } | Remove-Item -Force
 
       - name: Build NSIS installer
         shell: pwsh
         run: |
           Push-Location installer
-          try { makensis MaenBrowser.nsi; if ($LASTEXITCODE -ne 0) { throw "NSIS failed" } } finally { Pop-Location }
+          try { makensis /INPUTCHARSET UTF8 MaenBrowser.nsi; if ($LASTEXITCODE -ne 0) { throw "NSIS failed" } } finally { Pop-Location }
           $setup="installer\MaenBrowser-$env:MAEN_VERSION-Setup.exe"
           if (!(Test-Path $setup)) { throw "Installer was not created: $setup" }
 
@@ -184,7 +184,7 @@ jobs:
           "$hash  MaenBrowser-$env:MAEN_VERSION-Setup.exe" | Set-Content "$setup.sha256" -Encoding ASCII
 
       - name: Upload Setup only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MaenBrowser-Windows-x64-Setup-H264
           path: |
@@ -202,11 +202,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: MaenBrowser-Windows-x64-Setup-H264
           path: release-assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: MaenBrowser-Android-preview-and-UNSIGNED-bundle
           path: release-assets/android-preview

@@ -10,29 +10,29 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           # The action defaults to retired "tools platform-tools". Request only
           # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
           packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
-      - uses: gradle/actions/wrapper-validation@v4
+      - uses: gradle/actions/wrapper-validation@v6
       - name: Build and verify
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:assembleDebug :app:bundleRelease :app:assembleDebugAndroidTest --no-daemon
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: MaenBrowser-Android-validation
           path: |
             android/app/build/reports/
             android/app/build/test-results/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: MaenBrowser-Android-preview-and-UNSIGNED-bundle
           path: |
@@ -49,11 +49,11 @@ jobs:
         api: [29, 36]
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           # The action defaults to retired "tools platform-tools". Request only
           # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
@@ -70,7 +70,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: cd android && chmod +x gradlew && ./gradlew :app:connectedDebugAndroidTest --no-daemon
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: Android-device-tests-API-${{ matrix.api }}

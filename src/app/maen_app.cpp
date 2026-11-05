@@ -65,8 +65,7 @@ bool MaenApp::OnAlreadyRunningAppRelaunch(CefRefPtr<CefCommandLine> command_line
     const auto url=arg.ToString();const auto parsed=protection::ParseUrl(url);
     if(!parsed.valid||(parsed.scheme!="http"&&parsed.scheme!="https"))continue;
     if(protection::BlockNavigation(url))return true;
-    if(AuthPopupHost(parsed.host)||AuthPopupUrl(url))return false;
-    return client_->NavigateExistingTab(url);
+    return client_->OpenUrlInNewTab(url);
   }
   return client_->NavigateExistingTab("");
 }

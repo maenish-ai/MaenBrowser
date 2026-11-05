@@ -193,7 +193,7 @@ if (-not $popupBody.Contains("return false;") -or
     -not $popupBody.Contains("user_gesture") -or
     -not $popupBody.Contains("ShouldPreservePopup(source.host, destination.host") -or
     -not $popupBody.Contains("protection::BlockNavigation") -or
-    -not $popupBody.Contains("LoadURL(next_url)")) {
+    -not $popupBody.Contains("OpenUrlInNewTab(next_url,opener)")) {
   throw "Popup policy must preserve OAuth/payment/login popups and require a user gesture plus protection checks."
 }
 $beforeStart = $clientCpp.IndexOf("bool MaenClient::OnBeforeDownload")

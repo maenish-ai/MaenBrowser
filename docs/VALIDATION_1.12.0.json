@@ -1,0 +1,13 @@
+{
+  "version": "1.12.0",
+  "baseCommit": "121677235e63c3aec4e2744e7d966f79d0765d44",
+  "portableChecks": "passed",
+  "powerShellPreflight": "passed",
+  "pageRendering": "real Chromium: English/Arabic desktop, Arabic mobile; mocked weather success/off; zero weather requests by default; no horizontal overflow; device timezone checked",
+  "providerLiveProbe": "MET HTTP200, CORS *, fixed public Oslo test point; no user location used",
+  "installerEncoding": "NSIS compiled with a disposable fixture; Arabic UTF16 title bytes verified; fixture not distributed",
+  "android": "build + 4 unit tests + lintDebug/lintRelease passed; no new device acceptance run",
+  "windowsNativeRuntime": "not executed in Linux; new real CEF external-launch/popup tab tests added to CI",
+  "lastRemoteRun": "42008977527 succeeded before this change",
+  "remoteWrites": "none"
+}

@@ -296,6 +296,10 @@ class Resource final : public CefResourceRequestHandler {
       if (trusted_) r->SetHeaderByName("Origin", kExtensionOrigin, true);
       return RV_CONTINUE;
     }
+    const auto weather=ParseUrl(r->GetURL().ToString());
+    if(source_==kExtensionOrigin && weather.scheme=="https" && weather.host=="api.met.no" &&
+       weather.path=="/weatherapi/locationforecast/2.0/compact" && r->GetMethod()=="GET")
+      r->SetHeaderByName("User-Agent","MaenBrowser/1.12.0 (https://github.com/maenish-ai/MaenBrowser)",true);
     denied_ = Block(r->GetURL().ToString(), source_, document_);
     if (denied_) {
       const auto u=ParseUrl(r->GetURL().ToString());

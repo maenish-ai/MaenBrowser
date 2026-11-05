@@ -16,7 +16,7 @@ android {
         testInstrumentationRunner 'ai.maenish.maenbrowser.SmokeInstrumentation'
         minSdk 29
         targetSdk 36
-        versionCode 11100
+        versionCode 11200
         versionName releaseVersion
     }
     signingConfigs {

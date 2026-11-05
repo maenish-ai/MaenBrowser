@@ -16,7 +16,7 @@ jobs:
         shell: pwsh
         run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\maen-cef-output"
       - name: Upload Maen media CEF archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: maen-cef-154-media-windows64
           path: |

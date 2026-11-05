@@ -33,3 +33,14 @@ headers, corresponding editable sources and full license are distributed in the
 shims directory. config/ad-shims.lock.json records source links and packaged file
 hashes. They are separate scripts, not the whole uBlock extension; no endorsement
 or universal anti-adblock capability is claimed.
+
+## Optional start-page weather (1.12.0)
+
+Forecast data: MET Norway, https://www.met.no/ and https://api.met.no/ .
+Data licensed under Creative Commons Attribution 4.0:
+https://creativecommons.org/licenses/by/4.0/ . Values are rounded/reformatted
+for display; no endorsement is implied. Service terms:
+https://api.met.no/doc/TermsOfService . Weather is off by default. Selecting a
+city or consenting to approximate geolocation sends coordinates and the public
+IP to the provider; an hour-long local cache reduces traffic. No API key is
+bundled. The service is not guaranteed to be continuously available.

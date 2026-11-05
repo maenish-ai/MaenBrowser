@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 
@@ -11,7 +11,7 @@ if (-not $makensis) {
 
 Push-Location (Join-Path $repoRoot "installer")
 try {
-  & $makensis.Source "MaenBrowser.nsi"
+  & $makensis.Source /INPUTCHARSET UTF8 "MaenBrowser.nsi"
   if ($LASTEXITCODE -ne 0) { throw "NSIS failed" }
 } finally {
   Pop-Location

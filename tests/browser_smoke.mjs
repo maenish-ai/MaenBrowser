@@ -136,14 +136,28 @@ try{
     relaunched.once('error',error=>{clearTimeout(timeout);reject(error);});
     relaunched.once('exit',code=>{clearTimeout(timeout);code===0?resolve():reject(Error('Relaunch exit code '+code));});
   });
-  let reused=false;
-  for(let n=0;n<60;n++){
-    try{reused=await evaluate(`location.href===${JSON.stringify(relaunchUrl)}&&document.readyState==='complete'`);}catch{}
-    if(reused)break;await pause(100);
+  let externalTab;
+  for(let n=0;n<100;n++){
+    externalTab=await evaluate(`(async()=>{const here=await chrome.tabs.getCurrent();const tabs=await chrome.tabs.query({windowId:here.windowId});return tabs.find(t=>t.url===${JSON.stringify(relaunchUrl)}&&t.id!==here.id)||null;})()`);
+    if(externalTab)break;await pause(100);
   }
-  assert(reused,'External URL launch did not reuse the existing tab');
+  assert(externalTab,'External URL did not open a new tab in the existing window');
+  assert.equal(await evaluate('location.href'),controlUrl,'External launch replaced the original page');
+  await evaluate(`chrome.tabs.remove(${externalTab.id})`);
+  console.log('PASS: external URL opens a new tab in the current window and preserves the original');
+
+  await navigate(fixtureUrl);
+  const popupUrl=fixtureUrl+'clicked-link';
+  await send('Runtime.evaluate',{expression:`window.open(${JSON.stringify(popupUrl)},'_blank')`,userGesture:true});
   await navigate(controlUrl);
-  console.log('PASS: second process URL launch reuses the existing tab without an initialization error');
+  let clickedTab;
+  for(let n=0;n<100;n++){
+    clickedTab=await evaluate(`(async()=>{const here=await chrome.tabs.getCurrent();const tabs=await chrome.tabs.query({windowId:here.windowId});return tabs.find(t=>t.url===${JSON.stringify(popupUrl)}&&t.id!==here.id)||null;})()`);
+    if(clickedTab)break;await pause(100);
+  }
+  assert(clickedTab,'User-clicked link did not open a new tab in the source window');
+  await evaluate(`chrome.tabs.remove(${clickedTab.id})`);
+  console.log('PASS: user-gesture links stay in the same window as new tabs');
 
   const before=Number(result.data.blockedRequests);
   await navigate(fixtureUrl);

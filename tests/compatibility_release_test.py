@@ -28,6 +28,6 @@ assert any(f['file']=='sample.wma' and not f.get('required',True) for f in forma
 print('Compatibility release: local agent isolation/family guards, merged filters, critical sites and honest codec gates passed')
 
 assert 'OnAlreadyRunningAppRelaunch' in app
-assert 'NavigateExistingTab(url)' in app
+assert 'OpenUrlInNewTab(url)' in app
 main=(r/'src/main_win.cpp').read_text(encoding='utf-8')
 assert 'CEF_RESULT_CODE_NORMAL_EXIT_PROCESS_NOTIFIED) return 0;' in main

@@ -5,6 +5,7 @@
 #include <shellapi.h>
 
 #include <filesystem>
+#include <algorithm>
 #include <sstream>
 
 #include "include/cef_app.h"
@@ -124,6 +125,21 @@ void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
 
   ApplyMaenWindowIcon(browser->GetHost()->GetWindowHandle());
   browser_instances_[browser->GetIdentifier()] = browser;
+  std::erase_if(pending_tabs_,[](const PendingTab& tab){return GetTickCount64()>tab.deadline;});
+  if(!browser->IsPopup()) {
+    const HWND root=GetAncestor(browser->GetHost()->GetWindowHandle(),GA_ROOT);
+    for(auto it=pending_tabs_.begin();it!=pending_tabs_.end();++it) {
+      if(it->root!=root)continue;
+      const std::string url=it->url;pending_tabs_.erase(it);
+      CefPostTask(TID_UI,CefCreateClosureTask(base::BindOnce(
+        [](CefRefPtr<CefBrowser> tab,std::string next) {
+          if(tab->IsValid()&&tab->GetMainFrame()&&!protection::BlockNavigation(next))
+            tab->GetMainFrame()->LoadURL(protection::Rewrite(next));
+        },browser,url)));
+      break;
+    }
+  }
+
   if (storage::IsAgentMode() && !agent_watch_running_) {
     agent_watch_running_ = true;
     CefPostDelayedTask(TID_UI, CefCreateClosureTask(base::BindOnce(
@@ -153,6 +169,29 @@ bool MaenClient::NavigateExistingTab(const std::string& url) {
   if(!url.empty())target->GetMainFrame()->LoadURL(protection::Rewrite(url));
   const auto hwnd=target->GetHost()->GetWindowHandle();
   if(hwnd){ShowWindow(hwnd,SW_RESTORE);SetForegroundWindow(hwnd);}
+  return true;
+}
+
+bool MaenClient::OpenUrlInNewTab(const std::string& url,CefRefPtr<CefBrowser> opener) {
+  CEF_REQUIRE_UI_THREAD();
+  const auto parsed=protection::ParseUrl(url);
+  if(!parsed.valid||(parsed.scheme!="https"&&parsed.scheme!="http"))return false;
+  if(protection::BlockNavigation(url))return true;
+  if(!opener) {
+    const auto found=browser_instances_.find(last_active_browser_);
+    if(found!=browser_instances_.end())opener=found->second;
+    if(!opener||opener->IsPopup())for(const auto& [id,candidate]:browser_instances_)
+      if(candidate->IsValid()&&!candidate->IsPopup()){opener=candidate;break;}
+  }
+  std::erase_if(pending_tabs_,[](const PendingTab& tab){return GetTickCount64()>tab.deadline;});
+  if(!opener||!opener->IsValid()||pending_tabs_.size()>=32)return false;
+  const int command=cef_id_for_command_id_name("IDC_NEW_TAB");
+  if(command<=0||!opener->GetHost()->CanExecuteChromeCommand(command))return false;
+  const HWND root=GetAncestor(opener->GetHost()->GetWindowHandle(),GA_ROOT);
+  if(!root)return false;
+  pending_tabs_.push_back({root,url,GetTickCount64()+20000});
+  opener->GetHost()->ExecuteChromeCommand(command,CEF_WOD_NEW_FOREGROUND_TAB);
+  ShowWindow(root,SW_RESTORE);SetForegroundWindow(root);
   return true;
 }
 
@@ -197,7 +236,7 @@ bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   client = this;
   if (!browser || !browser->GetMainFrame()) return false;
 
-  // User-clicked ordinary links stay in the opener. OAuth/payment flows
+  // User-clicked ordinary links open a new tab in the opener window. OAuth/payment flows
   // preserve their popup and window.opener semantics.
   const auto destination = protection::ParseUrl(target_url.ToString());
   const auto source = protection::ParseUrl(frame ? frame->GetURL().ToString() : browser->GetMainFrame()->GetURL().ToString());
@@ -210,10 +249,9 @@ bool MaenClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   }
   const std::string url = target_url.ToString();
   CefPostTask(TID_UI, CefCreateClosureTask(base::BindOnce(
-      [](CefRefPtr<CefBrowser> opener, std::string next_url) {
-        if (opener && opener->IsValid() && opener->GetMainFrame())
-          opener->GetMainFrame()->LoadURL(next_url);
-      }, browser, url)));
+      [](CefRefPtr<MaenClient> self,CefRefPtr<CefBrowser> opener,std::string next_url) {
+        self->OpenUrlInNewTab(next_url,opener);
+      }, CefRefPtr<MaenClient>(this),browser,url)));
   return true;
 }
 
@@ -310,8 +348,10 @@ void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> fr
   // Consume once: duplicate load notifications must not navigate an existing surface.
   media_navigations_.erase(pending);
   const bool opened = media::OpenEmbeddedWebView2(browser->GetIdentifier(), browser->GetHost()->GetWindowHandle(), url,
-      [browser](const std::wstring& target) {
-        if (browser->IsValid() && browser->GetMainFrame()) browser->GetMainFrame()->LoadURL(target);
+      [self=CefRefPtr<MaenClient>(this),browser](const std::wstring& target) {
+        CefPostTask(TID_UI,CefCreateClosureTask(base::BindOnce(
+          [](CefRefPtr<MaenClient> client,CefRefPtr<CefBrowser> opener,std::string url){client->OpenUrlInNewTab(url,opener);},
+          self,browser,CefString(target).ToString())));
       });
   if (!opened) frame->ExecuteJavaScript(
       ui::Arabic() ? "document.body.textContent='تعذر فتح الصفحة. أعد التحميل للمحاولة.';"

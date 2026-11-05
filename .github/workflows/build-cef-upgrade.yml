@@ -15,7 +15,7 @@ jobs:
       - name: Verify candidate manifest and archive
         shell: pwsh
         run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: CEF156-codec-CANDIDATE-needs-integration-tests
           path: ${{ runner.temp }}\cef-candidate\*
