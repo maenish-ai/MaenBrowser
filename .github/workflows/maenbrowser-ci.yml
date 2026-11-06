@@ -32,6 +32,12 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$(tr -d '\r\n' < VERSION)" || { echo "Release tag must match VERSION"; exit 1; }
           echo "Releases always require codec-enabled CEF; preview releases are forbidden"
 
+      - name: Gate production tags on current engine and publisher acceptance
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python tools/audit-engine.py --output engine-freshness.json
+          python tools/release-readiness.py --engine-report engine-freshness.json --require
+
       - name: Check verified CEF archive configuration
         id: check
         shell: bash
@@ -64,6 +70,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Install build-time signature test dependency
+        run: python -m pip install -r tools/requirements-release.txt
 
       - name: JavaScript safeguards and package verification
         shell: pwsh
@@ -114,6 +123,10 @@ jobs:
         shell: pwsh
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: Stamp MaenBrowser identity before runtime acceptance
+        shell: pwsh
+        run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico" -ResourceDll "build\Release\MaenBrowser.dll"
+
       - name: Browser integration and real in-tab H.264 playback test
         timeout-minutes: 8
         shell: pwsh
@@ -129,10 +142,6 @@ jobs:
             build/Release/debug.log
             build/diagnostics/*.json
           if-no-files-found: ignore
-
-      - name: Stamp MaenBrowser icon
-        shell: pwsh
-        run: .\tools\set-exe-icon.ps1 -ExePath "build\Release\MaenBrowser.exe" -IconPath "assets\maenbrowser.ico"
 
       - name: Stage runtime
         shell: pwsh
@@ -159,7 +168,7 @@ jobs:
           Copy-Item "$env:CEF_ROOT/MAEN_MEDIA_PROVENANCE.json" dist/notices
           if (Test-Path "$env:CEF_ROOT/CREDITS.html") { Copy-Item "$env:CEF_ROOT/CREDITS.html" dist/notices/CEF-CREDITS.html }
           Remove-Item "dist\filters\sources" -Recurse -Force -ErrorAction SilentlyContinue
-          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.12.2.js" } | Remove-Item -Force
+          Get-ChildItem "dist\companion" -Filter "background-*.js" | Where-Object { $_.Name -ne "background-1.13.0.js" } | Remove-Item -Force
 
       - name: Build NSIS installer
         shell: pwsh

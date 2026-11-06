@@ -12,11 +12,11 @@ globalThis.chrome={
  storage:{local:{get:async()=>({sessions:[{id:'test',tabs:original}]})}},
  runtime:{getURL:p=>'chrome-extension://trusted/'+p},
  windows:{get:async id=>({id,type:'normal'}),getCurrent:async()=>({id:42,type:'normal'})},
- tabs:{create:async options=>{created.push(options);return{id:created.length};},group:async options=>{grouped.push(options);return 9;}},
+ tabs:{query:async()=>[],create:async options=>{created.push(options);return{id:created.length};},group:async options=>{grouped.push(options);return 9;}},
  tabGroups:{update:async(...args)=>updates.push(args)}
 };
 const {restoreSession}=await import('../assets/companion/session-restore.js');
-assert.deepEqual(await restoreSession('test'),{ok:true,restored:2});
+assert.deepEqual(await restoreSession('test'),{ok:true,restored:2,skipped:0});
 assert.equal(created[0].url,'https://example.org/');assert.equal(created[0].active,true);
 assert(created[1].url.startsWith('chrome-extension://trusted/deferred.html#'));
 assert.equal(created[1].active,false);assert.deepEqual(grouped,[{tabIds:[1,2]}]);
@@ -24,3 +24,8 @@ assert.equal(updates[0][1].title,'Work');assert.equal(updates[0][1].collapsed,fa
 assert(created.every(t=>t.windowId===42));
 await assert.rejects(()=>restoreSession('missing'));
 console.log('Sessions: safe imports, bounds, private exclusion, group restore and lazy loading passed');
+
+chrome.tabs.query=async()=>[{url:'https://example.org/',pinned:false},{url:'chrome-extension://trusted/deferred.html#https%3A%2F%2Fchat.example.org',pinned:false}];
+created.length=0;
+assert.deepEqual(await restoreSession('test'),{ok:true,restored:0,skipped:2});assert.equal(created.length,0);
+console.log('Restore retries: existing live and deferred pages are preserved instead of duplicated');

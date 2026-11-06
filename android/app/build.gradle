@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 def releaseVersion = file('../../VERSION').text.trim()
+def versionParts = releaseVersion.tokenize('.').collect { Integer.parseInt(it) }
+if (versionParts.size()!=3 || versionParts[1]>99 || versionParts[2]>99) throw new GradleException('Version requires bounded x.y.z components')
+def androidVersionCode = versionParts[0]*10000 + versionParts[1]*100 + versionParts[2]
+def storeIdentity = new groovy.json.JsonSlurper().parse(file('../../config/store-identity.json'))
+def publisherAppId = storeIdentity.androidIdentityConfirmed ? storeIdentity.androidApplicationId : 'ai.maenish.maenbrowser'
+if (!(publisherAppId ==~ /[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+/)) throw new GradleException('Invalid publisher Android application ID')
 def filterAssets = tasks.register('prepareFilterAssets', Sync) {
     from('../../assets/filters') { include 'ads.txt', 'ads-extra.txt', 'adult.txt', 'violence.txt', 'manifest.json' }
     from('../../assets/filters/sources') { include '*LICENSE*' }
@@ -12,11 +18,11 @@ android {
     compileSdk 36
     defaultConfig {
         // Provisional until publisher confirms the permanent Play application ID.
-        applicationId 'ai.maenish.maenbrowser'
+        applicationId publisherAppId
         testInstrumentationRunner 'ai.maenish.maenbrowser.SmokeInstrumentation'
         minSdk 29
         targetSdk 36
-        versionCode 11202
+        versionCode androidVersionCode
         versionName releaseVersion
     }
     signingConfigs {

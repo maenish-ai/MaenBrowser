@@ -17,6 +17,18 @@ final class PrivateStore {
     private JSONObject state;
     private String committed;
     private static volatile boolean storageWriteFailed;
+    private static PrivateStore processStore;
+    interface PolicyListener { void changed(boolean enabled); }
+    private final java.util.concurrent.CopyOnWriteArraySet<PolicyListener> listeners=new java.util.concurrent.CopyOnWriteArraySet<>();
+    static synchronized PrivateStore shared(Context context)throws Exception{
+        if(processStore==null)processStore=new PrivateStore(context.getApplicationContext());
+        return processStore;
+    }
+    void addPolicyListener(PolicyListener listener){listeners.add(listener);}
+    void removePolicyListener(PolicyListener listener){listeners.remove(listener);}
+    private void policyChanged(boolean enabled){
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{for(PolicyListener listener:listeners)listener.changed(enabled);});
+    }
     final boolean damaged;
     PrivateStore(Context c)throws Exception{
         prefs=c.getSharedPreferences("private-v1",Context.MODE_PRIVATE);
@@ -70,7 +82,8 @@ final class PrivateStore {
                     int failed=state.optInt("failures",0)+1;state.put("failures",failed);state.put("retryAfter",now+Math.min(3600000L,1000L*(1L<<Math.min(12,failed))));save();return false;
                 }
                 if(old.isEmpty()){state.put("salt",Base64.encodeToString(salt,Base64.NO_WRAP));state.put("pin",Base64.encodeToString(derived,Base64.NO_WRAP));}
-                state.put("failures",0);state.put("retryAfter",0);state.put("family",enabled);save();return true;
+                boolean changed=state.optBoolean("family",false)!=enabled;
+                state.put("failures",0);state.put("retryAfter",0);state.put("family",enabled);save();if(changed)policyChanged(enabled);return true;
             }
         }finally{java.util.Arrays.fill(pin,'\0');}
     }
@@ -87,7 +100,7 @@ final class PrivateStore {
             committed=next;
         }catch(Exception failure){
             // A failed disable/write must never relax the in-memory parent policy.
-            storageWriteFailed=true;state=new JSONObject(committed);throw failure;
+            storageWriteFailed=true;state=new JSONObject(committed);policyChanged(true);throw failure;
         }
     }
 }

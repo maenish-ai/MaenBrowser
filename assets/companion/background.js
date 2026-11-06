@@ -1,8 +1,13 @@
+import {commitSessions,recoverSessions} from './session-store.js';
+import {registerSecurityUpdates} from './security-updates.js';
+import {registerRecovery,validCheckpoints} from './session-recovery.js';
 import {inspectIdlePage} from './idle-page-probe.js';
 import {idlePolicy} from './memory-policy.js';
-import {restoreSession} from './session-restore.js';
+import {restoreTabList,restoreSession} from './session-restore.js';
 import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
+registerRecovery();
+registerSecurityUpdates(api);
 async function updateAlarm(){
   const {sleepEnabled=true}=await chrome.storage.local.get('sleepEnabled');
   if(sleepEnabled)await chrome.alarms.create('safe-idle-tabs',{periodInMinutes:5});
@@ -123,9 +128,27 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
     if(request.op==='settingsChanged'){
       const s=await syncProtectionBadge();if(!s)throw new Error('Protection state unavailable');await enforceFamily(s.family,s.family&&!request.wasFamily);await updateAlarm();return {ok:true};
     }
+    if(request.op==='restoreRecovery'){
+      const {sessionRecovery=[]}=await chrome.storage.local.get('sessionRecovery');
+      const entries=await validCheckpoints(sessionRecovery);
+      const entry=entries.find(x=>x.digest===request.digest);
+      if(!entry)throw new Error('No valid recovery checkpoint.');
+      return restoreTabList(entry.tabs,sender.tab?.windowId??null);
+    }
     if(request.op==='restoreSession')return restoreSession(request.id, sender.tab?.windowId ?? null);
+    if(request.op==='deleteSession')return commitSessions(sessions=>{
+      if(!sessions.some(x=>x.id===request.id))throw new Error('Session not found.');
+      return sessions.filter(x=>x.id!==request.id);
+    });
+    if(request.op==='recoverSessions')return recoverSessions();
+    if(request.op==='importSessions'){
+      if(!Array.isArray(request.entries)||request.entries.length>20)throw new Error('Invalid session file.');
+      const imported=request.entries.map(s=>({id:crypto.randomUUID(),name:String(s?.name||'Imported session').slice(0,100),created:Date.now(),tabs:restorableSession(s?.tabs)})).filter(s=>s.tabs.length);
+      if(!imported.length)throw new Error('No safe web addresses in the file.');
+      return commitSessions(sessions=>[...imported,...sessions].slice(0,20));
+    }
     if(request.op==='saveSession'){
-      const tabs=await chrome.tabs.query({currentWindow:true});const {sessions=[]}=await chrome.storage.local.get('sessions');
+      const tabs=await chrome.tabs.query({currentWindow:true});
       const grouped=[];
       for(const tab of tabs){
         let group;
@@ -134,7 +157,7 @@ chrome.runtime.onMessage.addListener((request,sender,respond)=>{
       }
       const saved={id:crypto.randomUUID(),name:String(request.name||'Saved session').slice(0,100),created:Date.now(),tabs:restorableSession(grouped)};
       if(!saved.tabs.length)throw new Error('No ordinary tabs to save.');
-      await chrome.storage.local.set({sessionsPrevious:sessions,sessions:[saved,...sessions].slice(0,20)});return {ok:true};
+      return commitSessions(sessions=>[saved,...sessions].slice(0,20));
     }
     return {ok:false,error:'Unknown action',code:'E101'};
   })().then(respond).catch(e=>respond({ok:false,error:e.message,...(e instanceof NativeConnectionError?{code:e.code}:{})}));return true;

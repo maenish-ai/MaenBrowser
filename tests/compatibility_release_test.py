@@ -14,7 +14,8 @@ assert 'storage::SettingsChanged(agent_settings_stamp_, now)' in client
 assert 'CloseBrowser(true)' in client
 assert app.index('client_->PrepareAgentProtection()') < app.index('protection::Initialize()')
 assert '!client_->AgentPolicyUnchanged()' in app
-assert native.count('MergeBundledAdRules(')==3
+assert native.count('MergeBundledAdRules(')>=3
+assert 'MergeBundledAdRules(*ads);g_ad_rules.store(ads)' in native
 assert 'SelectAdShim(state->family,state->ads,true' in native
 assert 'SetString("version", kVersion)' in native
 ads=set((r/'assets/filters/ads.txt').read_text(encoding='utf-8').splitlines())

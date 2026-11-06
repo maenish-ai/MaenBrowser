@@ -12,7 +12,7 @@ export async function nativeApi(op = 'get', extra = {}) {
     try {
       response = await fetch('https://maen.browser/api', {
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(op==='updateAdFilters'?20000:8000)
+        body:JSON.stringify({op,...extra}),cache:'no-store',signal:AbortSignal.timeout(['updateAdFilters','updateSecurityData'].includes(op)?30000:8000)
       });
       break;
     }catch{
@@ -36,7 +36,7 @@ export async function api(op = 'get', extra = {}) {
   if(!data||data.ok!==true||typeof data.ads!=='boolean'||typeof data.family!=='boolean'||!Array.isArray(data.exceptions))
     throw new NativeConnectionError('PROTECTION_RESPONSE');
   recordDiagnostic(op,null,data);
-  if(op==='save'||op==='updateAdFilters'||op==='restoreBackup') {
+  if(op==='save'||op==='updateAdFilters'||op==='updateSecurityData'||op==='restoreBackup') {
     try { Promise.resolve(chrome.storage.local.set({protectionRevision:String(data.revision)})).catch(()=>{}); } catch {}
     try { Promise.resolve(chrome.action.setBadgeText({text:data.listError?'!':data.ads?'✓':'—'})).catch(()=>{}); } catch {}
   }

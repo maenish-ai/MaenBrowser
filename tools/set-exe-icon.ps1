@@ -1,12 +1,17 @@
 param(
   [Parameter(Mandatory=$true)][string]$ExePath,
-  [Parameter(Mandatory=$true)][string]$IconPath
+  [Parameter(Mandatory=$true)][string]$IconPath,
+  [string]$ResourceDll = ""
 )
 $ErrorActionPreference="Stop"
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public static class MaenIconNative {
+ [DllImport("version.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+ public static extern uint GetFileVersionInfoSize(string file, out uint handle);
+ [DllImport("version.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+ public static extern bool GetFileVersionInfo(string file, uint handle, uint length, byte[] data);
  [DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
  public static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
  [DllImport("kernel32.dll", SetLastError=true)]
@@ -39,6 +44,14 @@ for($i=0;$i -lt $count;$i++){
  $group.AddRange([BitConverter]::GetBytes($planes));$group.AddRange([BitConverter]::GetBytes($bpp))
  $group.AddRange([BitConverter]::GetBytes([UInt32]$size));$group.AddRange([BitConverter]::GetBytes([UInt16]($i+1)))
 }
+$versionBytes=$null
+if($ResourceDll){
+ $dll=(Resolve-Path $ResourceDll).Path
+ [uint32]$ignored=0;$length=[MaenIconNative]::GetFileVersionInfoSize($dll,[ref]$ignored)
+ if(!$length -or $length -gt 65536){throw "Version resource missing or exceeds bounded size."}
+ $versionBytes=New-Object byte[] $length
+ if(-not [MaenIconNative]::GetFileVersionInfo($dll,0,$length,$versionBytes)){throw "Could not read application version resource."}
+}
 $hUpdate=[MaenIconNative]::BeginUpdateResource($exe,$false)
 if($hUpdate -eq [IntPtr]::Zero){throw "BeginUpdateResource failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"}
 $ok=$true
@@ -50,8 +63,19 @@ try{
   $g=$group.ToArray()
   $ok=[MaenIconNative]::UpdateResource($hUpdate,[IntPtr]14,[IntPtr]1,0,$g,[uint32]$g.Length)
  }
+ if($ok -and $versionBytes){
+  foreach($language in @(0,1033)){
+   if(-not [MaenIconNative]::UpdateResource($hUpdate,[IntPtr]16,[IntPtr]1,[uint16]$language,$versionBytes,[uint32]$versionBytes.Length)){$ok=$false;break}
+  }
+ }
 } finally {
  if(-not [MaenIconNative]::EndUpdateResource($hUpdate,-not $ok)){throw "EndUpdateResource failed."}
 }
 if(-not $ok){throw "Failed to stamp MaenBrowser icon resources."}
-Write-Host "Stamped MaenBrowser icon into $exe" -ForegroundColor Green
+Write-Host "Stamped MaenBrowser identity resources into $exe" -ForegroundColor Green
+
+if($ResourceDll){
+ $sourceVersion=[Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $ResourceDll).Path).FileVersion
+ $exeVersion=[Diagnostics.FileVersionInfo]::GetVersionInfo($exe).FileVersion
+ if($sourceVersion -ne $exeVersion){throw "Bootstrap version stamp differs from the built application module."}
+}

@@ -1,0 +1,186 @@
+[
+  {
+    "id": "brave-desktop",
+    "url": "https://community.brave.app/c/brave-feature-requests/desktop-requests/63.json",
+    "status": 200,
+    "bytes": 48661,
+    "file": "brave-desktop.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "brave-android",
+    "url": "https://community.brave.app/c/brave-feature-requests/android-requests/65.json",
+    "status": 200,
+    "bytes": 44227,
+    "file": "brave-android.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "brave-root",
+    "url": "https://community.brave.app/c/brave-feature-requests/57.json",
+    "status": 200,
+    "bytes": 41805,
+    "file": "brave-root.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "vivaldi-categories",
+    "url": "https://forum.vivaldi.net/api/categories",
+    "status": 200,
+    "bytes": 183545,
+    "file": "vivaldi-categories.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "mozilla-ideas",
+    "url": "https://connect.mozilla.org/restapi/vc/boards/id/ideas/messages?restapi.response_format=json&page_size=100",
+    "status": 200,
+    "bytes": 124,
+    "file": "mozilla-ideas.json",
+    "interpretation": "HTTP200 contains application error504; REST method unavailable",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "reddit-browsers",
+    "url": "https://www.reddit.com/r/browsers/top.json?t=year&limit=100",
+    "status": "unavailable",
+    "error": "HTTP Error 403: Forbidden",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "reddit-firefox",
+    "url": "https://www.reddit.com/r/firefox/top.json?t=year&limit=100",
+    "status": "unavailable",
+    "error": "HTTP Error 403: Forbidden",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "reddit-brave",
+    "url": "https://www.reddit.com/r/brave_browser/top.json?t=year&limit=100",
+    "status": "unavailable",
+    "error": "HTTP Error 403: Forbidden",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "reddit-vivaldi",
+    "url": "https://www.reddit.com/r/vivaldibrowser/top.json?t=year&limit=100",
+    "status": "unavailable",
+    "error": "HTTP Error 403: Forbidden",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "hn-wishlist",
+    "url": "https://hn.algolia.com/api/v1/search?query=browser%20wishlist&tags=story&hitsPerPage=30",
+    "status": 200,
+    "bytes": 76210,
+    "file": "hn-wishlist.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "edge-community",
+    "url": "https://techcommunity.microsoft.com/category/microsoftedge/discussions/microsoftedgeinsiderdiscussions",
+    "status": 200,
+    "bytes": 49703,
+    "file": "edge-community.html",
+    "interpretation": "Sign-in redirect/page, not an inspected discussion",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "chromium-issues",
+    "url": "https://issues.chromium.org/issues?q=browser%20download",
+    "status": 200,
+    "bytes": 84161,
+    "file": "chromium-issues.html",
+    "interpretation": "UI shell only; no structured issue sample extracted",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "cef-index",
+    "url": "https://cef-builds.spotifycdn.com/index.json",
+    "status": 200,
+    "bytes": 10584872,
+    "file": "cef-index.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "chrome-current",
+    "url": "https://versionhistory.googleapis.com/v1/chrome/platforms/win/channels/stable/versions/all/releases?filter=endtime=none&page_size=100",
+    "status": 200,
+    "bytes": 4335,
+    "file": "chrome-current.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "vivaldi-desktop",
+    "url": "https://forum.vivaldi.net/api/category/185/desktop-feature-requests",
+    "status": 200,
+    "bytes": 57811,
+    "file": "vivaldi-desktop.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "vivaldi-mobile",
+    "url": "https://forum.vivaldi.net/api/category/136/mobile-feature-requests",
+    "status": 200,
+    "bytes": 53172,
+    "file": "vivaldi-mobile.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "vivaldi-desktop-p2",
+    "url": "https://forum.vivaldi.net/api/category/185/desktop-feature-requests?page=2",
+    "status": 200,
+    "bytes": 57124,
+    "file": "vivaldi-desktop-p2.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "mozilla-topics",
+    "url": "https://connect.mozilla.org/restapi/vc/boards/id/ideas/topics?restapi.response_format=json&page_size=100",
+    "status": 200,
+    "bytes": 152,
+    "file": "mozilla-topics.json",
+    "interpretation": "HTTP200 contains permission error303; not a readable topic API",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "mozilla-list",
+    "url": "https://connect.mozilla.org/t5/ideas/idb-p/ideas/tab/most-recent",
+    "status": 200,
+    "bytes": 322569,
+    "file": "mozilla-list.html",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "brave-desktop-p2",
+    "url": "https://community.brave.app/c/brave-feature-requests/desktop-requests/63.json?page=1",
+    "status": 200,
+    "bytes": 44977,
+    "file": "brave-desktop-p2.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "brave-android-p2",
+    "url": "https://community.brave.app/c/brave-feature-requests/android-requests/65.json?page=1",
+    "status": 200,
+    "bytes": 45463,
+    "file": "brave-android-p2.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "hn-wishlist-thread",
+    "url": "https://hn.algolia.com/api/v1/items/39247432",
+    "status": 200,
+    "bytes": 4672,
+    "file": "hn-wishlist-thread.json",
+    "rawResponseInDistribution": false
+  },
+  {
+    "id": "winsparkle-api",
+    "url": "https://raw.githubusercontent.com/vslavik/winsparkle/master/include/winsparkle.h",
+    "status": 200,
+    "bytes": 22782,
+    "file": "winsparkle-api.html",
+    "rawResponseInDistribution": false
+  }
+]

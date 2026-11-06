@@ -9,14 +9,32 @@ jobs:
     timeout-minutes: 720
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - name: Build upstream codec candidate on dedicated SSD builder
         shell: pwsh
         run: .\tools\build-cef-media.ps1 -DownloadDir 'C:\maen-cef-8078' -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
       - name: Verify candidate manifest and archive
         shell: pwsh
         run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
+      - name: Prepare WebView2 SDK for candidate integration
+        shell: pwsh
+        run: |
+          $pkg="$env:RUNNER_TEMP/webview2.zip"
+          $sdk="$env:RUNNER_TEMP/webview2-candidate-sdk"
+          Invoke-WebRequest -Uri 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.4258.31' -OutFile $pkg
+          Expand-Archive $pkg $sdk -Force
+          "MAEN_CANDIDATE_WEBVIEW_SDK=$sdk" | Out-File $env:GITHUB_ENV -Append
+      - name: Compile and run actual candidate browser integration
+        shell: pwsh
+        run: .\tools\test-cef-candidate.ps1 -OutputDir "$env:RUNNER_TEMP\cef-candidate" -WebView2SdkRoot "$env:MAEN_CANDIDATE_WEBVIEW_SDK"
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
-          name: CEF156-codec-CANDIDATE-needs-integration-tests
+          name: CEF156-codec-CANDIDATE-runtime-test-results
           path: ${{ runner.temp }}\cef-candidate\*
           if-no-files-found: error

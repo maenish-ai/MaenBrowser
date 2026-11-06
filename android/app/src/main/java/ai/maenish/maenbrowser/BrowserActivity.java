@@ -19,13 +19,14 @@ import java.util.*;
 /** Native UI; no JS/native bridge, tracking SDK, background service, or bundled engine. */
 public final class BrowserActivity extends Activity {
     private final ArrayList<Tab> tabs=new ArrayList<>();
-    private final java.util.concurrent.ExecutorService persistence=java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static final java.util.concurrent.ExecutorService persistence=new java.util.concurrent.ThreadPoolExecutor(0,1,30L,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.LinkedBlockingQueue<Runnable>());
     private final Handler ui=new Handler(Looper.getMainLooper());
     private FrameLayout content;
     private EditText address;
     private ProgressBar progress;
     private TextView status;
     private PrivateStore store;
+    private final PrivateStore.PolicyListener policyListener=this::applyFamilyPolicy;
     private DomainFilters filters;
     private int selected=-1, budget=4;
     private ValueCallback<Uri[]> fileCallback;
@@ -34,13 +35,16 @@ public final class BrowserActivity extends Activity {
     private PermissionRequest mediaRequest;
     private WebChromeClient fullscreenOwner;
     private boolean destroyed;
+    // Process-local rotation handoff only. Durable sessions remain encrypted.
+    private static volatile String rotationTabs;
     private final Runnable saveTask=()->saveSession();
     private static final class Tab { WebView view; String url; Tab(String u){url=u;} }
 
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
-        try{store=new PrivateStore(this);}catch(Exception e){new AlertDialog.Builder(this).setTitle("MaenBrowser").setMessage("Secure storage unavailable. Browsing is disabled.").setPositiveButton("Close",(d,w)->finish()).setCancelable(false).show();return;}
+        try{store=PrivateStore.shared(this);}catch(Exception e){new AlertDialog.Builder(this).setTitle("MaenBrowser").setMessage("Secure storage unavailable. Browsing is disabled.").setPositiveButton("Close",(d,w)->finish()).setCancelable(false).show();return;}
         filters=new DomainFilters(getApplicationContext());
+        store.addPolicyListener(policyListener);
         if(store.family())filters.loadFamily(getApplicationContext());
         ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo memory=new ActivityManager.MemoryInfo();am.getMemoryInfo(memory);
@@ -52,11 +56,18 @@ public final class BrowserActivity extends Activity {
         if(Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,this::handleBack);
         getWindow().getDecorView().setOnApplyWindowInsetsListener((v,insets)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets i=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(i.left,i.top,i.right,i.bottom);}else{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());}return insets;});
         JSONArray savedTabs=store.sessions();
+        if(saved!=null && rotationTabs!=null){try{savedTabs=new JSONArray(rotationTabs);}catch(org.json.JSONException ignored){}}
+
         for(int i=0;i<Math.min(savedTabs.length(),budget);i++){String url=WebPolicy.address(savedTabs.optString(i));if(!url.isEmpty())tabs.add(new Tab(url));}
-        String incoming=incoming(getIntent());
-        if(!incoming.isEmpty()){if(tabs.isEmpty())tabs.add(new Tab(incoming));else tabs.get(0).url=incoming;}
+        String incoming=saved==null?incoming(getIntent()):"";
+        int initial=0;
+        if(!incoming.isEmpty()){
+            if(tabs.size()<budget){tabs.add(new Tab(incoming));initial=tabs.size()-1;}
+            else notice("Tab limit reached. Close a tab, then open the external link again. Existing tabs were preserved.");
+        }
         if(tabs.isEmpty())tabs.add(new Tab("https://www.google.com/"));
-        select(0);
+        if(saved!=null)initial=Math.max(0,Math.min(saved.getInt("selectedTab",0),tabs.size()-1));
+        select(initial);
         if(store.damaged)notice("Family protection locked: encrypted settings are damaged. No automatic reset.");
     }
     private void buildUi(){
@@ -189,12 +200,19 @@ public final class BrowserActivity extends Activity {
             if(w==3){if(store.family())throw new SecurityException("Unlock family protection first.");new AlertDialog.Builder(this).setTitle("Clear cookies and site storage?").setNegativeButton(android.R.string.cancel,null).setPositiveButton("Clear",(x,y)->{CookieManager.getInstance().removeAllCookies(null);WebStorage.getInstance().deleteAllData();for(Tab t:tabs)if(t.view!=null){t.view.clearCache(true);t.view.clearHistory();}notice("Browsing data cleared.");}).show();}
         }catch(Exception e){notice(e.getMessage()==null?"Settings could not be saved.":e.getMessage());}}).show();
     }
+    private void applyFamilyPolicy(boolean enabled){
+        if(destroyed || !enabled)return;
+        filters.loadFamily(getApplicationContext());denyMedia();
+        if(fileCallback!=null){fileCallback.onReceiveValue(null);fileCallback=null;fileOwner=null;fileOrigin="";}
+        if(fullscreenOwner!=null)fullscreenOwner.onHideCustomView();
+        for(Tab tab:tabs)if(tab.view!=null){tab.view.stopLoading();tab.view.loadUrl("about:blank");CookieManager.getInstance().setAcceptThirdPartyCookies(tab.view,false);}
+    }
     private void parentPrompt(){
         EditText pin=new EditText(this);pin.setInputType(129);pin.setSingleLine(true);
         new AlertDialog.Builder(this).setTitle(store.family()?"Parent passphrase":"Set / enter parent passphrase (8+ characters)").setView(pin).setNegativeButton(android.R.string.cancel,null).setPositiveButton("Apply",(d,w)->{
             char[]secret=pin.getText().toString().toCharArray();pin.setText("");
             // KDF and synchronous durable write never run on the UI thread.
-            new Thread(()->{try{boolean on=!store.family();boolean ok=store.setFamily(on,secret);ui.post(()->{if(!ok){notice("Passphrase rejected or retry delay active.");return;}if(on){filters.loadFamily(getApplicationContext());if(mediaRequest!=null){mediaRequest.deny();mediaRequest=null;}if(fileCallback!=null){fileCallback.onReceiveValue(null);fileCallback=null;}for(Tab t:tabs)if(t.view!=null){t.view.stopLoading();t.view.loadUrl("about:blank");CookieManager.getInstance().setAcceptThirdPartyCookies(t.view,false);}}notice(on?"Family protection enabled. Reload pages after lists load.":"Family protection disabled.");});}catch(Exception e){notice(e.getMessage()==null?"Protected setting failed.":e.getMessage());}},"Maen-parent-policy").start();
+            new Thread(()->{try{boolean on=!store.family();boolean ok=store.setFamily(on,secret);ui.post(()->{if(destroyed)return;if(!ok){notice("Passphrase rejected or retry delay active.");return;}notice(store.family()?"Family protection enabled. Reload pages after lists load.":"Family protection disabled.");});}catch(Exception e){notice(e.getMessage()==null?"Protected setting failed.":e.getMessage());}},"Maen-parent-policy").start();
         }).show();
     }
     private void requestMedia(PermissionRequest request){
@@ -224,8 +242,17 @@ public final class BrowserActivity extends Activity {
     @Override public void onRequestPermissionsResult(int code,String[]permissions,int[]results){super.onRequestPermissionsResult(code,permissions,results);if(code==71)grantMedia();}
     @Override protected void onActivityResult(int code,int result,Intent data){super.onActivityResult(code,result,data);if(code==70&&fileCallback!=null){ValueCallback<Uri[]>c=fileCallback;fileCallback=null;ArrayList<Uri>uris=new ArrayList<>();if(result==RESULT_OK&&data!=null&&!store.family()&&current()==fileOwner&&fileOwner!=null&&fileOrigin.equals(WebPolicy.origin(fileOwner.getUrl()))){if(data.getClipData()!=null){for(int i=0;i<Math.min(data.getClipData().getItemCount(),20);i++){Uri u=data.getClipData().getItemAt(i).getUri();if("content".equals(u.getScheme()))uris.add(u);}}else if(data.getData()!=null&&"content".equals(data.getData().getScheme()))uris.add(data.getData());}fileOwner=null;fileOrigin="";c.onReceiveValue(uris.isEmpty()?null:uris.toArray(new Uri[0]));}}
     private String incoming(Intent i){return Intent.ACTION_VIEW.equals(i.getAction())&&i.getData()!=null?WebPolicy.address(i.getData().toString()):"";}
-    @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);String u=incoming(intent);if(!u.isEmpty()&&current()!=null)navigate(u);}
-    private void saveSession(){if(store==null||store.damaged)return;JSONArray a=new JSONArray();for(Tab t:tabs)if(!WebPolicy.host(t.url).isEmpty())a.put(t.url);if(!persistence.isShutdown())persistence.execute(()->{try{store.sessions(a);CookieManager.getInstance().flush();}catch(Exception e){notice("Session could not be saved; previous session retained.");}});}
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);setIntent(intent);String u=incoming(intent);
+        if(u.isEmpty()||current()==null)return;
+        // Keep the current chat/draft and its request context intact.
+        if(tabs.size()>=budget){notice("Tab limit reached. Close a tab, then open the external link again. Existing tabs were preserved.");return;}
+        if(blocked(u,true)){notice("External link blocked by protection, or family lists are still loading.");return;}
+        tabs.add(new Tab(u));select(tabs.size()-1);saveSession();
+    }
+    private JSONArray sessionAddresses(){JSONArray a=new JSONArray();for(Tab t:tabs)if(!WebPolicy.host(t.url).isEmpty())a.put(t.url);return a;}
+    @Override protected void onSaveInstanceState(Bundle out){rotationTabs=sessionAddresses().toString();out.putInt("selectedTab",selected);super.onSaveInstanceState(out);}
+    private void saveSession(){if(store==null||store.damaged)return;JSONArray a=sessionAddresses();rotationTabs=a.toString();if(!persistence.isShutdown())persistence.execute(()->{try{store.sessions(a);CookieManager.getInstance().flush();}catch(Exception e){notice("Session could not be saved; previous session retained.");}});}
     @Override protected void onPause(){super.onPause();if(current()!=null)current().onPause();saveSession();}
     @Override protected void onResume(){super.onResume();if(current()!=null)current().onResume();}
     private void handleBack(){if(fullscreenOwner!=null){fullscreenOwner.onHideCustomView();return;}WebView v=current();if(v!=null&&v.canGoBack())v.goBack();else finish();}
@@ -233,5 +260,5 @@ public final class BrowserActivity extends Activity {
     // including Android16 predictive back. No AndroidX runtime dependency needed.
     @android.annotation.SuppressLint("GestureBackNavigation")
     @Override public void onBackPressed(){handleBack();}
-    @Override protected void onDestroy(){destroyed=true;ui.removeCallbacksAndMessages(null);denyMedia();if(fileCallback!=null)fileCallback.onReceiveValue(null);for(Tab t:tabs)if(t.view!=null){if(t.view.getParent()!=null)((ViewGroup)t.view.getParent()).removeView(t.view);t.view.destroy();}if(filters!=null)filters.close();persistence.shutdown();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;ui.removeCallbacksAndMessages(null);denyMedia();if(fileCallback!=null)fileCallback.onReceiveValue(null);for(Tab t:tabs)if(t.view!=null){if(t.view.getParent()!=null)((ViewGroup)t.view.getParent()).removeView(t.view);t.view.destroy();}if(filters!=null)filters.close();if(store!=null)store.removePolicyListener(policyListener);super.onDestroy();}
 }

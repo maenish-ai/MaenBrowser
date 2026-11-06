@@ -16,7 +16,7 @@ const parsed=parseHosts(input+'\n0.0.0.0 ad1.example # duplicate\n');
 assert.equal(parsed.trim().split('\n').length,10001);
 assert(!parsed.includes('0.0.0.0'));
 let created=[],windowCreations=0;
-globalThis.chrome={storage:{local:{get:async()=>({sessions:[{id:'one',tabs:[{url:'https://first.example'},{url:'https://second.example',pinned:true},{url:'javascript:alert(1)'}]}]})}},windows:{getCurrent:async()=>({id:42}),create:async()=>{windowCreations++;throw new Error('Must not open another window');}},tabs:{create:async t=>{created.push(t);return {id:created.length}},update:async()=>{}},runtime:{getURL:p=>'chrome-extension://test/'+p}};
+globalThis.chrome={storage:{local:{get:async()=>({sessions:[{id:'one',tabs:[{url:'https://first.example'},{url:'https://second.example',pinned:true},{url:'javascript:alert(1)'}]}]})}},windows:{getCurrent:async()=>({id:42}),create:async()=>{windowCreations++;throw new Error('Must not open another window');}},tabs:{query:async()=>[],create:async t=>{created.push(t);return {id:created.length}},update:async()=>{}},runtime:{getURL:p=>'chrome-extension://test/'+p}};
 await restoreSession('one');
 assert.equal(windowCreations,0);
 assert.equal(created.length,2);

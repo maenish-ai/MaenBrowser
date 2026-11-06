@@ -45,7 +45,7 @@ async function navigate(url) {
 const rawCall=object=>evaluate(`(async()=>{const r=await fetch('https://maen.browser/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify(object)})});return {status:r.status,data:await r.json()};})()`);
 async function call(object) {
   // Test convenience only. Real panels use the revision they displayed.
-  if(object.op==='save'&&!Object.hasOwn(object,'expectedRevision')) {
+  if(['save','updateSecurityData'].includes(object.op)&&!Object.hasOwn(object,'expectedRevision')) {
     const current=await rawCall({op:'get'});object={...object,expectedRevision:current.data.revision};
   }
   return rawCall(object);
@@ -265,11 +265,22 @@ try{
   assert(after>before,'Native resource blocking did not run from the ordinary test page');
   assert.equal(probe.resolved,false,'Blocked request unexpectedly completed');
   console.log('PASS: native ad toggle, download preference and request interception');
+  {
+    const lists=Object.fromEntries(['ads','adult','violence'].map(kind=>[kind,fs.readFileSync('assets/filters/'+kind+'.txt','utf8')]));
+    result=await call({op:'updateSecurityData',lists,sequence:'2026110601'});assert(result.data.ok);assert.equal(result.data.securityDataSequence,'2026110601');
+    result=await call({op:'updateSecurityData',lists,sequence:'2026110601'});assert.equal(result.data.ok,false);
+    result=await call({op:'updateSecurityData',lists:{...lists,adult:'invalid'},sequence:'2026110602'});assert.equal(result.data.ok,false);
+    console.log('PASS: atomic protected security lists, native replay floor and invalid-list rejection');
+  }
   result=await call({op:'save',settings:{family:true,allowOnly:true,allowed:['example.com']},newPin:'smoke-test-730192'});assert(result.data.ok);
   assert(result.data.familyListsLoaded);assert(result.data.adultDomains>1000);
   result=await call({op:'save',settings:{family:false},pin:'wrong'});assert.equal(result.data.ok,false);
   await pause(5100);
   result=await call({op:'save',settings:{family:false},pin:'smoke-test-730192'});assert(result.data.ok);assert.equal(result.data.family,false);assert.equal(result.data.familyListsLoaded,false);
+  result=await call({op:'save',settings:{allowed:['example.com']}});assert.equal(result.data.ok,false);assert(result.data.error.includes('PIN'));
+  await pause(5100);
+  result=await call({op:'save',settings:{allowed:['example.com']},pin:'smoke-test-730192'});assert(result.data.ok);
+  console.log('PASS: parent-policy edits require the PIN even while Family Protection is off');
   console.log('PASS: protected family settings and wrong-PIN rejection');
   const settingsFile=path.join(testProfile,'controls.dat');const bytes=fs.readFileSync(settingsFile);assert(!bytes.includes(Buffer.from('smoke-test-730192')));assert(!bytes.includes(Buffer.from('pinHash')));
   console.log('PASS: settings persisted as Windows DPAPI-protected bytes');

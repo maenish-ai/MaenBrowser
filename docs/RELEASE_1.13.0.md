@@ -1,0 +1,16 @@
+# MaenBrowser 1.13.0 source/build candidate
+
+This single batch improves resource-conscious tab management, session recovery, download handling and signed protection-data delivery, and prepares Store update/package infrastructure. The active CEF154 codec binary is unchanged; replacing it requires the dedicated Windows candidate builder and successful native acceptance. This source version is not a production-security approval.
+
+- Automatic local URL checkpoints retain up to3valid snapshots, at most200ordinary tabs and512KiB per snapshot; over-limit/empty/failed captures keep old data. Obvious login/signed-link tokens and private/internal pages are excluded; unknown tokens may remain in URLs. User can disable/delete checkpoints. Drafts, cookies, passwords, POST bodies and call state are never captured.
+- Manual session edits are serialized in the worker with an atomic current/previous write and1MiB collection bound. Restore keeps existing live/deferred tabs and can retry after a partial failure without duplicating identical addresses. Group failures leave restored pages available.
+- Tab manager defaults to the current window, supports all-window scope, title/recent/order views, search and bounded DOM rendering. These controls do not pretend to implement a native vertical tab bar or split renderer.
+- Download resume rechecks the original download and never reconstructs its URL/POST/auth request. Error advice explains connection, login, disk and safety failures. Existing request-preserving popup behavior remains.
+- Signed data uses2048–4096bit RSA-PSS/SHA256 and a pinned app-shipped SPKI key. Daily checks are optional; parent PIN remains required for protected policies. Native persistence uses DPAPI, one atomic bundle and a monotonic sequence, retaining baseline Family categories. Signing is unconfigured until the publisher provisions its key/feed.
+- Store update path uses signed MSIX/App Installer or official Store delivery. No dormant unsigned executable updater is enabled. Android remains WebView-based with Store-signed app updates, not the Windows extension-data client.
+- Preserves startup restore choices; corrects native application version, adds VERSIONINFO and stamps bootstrap identity from the actual module before acceptance. Android recreation keeps a process-local address handoff while durable sessions remain encrypted.
+- Includes current-engine/KEV evidence, candidate build+runtime integration, Store metadata/configuration and actual-Windows benchmark tooling.
+
+Validation scopes and production blockers are explicit in [tests](TEST_RESULTS_1.13.0.md). No remote GitHub changes were made for this batch. No new Windows installer or publisher-signed Store package was produced in the Linux workspace.
+
+Android recreation safety: production Activities now share one application-context encrypted-state object and one ordered, idle-retiring session writer. Policy listeners enforce parent changes in the live Activity, including cancellation of media/file grants and blanking existing documents; retired Activities unregister. This prevents a late session write from persisting an old parent-policy copy. Instrumentation asserts shared identity, but actual device execution remains pending.

@@ -183,10 +183,11 @@ def verify(root, spec):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--destination', type=Path, default=ROOT/'third_party/cef')
+    p.add_argument('--lock',type=Path,default=LOCK,help='Explicit isolated candidate lock; never changes the production lock')
     p.add_argument('--archive', type=Path, help='Use a local archive, verifying the selected SHA-256')
     p.add_argument('--verify', type=Path, help='Verify a previously prepared runtime')
     args = p.parse_args()
-    spec = selection(load_lock(), os.environ.get('MAEN_CEF_ARCHIVE_URL'), os.environ.get('MAEN_CEF_ARCHIVE_SHA256'))
+    spec = selection(load_lock(args.lock), os.environ.get('MAEN_CEF_ARCHIVE_URL'), os.environ.get('MAEN_CEF_ARCHIVE_SHA256'))
     if args.verify:
         verify(args.verify, spec)
         print('CEF archive provenance/layout verified; real playback still requires Windows tests.', file=sys.stderr)

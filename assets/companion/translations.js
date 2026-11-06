@@ -1558,5 +1558,245 @@ export const translations = {
   "Reason: {code}": [
     "Reason: {code}",
     "السبب: {code}"
+  ],
+  "Window": [
+    "Window",
+    "النافذة"
+  ],
+  "Current window": [
+    "Current window",
+    "النافذة الحالية"
+  ],
+  "All windows": [
+    "All windows",
+    "كل النوافذ"
+  ],
+  "Sort tabs": [
+    "Sort tabs",
+    "ترتيب التبويبات"
+  ],
+  "Tab order": [
+    "Tab order",
+    "ترتيب شريط التبويبات"
+  ],
+  "Recently used": [
+    "Recently used",
+    "المستخدمة مؤخرًا"
+  ],
+  "Title": [
+    "Title",
+    "العنوان"
+  ],
+  "Show more tabs": [
+    "Show more tabs",
+    "عرض تبويبات إضافية"
+  ],
+  "Local recovery checkpoints": [
+    "Local recovery checkpoints",
+    "نسخ الاسترداد المحلية"
+  ],
+  "Automatic checkpoints keep web addresses locally, not unsaved forms or private tabs. Up to three checkpoints are retained.": [
+    "Automatic checkpoints keep web addresses locally, not unsaved forms or private tabs. Up to three checkpoints are retained.",
+    "تحفظ نسخ الاسترداد عناوين الويب محليًا، ولا تحفظ النماذج غير المحفوظة أو التبويبات الخاصة. يُحتفظ بثلاث نسخ كحد أقصى."
+  ],
+  "Keep local recovery checkpoints": [
+    "Keep local recovery checkpoints",
+    "الاحتفاظ بنسخ استرداد محلية"
+  ],
+  "Delete recovery checkpoints": [
+    "Delete recovery checkpoints",
+    "حذف نسخ الاسترداد"
+  ],
+  "{count} tabs": [
+    "{count} tabs",
+    "{count} تبويبًا"
+  ],
+  "Signed security data": [
+    "Signed security data",
+    "بيانات الحماية الموقّعة"
+  ],
+  "Check signed security data automatically": [
+    "Check signed security data automatically",
+    "فحص تحديثات بيانات الحماية الموقّعة تلقائيًا"
+  ],
+  "Check security data now": [
+    "Check security data now",
+    "فحص بيانات الحماية الآن"
+  ],
+  "Automatic checks run once a day. Publisher signing must be configured. Parent PIN remains required when protected settings are locked.": [
+    "Automatic checks run once a day. Publisher signing must be configured. Parent PIN remains required when protected settings are locked.",
+    "يُجرى الفحص التلقائي مرة يوميًا. يلزم إعداد توقيع الناشر. يبقى رمز الوالد مطلوبًا عند قفل إعدادات الحماية."
+  ],
+  "MaenBrowser experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Signed data updates preserve parent controls. Executable updates require a publisher-signed package or an official store.": [
+    "MaenBrowser experimental release. Protection reduces risk; it does not guarantee safety or replace parental supervision. Signed data updates preserve parent controls. Executable updates require a publisher-signed package or an official store.",
+    "إصدار MaenBrowser تجريبي. تقلل الحماية المخاطر ولا تضمن الأمان أو تستبدل إشراف الوالدين. تحافظ تحديثات البيانات الموقّعة على ضوابط الوالدين. تتطلب تحديثات البرنامج حزمة موقّعة من الناشر أو متجرًا رسميًا."
+  ],
+  "Publisher signing is not configured. Existing filters remain active.": [
+    "Publisher signing is not configured. Existing filters remain active.",
+    "توقيع الناشر غير مُعدّ بعد. تبقى المرشحات الحالية فعالة."
+  ],
+  "Signed data updates are configured.": [
+    "Signed data updates are configured.",
+    "إعدادات تحديث بيانات الحماية الموقّعة جاهزة."
+  ],
+  "Signed security data updated.": [
+    "Signed security data updated.",
+    "تم تحديث بيانات الحماية الموقّعة."
+  ],
+  "Enter the parent PIN before updating protected security data.": [
+    "Enter the parent PIN before updating protected security data.",
+    "أدخل رمز الوالد قبل تحديث بيانات الحماية المقفلة."
+  ],
+  "Automatic security checks are disabled.": [
+    "Automatic security checks are disabled.",
+    "الفحص التلقائي لتحديث بيانات الحماية معطّل."
+  ],
+  "Security data is up to date.": [
+    "Security data is up to date.",
+    "بيانات الحماية محدّثة."
+  ],
+  "Existing filters remain active.": [
+    "Existing filters remain active.",
+    "تبقى المرشحات الحالية فعالة."
+  ],
+  "Check the connection. Resume is available only when the original download supports it.": [
+    "Check the connection. Resume is available only when the original download supports it.",
+    "تحقق من الاتصال. يتاح الاستئناف فقط إذا كان التنزيل الأصلي يدعمه."
+  ],
+  "Sign in on the original website, then request the file there. This browser will not replay your login or POST request.": [
+    "Sign in on the original website, then request the file there. This browser will not replay your login or POST request.",
+    "سجّل الدخول في الموقع الأصلي واطلب الملف منه. لن يعيد المتصفح إرسال بيانات الدخول أو طلب POST من تلقاء نفسه."
+  ],
+  "Check free space, folder permissions and the destination filename.": [
+    "Check free space, folder permissions and the destination filename.",
+    "تحقق من المساحة الحرة وصلاحيات المجلد واسم الملف."
+  ],
+  "The security check blocked this file. Do not disable protection to force the download.": [
+    "The security check blocked this file. Do not disable protection to force the download.",
+    "حظر فحص الأمان هذا الملف. لا تعطّل الحماية لإجبار تنزيله."
+  ],
+  "Return to the original website if Resume is unavailable. Your original request will not be recreated automatically.": [
+    "Return to the original website if Resume is unavailable. Your original request will not be recreated automatically.",
+    "عُد إلى الموقع الأصلي إذا تعذّر الاستئناف. لن يُعاد إنشاء طلبك الأصلي تلقائيًا."
+  ],
+  "This download cannot be resumed. Request it again on the original website.": [
+    "This download cannot be resumed. Request it again on the original website.",
+    "لا يمكن استئناف هذا التنزيل. اطلب الملف مجددًا من الموقع الأصلي."
+  ],
+  "No valid recovery checkpoint.": [
+    "No valid recovery checkpoint.",
+    "لا توجد نسخة استرداد محلية سليمة."
+  ],
+  "Session checkpoint is too large. Previous checkpoints were kept.": [
+    "Session checkpoint is too large. Previous checkpoints were kept.",
+    "نسخة الجلسة كبيرة جدًا. تم الاحتفاظ بالنسخ السابقة."
+  ],
+  "Update signature rejected.": [
+    "Update signature rejected.",
+    "رُفض توقيع التحديث."
+  ],
+  "Stale or invalid signed update sequence.": [
+    "Stale or invalid signed update sequence.",
+    "تسلسل التحديث الموقّع قديم أو غير صالح."
+  ],
+  "Signed update is expired or has invalid dates.": [
+    "Signed update is expired or has invalid dates.",
+    "انتهت صلاحية التحديث الموقّع أو أن تواريخه غير صالحة."
+  ],
+  "A newer browser is required for this security data.": [
+    "A newer browser is required for this security data.",
+    "تحتاج بيانات الحماية هذه إلى إصدار أحدث من المتصفح."
+  ],
+  "Untrusted update download origin.": [
+    "Untrusted update download origin.",
+    "مصدر تنزيل التحديث غير موثوق."
+  ],
+  "Security data integrity check failed. Previous filters were kept.": [
+    "Security data integrity check failed. Previous filters were kept.",
+    "فشل التحقق من سلامة بيانات الحماية. تم الاحتفاظ بالمرشحات السابقة."
+  ],
+  "Security update download failed. Previous filters were kept.": [
+    "Security update download failed. Previous filters were kept.",
+    "تعذر تنزيل تحديث الحماية. تم الاحتفاظ بالمرشحات السابقة."
+  ],
+  "Security data domains are invalid. Previous filters were kept.": [
+    "Security data domains are invalid. Previous filters were kept.",
+    "نطاقات بيانات الحماية غير صالحة. تم الاحتفاظ بالمرشحات السابقة."
+  ],
+  "Invalid or stale security data. Previous filters were kept.": [
+    "Invalid or stale security data. Previous filters were kept.",
+    "بيانات الحماية غير صالحة أو قديمة. تم الاحتفاظ بالمرشحات السابقة."
+  ],
+  "Could not save security data. Previous filters were kept.": [
+    "Could not save security data. Previous filters were kept.",
+    "تعذر حفظ بيانات الحماية. تم الاحتفاظ بالمرشحات السابقة."
+  ],
+  "Protected security data is unreadable. Repair the profile before updating.": [
+    "Protected security data is unreadable. Repair the profile before updating.",
+    "تعذرت قراءة بيانات الحماية المقفلة. أصلح ملف المستخدم قبل التحديث."
+  ],
+  "Combined security data exceeds limit.": [
+    "Combined security data exceeds limit.",
+    "يتجاوز حجم بيانات الحماية مجتمعة الحد المسموح."
+  ],
+  "Invalid security data sequence state.": [
+    "Invalid security data sequence state.",
+    "حالة تسلسل بيانات الحماية غير صالحة."
+  ],
+  "Invalid publisher feed URL.": [
+    "Invalid publisher feed URL.",
+    "عنوان مصدر تحديث الناشر غير صالح."
+  ],
+  "Showing {shown} of {total} matching tabs.": [
+    "Showing {shown} of {total} matching tabs.",
+    "عرض {shown} من أصل {total} تبويبًا مطابقًا."
+  ],
+  "Saved sessions are invalid. Recover the previous saved set.": [
+    "Saved sessions are invalid. Recover the previous saved set.",
+    "الجلسات المحفوظة غير صالحة. استعد المجموعة السابقة."
+  ],
+  "Saved sessions exceed the storage limit. Export and remove older sessions first.": [
+    "Saved sessions exceed the storage limit. Export and remove older sessions first.",
+    "تتجاوز الجلسات المحفوظة حد التخزين. صدّر الجلسات القديمة واحذفها أولًا."
+  ],
+  "Restored {restored} tabs; {skipped} were already open.": [
+    "Restored {restored} tabs; {skipped} were already open.",
+    "تمت استعادة {restored} تبويبًا؛ وكان {skipped} مفتوحًا بالفعل."
+  ],
+  "Some tabs could not be restored. Existing tabs and saved sessions were kept.": [
+    "Some tabs could not be restored. Existing tabs and saved sessions were kept.",
+    "تعذرت استعادة بعض التبويبات. تم الاحتفاظ بالتبويبات الحالية والجلسات المحفوظة."
+  ],
+  "UltraLite — older and low-memory devices": [
+    "UltraLite — older and low-memory devices",
+    "UltraLite — للأجهزة القديمة وقليلة الذاكرة"
+  ],
+  "Lite — reduced resource use": [
+    "Lite — reduced resource use",
+    "Lite — استهلاك موارد أقل"
+  ],
+  "Automatic checkpoints keep web addresses locally, not unsaved forms or private tabs. Up to three checkpoints are retained. Unknown private link tokens may still appear in addresses; disable and delete checkpoints when needed.": [
+    "Automatic checkpoints keep web addresses locally, not unsaved forms or private tabs. Up to three checkpoints are retained. Unknown private link tokens may still appear in addresses; disable and delete checkpoints when needed.",
+    "تحفظ نسخ الاسترداد عناوين الويب محليًا، دون النماذج غير المحفوظة أو التبويبات الخاصة. تُحفظ ثلاث نسخ كحد أقصى. قد تتضمن بعض العناوين رموز روابط خاصة غير معروفة؛ عطّل النسخ واحذفها عند الحاجة."
+  ],
+  "Find a setting": [
+    "Find a setting",
+    "ابحث عن إعداد"
+  ],
+  "Search narrows the cards. Parent PIN controls stay visible.": [
+    "Search narrows the cards. Parent PIN controls stay visible.",
+    "يُظهر البحث الأقسام المطابقة. تبقى حقول رمز الوالد ظاهرة."
+  ],
+  "Required for any native setting change while Family Protection is on, and for parent-policy changes whenever a parent PIN exists.": [
+    "Required for any native setting change while Family Protection is on, and for parent-policy changes whenever a parent PIN exists.",
+    "مطلوب لأي تغيير في الإعدادات الأصلية أثناء تفعيل حماية الأسرة، ولتغيير سياسة الوالدين متى كان رمز الوالد مُعدًّا."
+  ],
+  "Browser and controls have different versions. Close all windows and reopen the updated installation.": [
+    "Browser and controls have different versions. Close all windows and reopen the updated installation.",
+    "إصدار المتصفح ولوحة التحكم مختلفان. أغلق جميع النوافذ وأعد فتح النسخة المحدّثة."
+  ],
+  "Open MaenBrowser normally or repair protected settings before updating.": [
+    "Open MaenBrowser normally or repair protected settings before updating.",
+    "افتح MaenBrowser بالطريقة العادية أو أصلح الإعدادات المحمية قبل التحديث."
   ]
 };

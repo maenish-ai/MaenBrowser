@@ -22,3 +22,13 @@ android/local.properties
 *.keystore
 *.aab
 *.apk
+
+# Publisher private signing material; public trust roots belong in reviewed JSON.
+*.pfx
+*.p12
+*.pem
+*.key
+*.pk8
+.env
+.env.*
+!.env.example

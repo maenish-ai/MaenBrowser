@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "configured": false,
+  "windowsIdentityName": "",
+  "windowsPublisher": "",
+  "windowsPublisherDisplayName": "",
+  "packageBaseUrl": "",
+  "androidApplicationId": "ai.maenish.maenbrowser",
+  "androidIdentityConfirmed": false,
+  "privacyPolicyUrl": "",
+  "supportUrl": "https://github.com/maenish-ai/MaenBrowser/issues"
+}

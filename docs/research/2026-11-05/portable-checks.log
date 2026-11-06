@@ -1,0 +1,101 @@
+RUN /tmp/maen-agent-venv/bin/python tools/verify-package.py
+Package validation passed: version 1.12.2, extension oheleelieolhckdkpglimpgnhifpiilp
+All static control text has English and Arabic entries
+Pinned local ad compatibility shims and license verified
+RUN node tests/ad_shims_test.mjs
+Pinned ad shims: queued callbacks complete without ad delivery, requests or impressions
+RUN node tests/browser_diagnostics_test.mjs
+Browser diagnostics: endpoint-only metadata, no secrets, bounded read readiness and rejection checks passed
+RUN node tests/companion_api_test.mjs
+Direct native read/write bypasses stale Unknown action worker; no replay; diagnostics classified, bounded and private
+RUN node tests/download_context_test.mjs
+Download context: no move before commit, iframe exclusion, one-time page reparent, OAuth preserved, cleanup on close
+RUN node tests/download_progress_test.mjs
+Download speed, pause/resume, stalls and unknown-size tests passed
+RUN node tests/error_journal_test.mjs
+Local error journal: bounded, serialized, privacy-filtered and storage failure tolerant
+RUN node tests/idle_page_probe_test.mjs
+Idle inspection: chat/editor, live media, drafts, bounded forms and permissions protected
+RUN node tests/idle_recheck_test.mjs
+Idle discard rechecks: activity, policy, navigation, downloads and longer timeout passed
+RUN node tests/localization_test.mjs
+English/Arabic catalogues and interpolation placeholders verified
+RUN node tests/media_errors_test.mjs
+Media classification preserves abort/network/decode/source/unknown distinctions
+RUN node tests/options_conflict_test.mjs
+Real options submit: stale panel cannot restore ad state; conflict is visible, no retry, explicit reload works
+RUN node tests/options_failure_test.mjs
+Settings: optional storage isolation, malformed preferences, protected lock and connection retry passed
+RUN node tests/options_save_pin_test.mjs
+Settings save: ordinary changes omit unchanged family mode; real transitions and PINs are preserved
+RUN node tests/page_media_probe_test.mjs
+Media snapshot: bounded, no URLs/raw error text, unsupported/encrypted/empty states preserved
+RUN node tests/popup_failure_test.mjs
+Popup remains usable when tab lookup and badge update fail
+RUN node tests/process_sample_test.mjs
+CPU samples: normalization, restarts, short intervals and invalid counters passed
+RUN node tests/protection_error_ui_test.mjs
+Popup failure visibly reports numbered error, retry and selectable diagnostic report
+RUN node tests/protection_sync_regression_test.mjs
+Protection state synchronization and same-origin popup guards present
+RUN node tests/release196_test.mjs
+1.9.6: minimal settings patch, pressure policy, bounded filter validation and lazy sessions passed
+RUN node tests/render_scheduler_test.mjs
+Refresh limits, hidden-page cancellation, event coalescing and in-flight lifecycle passed
+RUN node tests/report_download_test.mjs
+Report download: JSON, filename and cleanup on success/failure passed
+RUN node tests/session_restore_test.mjs
+Sessions: safe imports, bounds, private exclusion, group restore and lazy loading passed
+RUN node tests/start_ad_toggle_test.mjs
+Start page contains search and shortcuts, no ad toggle or native protection polling
+RUN node tests/startup_popup_performance_test.mjs
+Startup preference, opt-in restore, popup reparenting and reduced polling guards passed
+RUN node tests/tab_policy_test.mjs
+Tab safeguards and session URL tests passed
+RUN node tests/technical_details_test.mjs
+Technical details: on-demand snapshots, private field exclusion and failed refresh passed
+RUN node tests/video_controls_test.mjs
+Media controls, errors, localization and no-autoplay checks passed
+RUN node tests/weather_policy_test.mjs
+Weather: bounded rounded coordinates, fixed HTTPS provider, timestamp freshness and malformed data passed
+RUN /tmp/maen-agent-venv/bin/python tests/android_release_test.py
+Android package: API levels, isolated preview ID, publisher signing, TLS/bridge boundaries and wrapper checksum passed (not device validation)
+RUN /tmp/maen-agent-venv/bin/python tests/android_sdk_workflow_test.py
+Android CI: all 3 SDK setup steps use supported explicit packages; no retired tools default
+RUN /tmp/maen-agent-venv/bin/python tests/community_dataset_test.py
+Wrote 143 distinct requests
+Community dataset: 143 distinct keys, traceable sources, counts and reproducible weighted scores
+RUN /tmp/maen-agent-venv/bin/python tests/compatibility_release_test.py
+Compatibility release: local agent isolation/family guards, merged filters, critical sites and honest codec gates passed
+RUN /tmp/maen-agent-venv/bin/python tests/control_endpoint_source_test.py
+Internal endpoint integration: startup registration order, actual-frame checks and exact CORS origin passed
+RUN /tmp/maen-agent-venv/bin/python tests/download_lifetime_test.py
+Download ownership: original popup request preserved, one continuation, no automatic close/hide/cancel
+Native media fallback: default WebView2 download manager preserved, no unconditional download cancellation
+RUN /tmp/maen-agent-venv/bin/python tests/engine_audit_test.py
+Engine freshness comparison: stable channels, full version ordering and malformed sources passed
+RUN /tmp/maen-agent-venv/bin/python tests/export_source_base_test.py
+Export: pinned base includes committed changes and binary files; complete manifest and applicable patch verified
+RUN /tmp/maen-agent-venv/bin/python tests/media_release_pipeline_test.py
+Media release gates: version, codecs, tested build, draft and checksum checks passed
+RUN /tmp/maen-agent-venv/bin/python tests/media_runtime_test.py
+Media runtime: default codec source, incomplete overrides, checksum, tamper, version and traversal guards passed
+RUN /tmp/maen-agent-venv/bin/python tests/navigation_regression_test.py
+Native navigation source guards passed (not a Windows runtime test)
+RUN /tmp/maen-agent-venv/bin/python tests/package_encoding_test.py
+Package validation passed: version 1.12.2, extension oheleelieolhckdkpglimpgnhifpiilp
+All static control text has English and Arabic entries
+Pinned local ad compatibility shims and license verified
+Internal endpoint integration: startup registration order, actual-frame checks and exact CORS origin passed
+Package validation passed with simulated Windows cp1252 defaults
+RUN /tmp/maen-agent-venv/bin/python tests/polish_release_test.py
+Polish: UTF8 installer source/build, same-window tab handoff, family checks, weather CSP and updated actions passed
+RUN /tmp/maen-agent-venv/bin/python tests/refine_release_test.py
+Refinement: native resource branding, menu new-tab routing, narrow internal permissions and Node24 artifact actions passed
+RUN /tmp/maen-agent-venv/bin/python tests/release_guards_test.py
+Release source invariants passed; Windows runtime validation still required
+RUN /tmp/maen-agent-venv/bin/python tests/updater_release_policy_test.py
+Updater: OFF build remains available; unsafe optional ON configuration is rejected
+Domain boundary and normalization tests passed
+Direct media routing tests passed
+All available portable checks passed.

@@ -1,9 +1,11 @@
-# MaenBrowser1.12.2 — download reliability
+> 1.13.0 source/build candidate: see [implementation status](docs/IMPLEMENTATION_STATUS.md), [test scopes](docs/TEST_RESULTS_1.13.0.md) and [production blockers](docs/RELEASE_BLOCKERS.md). Active CEF154 is unchanged; newer codec engine and Store signing/device acceptance are not completed in this environment.
 
-Preserve original popup download requests and transfer lifetime; defer normal-page reparenting until commit; show interruption reason codes.
+# MaenBrowser 1.13.0 — sessions, signed data and Store preparation
 
-- [Arabic upload](docs/UPLOAD_1.12.2_AR.md)
-- [Changes and required Windows validation](docs/RELEASE_1.12.2.md)
+Adds bounded session recovery, serialized session edits, original-download recovery, signed protection-data delivery and Store/performance tooling. Native engine, publisher signing and physical-device prerequisites remain explicit.
+
+- [Arabic upload](docs/UPLOAD_1.13.0_AR.md)
+- [Changes and required Windows validation](docs/RELEASE_1.13.0.md)
 
 ## Previous release context
 

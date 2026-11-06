@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "enabled": false,
+  "feedUrl": "https://raw.githubusercontent.com/maenish-ai/MaenBrowser/security-data/current.json",
+  "allowedDownloadOrigin": "https://raw.githubusercontent.com",
+  "allowedDownloadPrefix": "/maenish-ai/MaenBrowser/security-data/",
+  "publicKeySpki": "",
+  "algorithm": "RSA-PSS-SHA256",
+  "note": "Publisher must provision its own RSA-PSS public key and signed feed before enabling. Never put a private key in this file."
+}

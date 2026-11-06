@@ -45,3 +45,7 @@ permission is respected; a saved or timezone city can be used as a fallback.
 Approximate coordinates and the public IP reach the provider; a15–60minute
 local cache and visible-page-only refresh reduce traffic. No API key is
 bundled. The service is not guaranteed to be continuously available.
+
+## Build-time signing/test dependency
+
+PyCA cryptography50.0.2 is used by optional publisher signing and cryptographic build tests only; it is not bundled into the browser runtime. Upstream license/source: https://github.com/pyca/cryptography and https://cryptography.io/en/latest/. Publisher private keys are not distributed.

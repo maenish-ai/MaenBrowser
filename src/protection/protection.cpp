@@ -1,5 +1,7 @@
 #include "src/protection/protection.h"
 #include "src/protection/filter_snapshot.h"
+#include "src/protection/security_snapshot.h"
+#include "src/protection/parent_policy.h"
 #include "src/app/ui_language.h"
 #include <windows.h>
 #include <bcrypt.h>
@@ -56,6 +58,49 @@ std::string Json(CefRefPtr<CefDictionaryValue> d) {
 CefRefPtr<CefDictionaryValue> Dictionary(const std::string& text) {
   auto v = CefParseJSON(text, JSON_PARSER_RFC);
   return v && v->GetType() == VTYPE_DICTIONARY ? v->GetDictionary() : nullptr;
+}
+struct SecurityLists {
+  uint64_t sequence=0;
+  bool corrupt=false;
+  DomainRules ads,adult,violence;
+};
+std::atomic<std::shared_ptr<const SecurityLists>> g_security_lists{std::make_shared<const SecurityLists>()};
+std::filesystem::path SecurityDataPath(){return std::filesystem::path(storage::GetAppDataRoot())/L"security-data.dat";}
+bool DecodeSecurityLists(CefRefPtr<CefDictionaryValue> bundle, SecurityLists& out, bool family=false, bool ads=true){
+  if(!bundle || bundle->GetInt("schema")!=1 || !ParseSecuritySequence(bundle->GetString("sequence").ToString(),out.sequence))return false;
+  for(const auto key:{"ads","adult","violence"})if(bundle->GetType(key)!=VTYPE_STRING || bundle->GetString(key).length()>4*1024*1024)return false;
+  if(ads && !ParseSecurityDomains(bundle->GetString("ads").ToString(),10000,out.ads))return false;
+  return !family || (ParseSecurityDomains(bundle->GetString("adult").ToString(),10000,out.adult) &&
+    ParseSecurityDomains(bundle->GetString("violence").ToString(),100,out.violence));
+}
+std::shared_ptr<const SecurityLists> LoadSecurityLists(bool family=false,bool ads=true){
+  auto result=std::make_shared<SecurityLists>();std::error_code ec;
+  if(!std::filesystem::exists(SecurityDataPath(),ec)){
+    auto backup=SecurityDataPath();backup+=L".bak";
+    result->corrupt=ec || std::filesystem::exists(backup,ec);return result;
+  }
+  auto bytes=ReadFile(SecurityDataPath(),6*1024*1024);
+  DATA_BLOB input{static_cast<DWORD>(bytes.size()),reinterpret_cast<BYTE*>(bytes.data())},plain{};
+  if(bytes.empty() || !CryptUnprotectData(&input,nullptr,nullptr,nullptr,nullptr,CRYPTPROTECT_UI_FORBIDDEN,&plain)){result->corrupt=true;return result;}
+  const std::string json(reinterpret_cast<char*>(plain.pbData),plain.cbData);
+  SecureZeroMemory(plain.pbData,plain.cbData);LocalFree(plain.pbData);
+  if(!DecodeSecurityLists(Dictionary(json),*result,family,ads))result->corrupt=true;
+  return result;
+}
+bool SaveSecurityLists(CefRefPtr<CefDictionaryValue> bundle){
+  const auto json=Json(bundle);if(json.size()>5*1024*1024)return false;
+  DATA_BLOB input{static_cast<DWORD>(json.size()),reinterpret_cast<BYTE*>(const_cast<char*>(json.data()))},sealed{};
+  if(!CryptProtectData(&input,L"MaenBrowser security data",nullptr,nullptr,nullptr,CRYPTPROTECT_UI_FORBIDDEN,&sealed))return false;
+  auto target=SecurityDataPath(),temporary=target;temporary+=L".tmp";
+  bool ok=false;
+  {std::ofstream file(temporary,std::ios::binary|std::ios::trunc);if(file){file.write(reinterpret_cast<char*>(sealed.pbData),sealed.cbData);file.flush();ok=file.good();}}
+  SecureZeroMemory(sealed.pbData,sealed.cbData);LocalFree(sealed.pbData);
+  if(ok){std::error_code ec;if(std::filesystem::exists(target,ec)){auto backup=target;backup+=L".bak";ok=ReplaceFileW(target.c_str(),temporary.c_str(),backup.c_str(),0,nullptr,nullptr)!=FALSE;}
+    else ok=MoveFileExW(temporary.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH)!=FALSE;}
+  if(!ok){std::error_code ec;std::filesystem::remove(temporary,ec);}return ok;
+}
+void MergeSecurityRules(DomainRules& target,const DomainRules& updated){
+  auto values=target.Values();values.insert(values.end(),updated.Values().begin(),updated.Values().end());target.Assign(std::move(values));
 }
 std::filesystem::path SettingsPath() {
   return std::filesystem::path(storage::GetAppDataRoot()) / L"controls.dat";
@@ -127,6 +172,8 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
     d->SetString("listError", g_ad_rules.load()->error + (s.categories ? s.categories->error : ""));
     d->SetBool("familyListsLoaded", s.categories != nullptr);
     d->SetString("version", kVersion);
+    d->SetString("securityDataSequence",std::to_string(g_security_lists.load()->sequence));
+    d->SetBool("securityDataCorrupt",g_security_lists.load()->corrupt);
   }
   return d;
 }
@@ -196,6 +243,10 @@ std::shared_ptr<const FamilyRules> LoadFamilyRules() {
   auto rules = std::make_shared<FamilyRules>();
   rules->error = LoadDomains("adult.txt", rules->adult);
   rules->error += LoadDomains("violence.txt", rules->violence);
+  // Classification tables are loaded only while Family Protection is enabled.
+  const auto updated=LoadSecurityLists(true,false);
+  if(updated->corrupt)rules->error+="Updated security data is unreadable. Family categories remain locked. ";
+  else if(updated->sequence){MergeSecurityRules(rules->adult,updated->adult);MergeSecurityRules(rules->violence,updated->violence);}
   return rules;
 }
 std::filesystem::path AdSnapshotPath() {
@@ -326,7 +377,7 @@ class Resource final : public CefResourceRequestHandler {
       if (!post) return new Response(Error("Missing request"), "application/json", 400, false, true);
       CefPostData::ElementVector elements; post->GetElements(elements); std::string body;
       for (const auto& e : elements) {
-        if (e->GetType() != PDE_TYPE_BYTES || e->GetBytesCount() > 5 * 1024 * 1024 || body.size() + e->GetBytesCount() > 5 * 1024 * 1024)
+        if (e->GetType() != PDE_TYPE_BYTES || e->GetBytesCount() > 6 * 1024 * 1024 || body.size() + e->GetBytesCount() > 6 * 1024 * 1024)
           return new Response(Error("Request too large"), "application/json", 413, false, true);
         const auto n = body.size(); body.resize(n + e->GetBytesCount()); e->GetBytes(e->GetBytesCount(), body.data() + n);
       }
@@ -434,6 +485,9 @@ void Initialize() {
   shims->analytics=ReadFile(InstallDirectory()/L"shims"/L"google-analytics_analytics.js",16384);
   shims->publisher=ReadFile(InstallDirectory()/L"shims"/L"googletagservices_gpt.js",16384);
   g_ad_shims.store(shims);
+  const auto loadedSecurity=LoadSecurityLists();
+  auto securityMetadata=std::make_shared<SecurityLists>();securityMetadata->sequence=loadedSecurity->sequence;securityMetadata->corrupt=loadedSecurity->corrupt;
+  g_security_lists.store(securityMetadata);
   auto ads = std::make_shared<AdRules>();
   ads->error = LoadDomains("ads.txt", ads->domains);
   DomainRules updated;
@@ -445,6 +499,7 @@ void Initialize() {
       ads->domains = std::move(updated); ads->error.clear();
     }
   }
+  if(!loadedSecurity->corrupt && loadedSecurity->sequence)MergeSecurityRules(ads->domains,loadedSecurity->ads);
   MergeBundledAdRules(*ads);
   g_ad_rules.store(ads);
   auto s = std::make_shared<Settings>();
@@ -583,6 +638,24 @@ std::string Api(const std::string& body) {
     g_settings.store(recovered);
     auto out = Export(*recovered, false); out->SetBool("ok", true); return Json(out);
   }
+  if(op=="updateSecurityData"){
+    std::lock_guard<std::mutex> lock(g_write);auto old=Current();
+    if(old->corrupt || g_security_lists.load()->corrupt)return Error("Protected security data is unreadable. Repair the profile before updating.");
+    if(d->GetString("expectedRevision").ToString()!=std::to_string(old->revision))return Error("Settings changed in another window. Reload settings before saving.");
+    if(old->family || !old->pin_hash.empty()){
+      if(std::chrono::steady_clock::now()<g_retry)return Error("Please wait before trying your PIN again.");
+      if(!VerifyPin(*old,d->GetString("pin").ToString())){g_retry=std::chrono::steady_clock::now()+std::chrono::seconds(5);return Error("Incorrect parent PIN.");}
+    }
+    auto bundle=d->GetDictionary("lists");if(!bundle)return Error("Missing security data lists.");
+    bundle=bundle->Copy(false);bundle->SetInt("schema",1);bundle->SetString("sequence",d->GetString("sequence"));
+    auto parsed=std::make_shared<SecurityLists>();
+    if(!DecodeSecurityLists(bundle,*parsed,true) || parsed->sequence<=g_security_lists.load()->sequence)return Error("Invalid or stale security data. Previous filters were kept.");
+    if(!SaveSecurityLists(bundle))return Error("Could not save security data. Previous filters were kept.");
+    auto metadata=std::make_shared<SecurityLists>();metadata->sequence=parsed->sequence;g_security_lists.store(metadata);
+    auto ads=std::make_shared<AdRules>();ads->domains=std::move(parsed->ads);MergeBundledAdRules(*ads);g_ad_rules.store(ads);
+    if(old->family){auto next=std::make_shared<Settings>(*old);next->categories=LoadFamilyRules();g_settings.store(next);}
+    auto out=Export(*Current(),false);out->SetBool("ok",true);return Json(out);
+  }
   if (op == "updateAdFilters") {
     std::lock_guard<std::mutex> lock(g_write);
     auto old = Current();
@@ -610,7 +683,9 @@ std::string Api(const std::string& body) {
   if (d->GetString("expectedRevision").ToString() != std::to_string(old->revision))
     return Error("Settings changed in another window. Reload settings before saving.");
   auto patch = d->GetDictionary("settings"); if (!patch) return Error("Missing settings");
-  if (old->family || (!old->pin_hash.empty() && (patch->HasKey("family") || d->HasKey("newPin")))) {
+  CefDictionaryValue::KeyList keys;patch->GetKeys(keys);std::vector<std::string> changed;
+  for(const auto& key:keys)changed.push_back(key.ToString());
+  if (RequiresParentPin(old->family,!old->pin_hash.empty(),changed,d->HasKey("newPin"))) {
     if (std::chrono::steady_clock::now() < g_retry) return Error("Please wait before trying your PIN again.");
     if (!VerifyPin(*old, d->GetString("pin").ToString())) {
       g_retry = std::chrono::steady_clock::now() + std::chrono::seconds(5); return Error("Incorrect parent PIN.");

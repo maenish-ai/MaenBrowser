@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "product": "MaenBrowser",
-  "version": "1.12.2",
+  "version": "1.13.0",
   "isolatedProfile": true,
   "familyGuard": true,
   "readOnlySettings": true,

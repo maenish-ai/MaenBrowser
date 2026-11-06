@@ -19,6 +19,11 @@ jobs:
           # supported packages; AGP 8.13.2 uses Build Tools 35 with compileSdk 36.
           packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
       - uses: gradle/actions/wrapper-validation@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate publisher-owned Android identity and privacy metadata
+        run: python tools/store-readiness.py --platform android --require-metadata
       - name: Build with publisher upload key, never debug signing
         shell: bash
         env:

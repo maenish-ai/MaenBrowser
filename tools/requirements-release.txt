@@ -1,0 +1,2 @@
+# Build-time signing only; no Python dependency is added to the browser runtime.
+cryptography==50.0.2

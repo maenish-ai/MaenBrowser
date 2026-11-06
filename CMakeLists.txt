@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MaenBrowser VERSION 1.12.2 LANGUAGES CXX)
+project(MaenBrowser VERSION 1.13.0 LANGUAGES CXX)
 
 if(MSVC)
   add_compile_options(/utf-8)
@@ -15,8 +15,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CEF_ROOT "" CACHE PATH "Path to extracted CEF binary distribution")
+set(MAEN_RUNTIME_LOCK_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/media-runtime.lock.json" CACHE FILEPATH "Explicit runtime lock, separate for candidate tests")
 option(MAEN_ENABLE_UPDATER "Enable WinSparkle updater" OFF)
 set(WINSPARKLE_ROOT "" CACHE PATH "Path to WinSparkle SDK")
+include(cmake/UpdatePolicy.cmake)
 set(WEBVIEW2_SDK_ROOT "" CACHE PATH "Path to extracted Microsoft.Web.WebView2 NuGet package")
 
 if(NOT CEF_ROOT)
@@ -39,7 +41,7 @@ endif()
 # A successful C++ build alone does not establish H.264 support.
 find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
 execute_process(
-  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/media-runtime.py" --verify "${CEF_ROOT}"
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/media-runtime.py" --verify "${CEF_ROOT}" --lock "${MAEN_RUNTIME_LOCK_FILE}"
   RESULT_VARIABLE MAEN_MEDIA_VERIFY_RESULT
 )
 if(NOT MAEN_MEDIA_VERIFY_RESULT EQUAL 0)
@@ -115,6 +117,9 @@ set_target_properties(MaenBrowser PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${MAEN_OUT_DIR}"
   LIBRARY_OUTPUT_DIRECTORY "${MAEN_OUT_DIR}"
 )
+
+configure_file(src/win/version.rc.in "${CMAKE_CURRENT_BINARY_DIR}/maenbrowser-version.rc" @ONLY)
+target_sources(MaenBrowser PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/maenbrowser-version.rc")
 
 target_include_directories(MaenBrowser PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -235,7 +240,7 @@ else()
 endif()
 add_test(NAME control_origin COMMAND MaenControlOriginTests)
 
-foreach(pair "MaenAgentProfileTests;tests/agent_profile_test.cpp" "MaenPopupPolicyTests;tests/popup_policy_test.cpp" "MaenSettingsStampTests;tests/settings_stamp_test.cpp" "MaenAdShimTests;tests/ad_shim_policy_test.cpp")
+foreach(pair "MaenParentPolicyTests;tests/parent_policy_test.cpp" "MaenSecuritySnapshotTests;tests/security_snapshot_test.cpp" "MaenAgentProfileTests;tests/agent_profile_test.cpp" "MaenPopupPolicyTests;tests/popup_policy_test.cpp" "MaenSettingsStampTests;tests/settings_stamp_test.cpp" "MaenAdShimTests;tests/ad_shim_policy_test.cpp")
   list(GET pair 0 test_target)
   list(GET pair 1 test_source)
   add_executable(${test_target} ${test_source})

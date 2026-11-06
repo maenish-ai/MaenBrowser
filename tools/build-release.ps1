@@ -5,6 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+python -m pip install -r "$PSScriptRoot\requirements-release.txt"
+if ($LASTEXITCODE -ne 0) { throw "Build-time signature test dependency unavailable" }
 python "$PSScriptRoot\run-checks.py"
 if ($LASTEXITCODE -ne 0) { throw "Portable checks failed" }
 & "$PSScriptRoot\preflight.ps1"
@@ -12,6 +14,7 @@ if ($LASTEXITCODE -ne 0) { throw "Portable checks failed" }
 
 cmake --build $BuildDir --config Release --parallel
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+& "$PSScriptRoot/set-exe-icon.ps1" -ExePath "$BuildDir/Release/MaenBrowser.exe" -IconPath "$PSScriptRoot/../assets/maenbrowser.ico" -ResourceDll "$BuildDir/Release/MaenBrowser.dll"
 ctest --test-dir $BuildDir -C Release --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw "Native tests failed" }
 node tests/browser_smoke.mjs "$BuildDir/Release/MaenBrowser.exe"

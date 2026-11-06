@@ -20,12 +20,25 @@ def report(lock,chrome,cef):
     pinned=lock['cef_version'].split('+chromium-',1)[1]
     stable=[x for x in cef['windows64']['versions'] if x.get('channel')=='stable']
     newest=max(stable,key=lambda x:version(x['chromium_version']))
-    latest=max((x['version'] for x in chrome['versions']),key=version)
-    return {'schema':1,'checkedUtc':datetime.now(timezone.utc).isoformat(),'pinnedChromium':pinned,'latestChromeStable':latest,'latestCefStable':newest['cef_version'],'latestCefChromium':newest['chromium_version'],'currentAgainstChrome':version(pinned)>=version(latest),'currentAgainstCef':version(pinned)>=version(newest['chromium_version']),'note':'A matching version is not proof that the binary is secure. Codec and sandbox runtime tests remain mandatory.'}
+    # Version listings include builds which may never be served. Compare active
+    # stable releases, excluding zero-fraction controls, ended/future rollouts.
+    now=datetime.now(timezone.utc)
+    def active(entry):
+        serving=entry.get('serving',{})
+        if not isinstance(entry.get('fraction'),(int,float)) or entry['fraction']<=0:return False
+        if serving.get('endTime'):return False
+        start=serving.get('startTime')
+        if not start:return False
+        try:return datetime.fromisoformat(start.replace('Z','+00:00'))<=now
+        except (ValueError,TypeError):return False
+    served=[entry for entry in chrome['releases'] if active(entry)]
+    if not served:raise ValueError('No active stable releases; freshness is unknown')
+    latest=max((x['version'] for x in served),key=version)
+    return {'schema':1,'checkedUtc':datetime.now(timezone.utc).isoformat(),'pinnedChromium':pinned,'latestChromeStable':latest,'comparisonBasis':'highest version in currently served nonzero-fraction Windows stable cohorts','activeStableVersions':sorted({x['version'] for x in served},key=version),'latestCefStable':newest['cef_version'],'latestCefChromium':newest['chromium_version'],'currentAgainstChrome':version(pinned)>=version(latest),'currentAgainstCef':version(pinned)>=version(newest['chromium_version']),'note':'A matching version is not proof that the binary is secure. Codec and sandbox runtime tests remain mandatory.'}
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--require-current',action='store_true');a=p.parse_args()
     try:
-        result=report(json.loads((ROOT/'config/media-runtime.lock.json').read_text(encoding='utf-8')),get('https://versionhistory.googleapis.com/v1/chrome/platforms/win/channels/stable/versions?page_size=20'),get('https://cef-builds.spotifycdn.com/index.json'))
+        result=report(json.loads((ROOT/'config/media-runtime.lock.json').read_text(encoding='utf-8')),get('https://versionhistory.googleapis.com/v1/chrome/platforms/win/channels/stable/versions/all/releases?filter=endtime=none&page_size=100'),get('https://cef-builds.spotifycdn.com/index.json'))
         code=2 if a.require_current and not result['currentAgainstChrome'] else 0
     except Exception as e:
         result={'schema':1,'status':'unknown','error':str(e),'currentAgainstChrome':False};code=2 if a.require_current else 1

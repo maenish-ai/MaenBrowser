@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {commitSessions,recoverSessions} from '../assets/companion/session-store.js';
+let state={sessions:[],sessionsPrevious:[]};let fail=false;
+const storage={get:async defaults=>{await new Promise(r=>setTimeout(r,5));return {...defaults,...state};},set:async values=>{if(fail)throw Error('disk full');Object.assign(state,values);}};
+await Promise.all([commitSessions(s=>[{id:'a'},...s],storage),commitSessions(s=>[{id:'b'},...s],storage)]);
+assert.deepEqual(state.sessions.map(x=>x.id),['b','a']);assert.deepEqual(state.sessionsPrevious,[{id:'a'}]);
+fail=true;await assert.rejects(()=>commitSessions(()=>[],storage),/disk full/);assert.equal(state.sessions.length,2);
+fail=false;await recoverSessions(storage);assert.deepEqual(state.sessions,[{id:'a'}]);
+await assert.rejects(()=>commitSessions(()=>[{name:'x'.repeat(1024*1024+1)}],storage),/storage limit/);assert.equal(state.sessions[0].id,'a');
+state.sessions={damaged:true};await recoverSessions(storage);assert.equal(state.sessions.length,2);
+console.log('Session store: concurrent operations serialized, backup retained, quota/storage failures preserve data and corrupted current set recovers');

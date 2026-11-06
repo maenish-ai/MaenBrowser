@@ -132,3 +132,7 @@ for(const link of document.querySelectorAll?.('a[href^="chrome://"]')||[]){
     }catch(error){message($('status'),error);}
   });
 }
+
+import './security-update-ui.js';
+
+import './settings-navigation.js';

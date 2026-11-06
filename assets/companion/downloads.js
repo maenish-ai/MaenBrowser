@@ -1,10 +1,11 @@
+import {downloadAdvice,resumeOriginalDownload} from './download-recovery.js';
 import {scheduleRender} from './render-scheduler.js';
 import {t} from './i18n.js';
 import {$,message} from './api.js';
 import {sampleProgress,formatBytes} from './download-progress.js';
 const rows=new Map(),samples=new Map();
 let poll;
-function action(label,fn){const b=document.createElement('button');b.className='small';b.textContent=t(label);b.onclick=()=>Promise.resolve(fn()).then(schedule).catch(e=>message($('status'),e));return b;}
+function action(label,fn){const b=document.createElement('button');b.className='small';b.textContent=t(label);b.onclick=async()=>{b.disabled=true;try{await fn();schedule();}catch(e){message($('status'),e);}finally{b.disabled=false;}};return b;}
 function setText(el,text){if(el.textContent!==text)el.textContent=text;}
 async function render(){
   clearTimeout(poll);
@@ -30,13 +31,14 @@ async function render(){
       if(p.seconds!==null)detail+=' · '+t('{seconds} seconds remaining',{seconds:Math.ceil(p.seconds)});
     }
     if(typeof d.error==='string'&&d.error)detail+=' · '+t('Reason: {code}',{code:d.error.slice(0,80)});
+    if(d.state==='interrupted')detail+=' · '+t(downloadAdvice(d.error));
     setText(row.detail,detail);row.bar.hidden=d.state!=='in_progress';
     if(p.percent===null)row.bar.removeAttribute('value');else row.bar.value=p.percent;
     const signature=[d.state,d.paused,d.canResume,d.exists,document.documentElement.lang].join('|');
     if(row.signature!==signature){
       row.signature=signature;row.actions.replaceChildren();row.bar.setAttribute('aria-label',t('Download progress'));
-      if(d.state==='in_progress')row.actions.append(action(d.paused?'Resume':'Pause',()=>d.paused?chrome.downloads.resume(d.id):chrome.downloads.pause(d.id)),action('Cancel',()=>chrome.downloads.cancel(d.id)));
-      if(d.state==='interrupted'&&d.canResume)row.actions.append(action('Resume',()=>chrome.downloads.resume(d.id)));
+      if(d.state==='in_progress')row.actions.append(action(d.paused?'Resume':'Pause',()=>d.paused?resumeOriginalDownload(d.id):chrome.downloads.pause(d.id)),action('Cancel',()=>chrome.downloads.cancel(d.id)));
+      if(d.state==='interrupted'&&d.canResume)row.actions.append(action('Resume',()=>resumeOriginalDownload(d.id)));
       if(d.state==='complete'&&d.exists)row.actions.append(action('Open',()=>chrome.downloads.open(d.id)),action('Show folder',()=>chrome.downloads.show(d.id)));
     }
   }

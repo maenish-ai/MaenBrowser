@@ -1,0 +1,117 @@
+name: Prepare and optionally publish signed security data
+on:
+  workflow_dispatch:
+    inputs:
+      sequence:
+        description: 'Strictly increasing sequence; leave empty for UTC YYYYMMDDHHMMSS'
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'assets/filters/**'
+      - 'tools/build-security-feed.py'
+      - 'assets/companion/security-update-policy.json'
+  schedule:
+    - cron: '40 5 * * 1'
+permissions:
+  contents: read
+jobs:
+  signed-data:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      available: ${{ steps.key.outputs.available }}
+      sequence: ${{ steps.sign.outputs.sequence }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check publisher provisioning without failing ordinary source pushes
+        id: key
+        env:
+          SIGNING_KEY: ${{ secrets.MAEN_SECURITY_SIGNING_KEY_PEM }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Publisher key is not configured; no signed feed is produced or published.'
+          fi
+      - uses: actions/setup-python@v6
+        if: steps.key.outputs.available == 'true'
+        with:
+          python-version: '3.12'
+      - if: steps.key.outputs.available == 'true'
+        run: python -m pip install -r tools/requirements-release.txt
+      - name: Validate and sign reviewed data
+        if: steps.key.outputs.available == 'true'
+        id: sign
+        env:
+          MAEN_SECURITY_SIGNING_KEY_PEM: ${{ secrets.MAEN_SECURITY_SIGNING_KEY_PEM }}
+          REQUESTED_SEQUENCE: ${{ inputs.sequence }}
+        run: |
+          set -euo pipefail
+          sequence="${REQUESTED_SEQUENCE:-$(date -u +%Y%m%d%H%M%S)}"
+          python tools/build-security-feed.py --output signed-security-data --sequence "$sequence"
+          echo "sequence=$sequence" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        if: steps.key.outputs.available == 'true'
+        with:
+          name: signed-security-data-review-before-publishing
+          path: signed-security-data/
+          if-no-files-found: error
+
+  publish-data:
+    needs: signed-data
+    # The owner must explicitly enable publication; source upload alone cannot
+    # create a feed branch, release, or repository-setting change.
+    if: needs.signed-data.outputs.available == 'true' && vars.MAEN_ENABLE_SECURITY_DATA_PUBLISH == 'true'
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r tools/requirements-release.txt
+      - uses: actions/download-artifact@v8
+        with:
+          name: signed-security-data-review-before-publishing
+          path: signed-security-data
+      - name: Verify exact app trust root and all signed data before publishing
+        env:
+          DATA_SEQUENCE: ${{ needs.signed-data.outputs.sequence }}
+        run: python tools/verify-security-feed.py --directory signed-security-data --sequence "$DATA_SEQUENCE"
+      - name: Publish data on a separate branch, never change application source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          DATA_SEQUENCE: ${{ needs.signed-data.outputs.sequence }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          source_dir="$GITHUB_WORKSPACE/signed-security-data"
+          feed_dir="$RUNNER_TEMP/maen-security-feed"
+          mkdir -p "$feed_dir"
+          git -C "$feed_dir" init --initial-branch=security-data
+          git -C "$feed_dir" remote add origin "$REPO_URL"
+          if git -C "$feed_dir" fetch origin security-data; then
+            git -C "$feed_dir" checkout -B security-data FETCH_HEAD
+          fi
+          if [ -f "$feed_dir/current.json" ]; then
+            python - "$feed_dir/current.json" "$DATA_SEQUENCE" <<'PY'
+          import sys,json,base64
+          old=json.loads(base64.b64decode(json.load(open(sys.argv[1]))['payload']))['sequence']
+          if int(sys.argv[2])<=old:raise SystemExit('Refusing stale feed sequence')
+          PY
+          fi
+          mkdir -p "$feed_dir/$DATA_SEQUENCE"
+          cp "$source_dir/ads.txt" "$source_dir/adult.txt" "$source_dir/violence.txt" "$feed_dir/$DATA_SEQUENCE/"
+          cp "$source_dir/current.json" "$feed_dir/current.json"
+          cp -R "$source_dir/notices" "$feed_dir/$DATA_SEQUENCE/notices"
+          git -C "$feed_dir" config user.name 'MaenBrowser security data publisher'
+          git -C "$feed_dir" config user.email 'security-data@users.noreply.github.com'
+          git -C "$feed_dir" add --all
+          git -C "$feed_dir" commit -m "Publish signed protection data $DATA_SEQUENCE"
+          git -C "$feed_dir" push origin HEAD:refs/heads/security-data

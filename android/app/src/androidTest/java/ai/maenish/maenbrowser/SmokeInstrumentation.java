@@ -34,7 +34,29 @@ public final class SmokeInstrumentation extends Instrumentation {
                 PrivateStore damaged=new PrivateStore(isolated);require(damaged.damaged&&damaged.family(),"tamper did not fail closed");
             }finally{isolated.getSharedPreferences("private-v1",0).edit().clear().commit();}
             Intent intent=new Intent().setClassName(getTargetContext().getPackageName(),BrowserActivity.class.getName()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            require(PrivateStore.shared(getTargetContext())==PrivateStore.shared(getTargetContext()),"Activities must share one parental-state instance across recreation");
             activity=startActivitySync(intent);waitForIdleSync();
+            final WebView[] originalWeb={null};
+            runOnMainSync(()->originalWeb[0]=find(activity.getWindow().getDecorView()));
+            java.util.concurrent.atomic.AtomicInteger extraActivities=new java.util.concurrent.atomic.AtomicInteger();
+            Application.ActivityLifecycleCallbacks lifecycle=new Application.ActivityLifecycleCallbacks(){
+                public void onActivityCreated(Activity a,Bundle b){if(a instanceof BrowserActivity)extraActivities.incrementAndGet();}
+                public void onActivityStarted(Activity a){} public void onActivityResumed(Activity a){}
+                public void onActivityPaused(Activity a){} public void onActivityStopped(Activity a){}
+                public void onActivitySaveInstanceState(Activity a,Bundle b){} public void onActivityDestroyed(Activity a){}
+            };
+            Application application=activity.getApplication();application.registerActivityLifecycleCallbacks(lifecycle);
+            try{
+                runOnMainSync(()->getTargetContext().startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://example.org/"))
+                    .setClassName(getTargetContext().getPackageName(),BrowserActivity.class.getName()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+                waitForIdleSync();
+                require(extraActivities.get()==0,"External URL created a second Activity with an independent parental-state cache");
+                runOnMainSync(()->{
+                    require("https://example.org/".equals(activity.getIntent().getDataString()),"External intent was not delivered to the existing Activity");
+                    require(find(activity.getWindow().getDecorView())!=originalWeb[0],"External link replaced the current tab instead of opening a new tab");
+                });
+            }finally{application.unregisterActivityLifecycleCallbacks(lifecycle);}
+
             runOnMainSync(()->{
                 web=find(activity.getWindow().getDecorView());require(web!=null,"WebView missing");
                 WebSettings s=web.getSettings();require(!s.getAllowFileAccess(),"file access enabled");require(!s.getAllowContentAccess(),"content access enabled");require(s.getMixedContentMode()==WebSettings.MIXED_CONTENT_NEVER_ALLOW,"mixed content enabled");require(s.getSafeBrowsingEnabled(),"Safe Browsing disabled");require(s.getMediaPlaybackRequiresUserGesture(),"autoplay unexpectedly allowed");require(!CookieManager.getInstance().acceptThirdPartyCookies(web),"third-party cookies enabled by default");

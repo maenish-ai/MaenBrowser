@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "baselineCommit": "e2692a82b018af5bd34a236787148f9ede49e8f2",
+  "appVersion": "1.12.2",
+  "reviewBranch": "development/community-audit-2026",
+  "releaseReady": false,
+  "portable": "passed",
+  "preflight": "passed with existing download review warning",
+  "research": {
+    "canonicalRequests": 143,
+    "uniqueSourceThreads": 155,
+    "evidenceAssociations": 165,
+    "representativePoll": false
+  },
+  "android": {
+    "build": "passed",
+    "tasks": 126,
+    "unitTests": 4,
+    "unitFailures": 0,
+    "lintWarningsPerVariant": 9,
+    "lintErrors": 0,
+    "instrumentation": "compiled; not executed locally",
+    "bundle": "unsigned"
+  },
+  "windowsNewBranch": "not executed locally",
+  "baselineWindowsRun": "https://github.com/maenish-ai/MaenBrowser/actions/runs/42094561247",
+  "benchmark": "parser only; no hardware measurements",
+  "idleDOMHarness": "passed; visibility/permission/privileged inspection mocked",
+  "productionReleasePublished": false,
+  "sourceDelivery": "full/changed ZIP integrity, all source hashes, exact-baseline patch and applied-source checks passed",
+  "remotePush": "HTTP403 permission denied; no remote branch or new CI created"
+}

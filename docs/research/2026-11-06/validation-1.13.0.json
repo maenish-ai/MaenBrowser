@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "version": "1.13.0",
+  "baseline": "e2692a82b018af5bd34a236787148f9ede49e8f2",
+  "githubMainReadOnlyVerification": "Remote main still matches pinned baseline",
+  "githubWritesThisTask": false,
+  "productionReady": false,
+  "portable": {
+    "status": "passed",
+    "javascriptSuites": 33,
+    "pythonChecksIncludingPackage": 22,
+    "portableCppPrograms": 13,
+    "cryptoBuildDependency": "cryptography50.0.2; official PyPI release metadata verified"
+  },
+  "android": {
+    "build": "passed",
+    "versionName": "1.13.0",
+    "versionCode": 11300,
+    "unitTests": 4,
+    "lint": {
+      "lint-results-release": [
+        {
+          "id": "AndroidGradlePluginVersion",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetJavaScriptEnabled",
+          "severity": "Warning"
+        },
+        {
+          "id": "IconLauncherShape",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        }
+      ],
+      "lint-results-debug": [
+        {
+          "id": "AndroidGradlePluginVersion",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetJavaScriptEnabled",
+          "severity": "Warning"
+        },
+        {
+          "id": "IconLauncherShape",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        },
+        {
+          "id": "SetTextI18n",
+          "severity": "Warning"
+        }
+      ]
+    },
+    "instrumentation": "compiled only; not run locally",
+    "releaseBundle": "unsigned; not Play-ready",
+    "apkSignature": "debug APK v2 verified",
+    "sharedState": "compiled: shared parental state, ordered writer and live policy observers"
+  },
+  "ui": "Headless Chromium actual DOM in English/Arabic, mocked Chrome/native APIs; passed",
+  "windowsNewBuild": "not run; Windows unavailable",
+  "cefUpgrade": "pipeline prepared; active154unchanged,156unbuilt",
+  "physical4_8_16GB": "not measured",
+  "storeSubmission": "not performed; publisher prerequisites missing",
+  "sourceDelivery": "ZIP/manifest integrity and exact-baseline patch/application checks passed"
+}

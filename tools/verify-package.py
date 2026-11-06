@@ -14,6 +14,10 @@ assert worker, 'Manifest is missing background.service_worker'
 assert (companion / worker).is_file(), f'Missing background service worker: {worker}'
 assert manifest.get('background', {}).get('type') == 'module', 'Background worker must be an ES module'
 assert manifest['version'] == (root / 'VERSION').read_text(encoding="utf-8").strip()
+version_header=(root/'include/maenbrowser/version.h').read_text(encoding='utf-8')
+assert f'#define MAEN_BROWSER_VERSION "{manifest["version"]}"' in version_header, 'Native fallback version differs from manifest'
+assert 'kVersion[] = MAEN_BROWSER_VERSION' in version_header, 'Native API must use the actual build version'
+
 digest = hashlib.sha256(base64.b64decode(manifest['key'])).hexdigest()[:32]
 extension_id = ''.join(chr(ord('a') + int(c, 16)) for c in digest)
 assert extension_id in (root / 'src/protection/identity.h').read_text(encoding="utf-8")

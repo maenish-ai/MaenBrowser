@@ -4,7 +4,19 @@
 export async function inspectIdlePage(){
   if(document.visibilityState==='visible'||document.hasFocus())return false;
   if(navigator.mediaSession?.playbackState==='playing')return false;
-  if(document.querySelector('[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="log"],[role="chat"],iframe[src*="meet"],iframe[src*="call"]'))return false;
+  if(document.querySelector('[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="log"],[role="chat"],iframe,frame,object,embed'))return false;
+  // Cross-origin frames and shadow trees can hide drafts or live calls.
+  // If privileged shadow inspection is unavailable, preserve the tab.
+  const inspectShadow=globalThis.chrome?.dom?.openOrClosedShadowRoot;
+  if(typeof inspectShadow!=='function')return false;
+  try{
+    const walker=document.createTreeWalker(document.documentElement,1);
+    let node=document.documentElement,remaining=1024;
+    while(node){
+      if(--remaining<0||inspectShadow(node))return false;
+      node=walker.nextNode();
+    }
+  }catch{return false;}
   let budget=256;
   const media=document.querySelectorAll('audio,video');
   if(media.length>budget)return false;

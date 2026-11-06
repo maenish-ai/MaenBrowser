@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import {inspectIdlePage} from '../assets/companion/idle-page-probe.js';
-let media=[],controls=[],editor=false,grant='prompt';
-globalThis.document={visibilityState:'hidden',hasFocus:()=>false,querySelector:()=>editor?{}:null,querySelectorAll:s=>s==='audio,video'?media:controls};
+let media=[],controls=[],editor=false,grant='prompt',shadow=null,nodes=0;
+globalThis.chrome={dom:{openOrClosedShadowRoot:()=>shadow}};
+globalThis.document={documentElement:{},createTreeWalker:()=>({nextNode:()=>nodes-->0?{}:null}),visibilityState:'hidden',hasFocus:()=>false,querySelector:()=>editor?{}:null,querySelectorAll:s=>s==='audio,video'?media:controls};
 Object.defineProperty(globalThis,'navigator',{configurable:true,value:{permissions:{query:async()=>({state:grant})}}});
 assert(await inspectIdlePage());
+shadow={};assert(!await inspectIdlePage());shadow=null;
+nodes=1025;assert(!await inspectIdlePage());nodes=0;
+const shadowApi=chrome.dom.openOrClosedShadowRoot;delete chrome.dom.openOrClosedShadowRoot;assert(!await inspectIdlePage());chrome.dom.openOrClosedShadowRoot=shadowApi;
 editor=true;assert(!await inspectIdlePage());editor=false;
 media=[{paused:false}];assert(!await inspectIdlePage());
 media=[{paused:true,srcObject:{}}];assert(!await inspectIdlePage());
