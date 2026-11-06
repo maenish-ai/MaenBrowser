@@ -42,7 +42,7 @@ def assessment(key):
 
 def build():
     groups=defaultdict(list)
-    for x in json.loads(FACTS.read_text()):groups[x['canonical_key']].append(x)
+    for x in json.loads(FACTS.read_text(encoding='utf-8')):groups[x['canonical_key']].append(x)
     rows=[]
     for i,(key,items) in enumerate(sorted(groups.items()),1):
         # Prefer a recently CREATED post, not a recently bumped old topic.

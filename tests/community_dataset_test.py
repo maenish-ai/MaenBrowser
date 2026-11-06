@@ -7,9 +7,9 @@ runpy.run_path(str(root/'tools/research/build-community-dataset.py'),run_name='_
 # CSV is reproducible from the retained extraction facts.
 assert before==p.read_bytes(), 'Regenerate community CSV before committing'
 assert (root/'COMMUNITY_REQUESTS.csv').read_bytes()==p.read_bytes()
-rows=list(csv.DictReader(p.open()));assert len(rows)>=100
+rows=list(csv.DictReader(p.open(encoding='utf-8', newline='')));assert len(rows)>=100
 assert len({r['canonical_key'] for r in rows})==len(rows)
-facts=json.loads((root/'docs/research/2026-11-05/community-source-facts.json').read_text())
+facts=json.loads((root/'docs/research/2026-11-05/community-source-facts.json').read_text(encoding='utf-8'))
 for r in rows:
  matching=[f for f in facts if f['canonical_key']==r['canonical_key']]
  assert r['source_url'].startswith('https://') and r['source_url'] in {f['url'] for f in matching}
