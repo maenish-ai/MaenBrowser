@@ -49,10 +49,18 @@ public final class SmokeInstrumentation extends Instrumentation {
             try{
                 runOnMainSync(()->getTargetContext().startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://example.org/"))
                     .setClassName(getTargetContext().getPackageName(),BrowserActivity.class.getName()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-                waitForIdleSync();
+                // Activity launches are asynchronous; an idle main queue does not mean
+                // the system has dispatched onNewIntent yet, especially on API 36.
+                java.util.concurrent.atomic.AtomicBoolean delivered=new java.util.concurrent.atomic.AtomicBoolean();
+                long deadline=android.os.SystemClock.uptimeMillis()+10000;
+                while(!delivered.get() && android.os.SystemClock.uptimeMillis()<deadline){
+                    waitForIdleSync();
+                    runOnMainSync(()->delivered.set("https://example.org/".equals(activity.getIntent().getDataString())));
+                    if(!delivered.get())android.os.SystemClock.sleep(100);
+                }
+                require(delivered.get(),"External intent was not delivered to the existing Activity within 10 seconds");
                 require(extraActivities.get()==0,"External URL created a second Activity with an independent parental-state cache");
                 runOnMainSync(()->{
-                    require("https://example.org/".equals(activity.getIntent().getDataString()),"External intent was not delivered to the existing Activity");
                     require(find(activity.getWindow().getDecorView())!=originalWeb[0],"External link replaced the current tab instead of opening a new tab");
                 });
             }finally{application.unregisterActivityLifecycleCallbacks(lifecycle);}

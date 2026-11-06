@@ -577,7 +577,7 @@ std::string Api(const std::string& body) {
   const auto op = d->GetString("op").ToString();
   if (storage::IsAgentMode() && op != "get" && op != "technical")
     return Error("Settings cannot be changed from an agent-controlled browser. Open MaenBrowser normally.");
-  if (op != "updateAdFilters" && body.size() > 65536) return Error("Request too large");
+  if (op != "updateAdFilters" && op != "updateSecurityData" && body.size() > 65536) return Error("Request too large");
   if (op == "technical") {
     auto out = CefDictionaryValue::Create();
     out->SetBool("ok", true);
