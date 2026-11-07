@@ -22,9 +22,22 @@
     "source_sha256": "22a783a6a2eeaf29b93038d59bfeccc90cead3e7a51c8367f989f5926afc415d",
     "license": "GPL-3.0",
     "commit": "eb7db8ed27237af2f3c0cb79c9c735e3e076dbad",
-    "retrieved": "2026-11-04",
-    "sha256": "54dbc94646493d48cb93d3561fe4bccf7ecabc1fbf2d86a3122c2c4d3d3f7091",
-    "domains": 77755
+    "retrieved": "2026-11-07",
+    "sha256": "877d9758c3d5b562a372d1b897465880eb96e4413be681b4b1600c307af4f9c4",
+    "domains": 78655,
+    "supplement": {
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/eb7db8ed27237af2f3c0cb79c9c735e3e076dbad/wildcard/multi-onlydomains.txt",
+      "source_sha256": "232f3a0d86d7653fd39090679c23da784fd45160ee4c04fbab36e4002b8895d4",
+      "commit": "eb7db8ed27237af2f3c0cb79c9c735e3e076dbad",
+      "license": "GPL-3.0",
+      "prefixes": [
+        "adserver.",
+        "ads.",
+        "ads1.",
+        "ads2.",
+        "ads3."
+      ]
+    }
   },
   {
     "name": "adult",
@@ -32,7 +45,7 @@
     "source_sha256": "a9c5da91798eace14db0cc2f3e5353fecad84e2cc643dbc7164dec0e949fd40b",
     "license": "MIT",
     "commit": "6d56ab44f2b3d27de062b5194eb51bcd8115a773",
-    "retrieved": "2026-11-04",
+    "retrieved": "2026-11-07",
     "sha256": "41288473fb6cedeb2cd2bc7ffaf5fd70662833bfbdcac82fd0977098735d3ac4",
     "domains": 76796
   }

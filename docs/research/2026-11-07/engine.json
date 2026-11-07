@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "checkedUtc": "2026-11-07T05:32:28.885886+00:00",
+  "pinnedChromium": "154.0.8037.98",
+  "latestChromeStable": "158.0.8127.18",
+  "comparisonBasis": "highest version in currently served nonzero-fraction Windows stable cohorts",
+  "activeStableVersions": [
+    "156.0.8078.80",
+    "156.0.8078.81",
+    "156.0.8078.82",
+    "157.0.8103.38",
+    "157.0.8103.39",
+    "158.0.8127.18"
+  ],
+  "latestCefStable": "156.0.15+gcf671c0+chromium-156.0.8078.80",
+  "latestCefChromium": "156.0.8078.80",
+  "currentAgainstChrome": false,
+  "currentAgainstCef": false,
+  "note": "A matching version is not proof that the binary is secure. Codec and sandbox runtime tests remain mandatory."
+}

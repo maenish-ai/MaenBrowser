@@ -37,9 +37,24 @@ def main():
             with urlopen(entry['url'],timeout=60) as src:raw=src.read(16*1024*1024+1)
         if len(raw)>16*1024*1024 or hashlib.sha256(raw).hexdigest()!=entry['source_sha256']:raise ValueError('Filter source hash mismatch')
         data=parse_domains(raw.decode('utf-8'),entry['format']);staged.append((entry,data))
+    supplement=lock['ads_extra_supplement']
+    if args.input_dir: raw=(args.input_dir/'maen-filter-ads-supplement.txt').read_bytes()
+    else:
+        if not supplement['url'].startswith('https://raw.githubusercontent.com/'):raise ValueError('Unapproved supplement source')
+        with urlopen(supplement['url'],timeout=60) as src:raw=src.read(16*1024*1024+1)
+    if len(raw)>16*1024*1024 or hashlib.sha256(raw).hexdigest()!=supplement['source_sha256']:raise ValueError('Supplement source hash mismatch')
+    supplement_domains=parse_domains(raw.decode('utf-8'),'domains').decode('ascii').splitlines()
+    for index,(entry,data) in enumerate(staged):
+        if entry['name']=='ads-extra':
+            selected={host for host in supplement_domains if host.startswith(tuple(supplement['prefixes']))}
+            merged=set(data.decode('ascii').splitlines())|selected
+            data=('\n'.join(sorted(merged))+'\n').encode('ascii')
+            if len(data)>4*1024*1024 or len(merged)>250000:raise ValueError('Combined filter too large')
+            staged[index]=(entry,data)
     for entry,data in staged:
         (ROOT/'assets/filters'/(entry['name']+'.txt')).write_bytes(data)
         item={**{k:entry[k] for k in ['name','url','source_sha256','license','commit']},'retrieved':datetime.now(timezone.utc).date().isoformat(),'sha256':hashlib.sha256(data).hexdigest(),'domains':len(data.splitlines())}
+        if entry['name']=='ads-extra':item['supplement']=supplement
         manifest=[m for m in manifest if m['name']!=entry['name']]+[item]
         print(entry['name'],item['domains'])
     manifest_path.write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')

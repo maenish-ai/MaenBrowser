@@ -86,8 +86,10 @@ public final class BrowserActivity extends Activity {
     private void notice(String text){ui.post(()->{if(!destroyed){if(status!=null)status.setText(text);Toast.makeText(this,text,Toast.LENGTH_LONG).show();}});}
     private WebView current(){return selected>=0&&selected<tabs.size()?tabs.get(selected).view:null;}
     private boolean blocked(String url,boolean main){
-        if(WebPolicy.host(url).isEmpty())return true;
-        return filters.familyBlocked(url,store.family())||filters.adsBlocked(url,store.ads());
+        // Parse once: WebView calls this for every page resource, including
+        // the many requests made by chat applications.
+        String host=WebPolicy.host(url);if(host.isEmpty())return true;
+        return filters.familyBlocked(host,store.family())||filters.adsBlocked(host,store.ads());
     }
     private void navigate(String raw){
         String url=WebPolicy.address(raw);if(url.isEmpty()){notice("Enter a valid HTTPS website address.");return;}

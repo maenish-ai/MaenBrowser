@@ -18,8 +18,8 @@ final class DomainFilters {
         if(familyReady)return;
         loader.execute(()->{try{Set<String>s=read(c,"adult.txt");s.addAll(read(c,"violence.txt"));family=Collections.unmodifiableSet(s);familyReady=true;}catch(IOException ignored){}});
     }
-    boolean familyBlocked(String url, boolean enabled){return enabled&&(!familyReady||WebPolicy.matches(family,WebPolicy.host(url)));}
-    boolean adsBlocked(String url,boolean enabled){return enabled&&adsReady&&WebPolicy.matches(ads,WebPolicy.host(url));}
+    boolean familyBlocked(String host, boolean enabled){return enabled&&(!familyReady||WebPolicy.matches(family,host));}
+    boolean adsBlocked(String host,boolean enabled){return enabled&&adsReady&&WebPolicy.matches(ads,host);}
     boolean ready(boolean familyMode){return adsReady&&(!familyMode||familyReady);}
     private Set<String> read(Context c,String file)throws IOException{
         Set<String>s=new HashSet<>();

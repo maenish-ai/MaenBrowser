@@ -18,3 +18,6 @@ for(const host of ['discord.com','app.slack.com','web.telegram.org','chat.google
  assert(!candidate({...base,url:'https://'+host},now,30),host);
  assert(candidate({...base,url:'https://'+host+'.evil.test'},now,30),host+' lookalike');
 }
+assert(!candidate({...base,url:'not a URL'},now,30));
+assert(!candidate({...base,url:'https://example.com',lastAccessed:now-60000},now,30));
+assert(!candidate({...base,url:'https://sub.example.com'},now,30,[null,42,'example.com']));
