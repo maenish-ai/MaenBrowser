@@ -58,5 +58,18 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://maen.browser https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts https://api.met.no https://raw.githubusercontent.com/maenish-ai/MaenBrowser/"
   },
-  "default_locale": "en"
+  "default_locale": "en",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "download-same-tab.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
 }
