@@ -1,0 +1,23 @@
+import {strict as assert} from 'node:assert';
+import {candidate,restorableSession,webUrl} from '../assets/companion/tab-policy.js';
+const now=200000000,base={id:1,active:false,pinned:false,audible:false,discarded:false,incognito:false,status:'complete',url:'https://example.com',lastAccessed:0};
+assert(candidate(base,now,30));
+for(const key of ['active','pinned','audible','discarded','incognito'])assert(!candidate({...base,[key]:true},now,30),key);
+assert(!candidate({...base,autoDiscardable:false},now,30));
+for(const url of ['chrome://settings','file:///tmp/a','https://web.whatsapp.com','https://call.zoom.us'])assert(!candidate({...base,url},now,30),url);
+assert(candidate({...base,url:'https://whatsapp.com.evil.test'},now,30));
+assert(!candidate({...base,url:'https://sub.example.com'},now,30,['example.com']));
+assert(!candidate({...base,lastAccessed:undefined},now,30));
+assert(!candidate({...base,lastAccessed:now-60000},now,30));
+assert(!webUrl('javascript:alert(1)'));
+assert.deepEqual(restorableSession([base,{...base,incognito:true},{...base,url:'javascript:alert(1)'}]).map(x=>x.url),['https://example.com']);
+for(const path of ['movie.mp4','MOVIE.M4V','audio.m4a','audio.aac'])assert(!candidate({...base,url:'https://cdn.example/'+path+'?token=test'},now,30));
+assert(candidate({...base,url:'https://example.com/watch?file=movie.mp4'},now,30));
+console.log('Tab safeguards and session URL tests passed');
+for(const host of ['discord.com','app.slack.com','web.telegram.org','chat.google.com','photoshop.adobe.com','www.photopea.com','www.figma.com']){
+ assert(!candidate({...base,url:'https://'+host},now,30),host);
+ assert(candidate({...base,url:'https://'+host+'.evil.test'},now,30),host+' lookalike');
+}
+assert(!candidate({...base,url:'not a URL'},now,30));
+assert(!candidate({...base,url:'https://example.com',lastAccessed:now-60000},now,30));
+assert(!candidate({...base,url:'https://sub.example.com'},now,30,[null,42,'example.com']));

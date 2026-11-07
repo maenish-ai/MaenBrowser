@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "name": "ads-extra",
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/eb7db8ed27237af2f3c0cb79c9c735e3e076dbad/wildcard/light-onlydomains.txt",
+      "format": "domains",
+      "license": "GPL-3.0",
+      "commit": "eb7db8ed27237af2f3c0cb79c9c735e3e076dbad",
+      "source_sha256": "22a783a6a2eeaf29b93038d59bfeccc90cead3e7a51c8367f989f5926afc415d",
+      "size_bytes": 1693286
+    },
+    {
+      "name": "adult",
+      "url": "https://raw.githubusercontent.com/StevenBlack/hosts/6d56ab44f2b3d27de062b5194eb51bcd8115a773/alternates/porn-only/hosts",
+      "format": "hosts",
+      "license": "MIT",
+      "commit": "6d56ab44f2b3d27de062b5194eb51bcd8115a773",
+      "source_sha256": "a9c5da91798eace14db0cc2f3e5353fecad84e2cc643dbc7164dec0e949fd40b",
+      "size_bytes": 1960804
+    }
+  ],
+  "ads_extra_supplement": {
+    "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/eb7db8ed27237af2f3c0cb79c9c735e3e076dbad/wildcard/multi-onlydomains.txt",
+    "source_sha256": "232f3a0d86d7653fd39090679c23da784fd45160ee4c04fbab36e4002b8895d4",
+    "commit": "eb7db8ed27237af2f3c0cb79c9c735e3e076dbad",
+    "license": "GPL-3.0",
+    "prefixes": [
+      "adserver.",
+      "ads.",
+      "ads1.",
+      "ads2.",
+      "ads3."
+    ]
+  }
+}
