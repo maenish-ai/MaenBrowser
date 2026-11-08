@@ -1,0 +1,14 @@
+import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';import vm from 'node:vm';
+import {adBadge} from '../assets/companion/api.js';
+const source=readFileSync('assets/companion/popup.js','utf8').replace(/^import .*;\n/gm,'');
+const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',disabled:false,classList:{add(){}},select(){}});return nodes.get(id);};
+let count='30',badge='',reload=[];
+const snapshot=()=>({ok:true,ads:true,family:false,exceptions:[],version:'1.13.0',adBlockedRequests:count});
+const chrome={tabs:{query:async()=>[{id:7,url:'https://example.com'}],reload:async id=>reload.push(id)},runtime:{getManifest:()=>({version:'1.13.0'})},action:{setBadgeText:async v=>{badge=v.text}}};
+const context=vm.createContext({$,chrome,console,Error,adBadge,nativeApi:async()=>snapshot(),api:async()=>snapshot(),host:()=> 'example.com',matchesHost:()=>false,t:(s,v={})=>s.replace(/\{(\w+)\}/g,(_,k)=>String(v[k]??'')),message:(n,s)=>n.textContent=String(s),diagnosticCode:()=>'',describeError:()=>'',diagnosticReport:()=>'',revealVideoControls(){}});
+vm.runInContext(source,context);await new Promise(r=>setImmediate(r));
+assert.match($('count').textContent,/30 ad or tracker requests/);assert.equal(badge,'30');
+count='31';await $('refreshCount').onclick();assert.match($('count').textContent,/31 ad or tracker requests/);assert.equal(badge,'31');
+await $('reloadSite').onclick();assert.deepEqual(reload,[7]);
+console.log('Popup shows browser-wide ad counter, refreshes by request and reloads only after user action');

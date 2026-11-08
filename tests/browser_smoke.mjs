@@ -173,6 +173,7 @@ try{
   console.log('PASS: user-gesture links stay in the same window as new tabs');
 
   const before=Number(result.data.blockedRequests);
+  const beforeAd=Number(result.data.adBlockedRequests);assert(Number.isSafeInteger(beforeAd) && beforeAd>=0);
   await navigate(fixtureUrl);
   const shim=await evaluate(`new Promise(resolve=>{window.GoogleAnalyticsObject='maen_ga_probe';const script=document.createElement('script');script.src='https://www.google-analytics.com/analytics.js';script.crossOrigin='anonymous';script.onload=()=>resolve({loaded:window.maen_ga_probe?.loaded===true});script.onerror=()=>resolve({loaded:false});document.head.append(script);})`);
   assert.equal(shim.loaded,true,'Native ad compatibility shim did not load');
@@ -263,6 +264,7 @@ try{
   const after=Number(result.data.blockedRequests);
   console.log('Native ad probe:',JSON.stringify({before,after,probe}));
   assert(after>before,'Native resource blocking did not run from the ordinary test page');
+  assert(Number(result.data.adBlockedRequests)>beforeAd,'Ad/tracker request counter did not increase');
   assert.equal(probe.resolved,false,'Blocked request unexpectedly completed');
   console.log('PASS: native ad toggle, download preference and request interception');
   {

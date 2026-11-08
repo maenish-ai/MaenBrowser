@@ -1,4 +1,9 @@
 export const translations = {
+  "Reload current page": ["Reload current page", "إعادة تحميل الصفحة الحالية"],
+  "If a site does not load, reload it or review the site exception above. A local protection connection error does not mean the internet is down.": ["If a site does not load, reload it or review the site exception above. A local protection connection error does not mean the internet is down.", "إذا لم يفتح الموقع، أعد تحميله أو راجع استثناء الموقع أعلاه. تعذر الاتصال بالحماية المحلية لا يعني انقطاع الإنترنت."],
+  "Refresh count": ["Refresh count", "تحديث العدد"],
+  "{count} ad or tracker requests blocked since browser start (all tabs)": ["{count} ad or tracker requests blocked since browser start (all tabs)", "تم حجب {count} طلب إعلان أو تتبع منذ تشغيل المتصفح (كل التبويبات)"],
+  "Ad counter unavailable. Restart using a matching browser version.": ["Ad counter unavailable. Restart using a matching browser version.", "عداد الإعلانات غير متاح. أعد تشغيل نسخة المتصفح المطابقة."],
   "Diagnostic report": [
     "Diagnostic report",
     "تقرير التشخيص"

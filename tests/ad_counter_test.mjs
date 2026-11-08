@@ -1,0 +1,10 @@
+import {strict as assert} from 'node:assert';
+import {adBadge} from '../assets/companion/api.js';
+assert.equal(adBadge({ads:true,adBlockedRequests:'0'}),'0');
+assert.equal(adBadge({ads:true,adBlockedRequests:'30'}),'30');
+assert.equal(adBadge({ads:true,adBlockedRequests:'1000'}),'999+');
+assert.equal(adBadge({ads:true}),'?');
+assert.equal(adBadge({ads:true,adBlockedRequests:'-1'}),'?');
+assert.equal(adBadge({ads:false,adBlockedRequests:'30'}),'—');
+assert.equal(adBadge({ads:true,listError:'missing',adBlockedRequests:'30'}),'!');
+console.log('Badge counts ad/tracker requests and distinguishes OFF, invalid and missing filters');

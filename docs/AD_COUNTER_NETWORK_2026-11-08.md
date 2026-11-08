@@ -1,0 +1,9 @@
+# Ad request counter and connection diagnostics
+
+Based on `612bebade11a19163fd1d1d37da0695052210f2f`. The native browser counts ad/tracker domain-rule denials separately from family or other blocks; existing total remains for compatibility. This is a browser-process-wide, since-start request count across all tabs, not a per-site counter, a count of distinct ads, or persisted history. If both family and ad rules would block the same request, the family rule takes precedence and it is not added to the ad-specific count. Local compatibility shims are counted as blocked ad/tracker requests. Browser restarts reset the counter.
+
+The protection popup shows the count and an explicit refresh button; while the popup is open it checks the local privileged endpoint every five seconds, never from page scripts. The badge shows 0–999 or 999+, `—` when ad blocking is off, `!` on list errors, and `?` if the counter is unavailable. A version mismatch is not reported as a valid zero. The infrequent background protection sync also refreshes the badge. The new button reloads the current ordinary page only on explicit user action; it does not disable TLS, family protection, security rules or the ad blocker. A site-specific exception is an existing, explicit user choice.
+
+An intermittent web-page 'no network' message could have several causes. Its exact source and reproduction are not available here; this change does not claim to fix internet connectivity. The popup explains that a local protection endpoint error is distinct from website connectivity. No automatic network retry of POST or ad-block bypass has been added.
+
+Local JS/Python/C++ portable tests and preflight passed. The Windows browser integration smoke has an assertion that the ad-specific counter increments for a blocked request; it has not run on this changed version here. Windows runtime and the user's reported site error remain to be verified.

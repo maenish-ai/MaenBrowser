@@ -38,6 +38,8 @@ std::atomic<std::shared_ptr<const Settings>> g_settings{std::make_shared<const S
 struct AdRules { DomainRules domains; std::string error; };
 std::atomic<std::shared_ptr<const AdRules>> g_ad_rules{std::make_shared<const AdRules>()};
 std::atomic<uint64_t> g_blocked{0};
+// Number of requests denied specifically by ad/tracker rules since browser launch.
+std::atomic<uint64_t> g_ad_blocked{0};
 std::mutex g_write;
 std::chrono::steady_clock::time_point g_retry{};
 struct AdShims { std::string analytics, publisher; };
@@ -166,6 +168,7 @@ CefRefPtr<CefDictionaryValue> Export(const Settings& s, bool secret) {
   else {
     d->SetBool("hasPin", !s.pin_hash.empty()); d->SetBool("lockedFile", s.corrupt);
     d->SetString("blockedRequests", std::to_string(g_blocked.load()));
+    d->SetString("adBlockedRequests", std::to_string(g_ad_blocked.load()));
     d->SetInt("adDomains", static_cast<int>(g_ad_rules.load()->domains.Size()));
     d->SetInt("adultDomains", s.categories ? static_cast<int>(s.categories->adult.Size()) : 0);
     d->SetInt("violenceDomains", s.categories ? static_cast<int>(s.categories->violence.Size()) : 0);
@@ -541,8 +544,10 @@ bool Block(const std::string& url, const std::string& source, bool document) {
   }
   // Most resources are not advertising domains. Avoid parsing the source URL
   // or searching exceptions unless the ad list actually matches.
-  if (!denied && s->ads && g_ad_rules.load()->domains.Contains(u.host) && !s->exceptions.Contains(u.host))
+  if (!denied && s->ads && g_ad_rules.load()->domains.Contains(u.host) && !s->exceptions.Contains(u.host)) {
     denied = s->exceptions.Size() == 0 || !s->exceptions.Contains(ParseUrl(source).host);
+    if (denied) ++g_ad_blocked;
+  }
   if (denied) ++g_blocked;
   return denied;
 }

@@ -3,6 +3,14 @@ import {diagnosticCode,describeError,recordDiagnostic} from './diagnostics.js';
 export class NativeConnectionError extends Error {
   constructor(code){super(code);this.code=code;}
 }
+// A browser-wide session count of blocked requests, not a count of visible ads.
+export function adBadge(state) {
+  if (state.listError) return '!';
+  if (!state.ads) return '—';
+  const raw=String(state.adBlockedRequests ?? '');
+  if (!/^(0|[1-9]\d{0,19})$/.test(raw)) return '?';
+  return raw.length>3 || Number(raw)>999 ? '999+' : raw;
+}
 export async function nativeApi(op = 'get', extra = {}) {
   let response,data;
   // Only the read-only status request may be retried. Never replay a write:
@@ -38,7 +46,7 @@ export async function api(op = 'get', extra = {}) {
   recordDiagnostic(op,null,data);
   if(op==='save'||op==='updateAdFilters'||op==='updateSecurityData'||op==='restoreBackup') {
     try { Promise.resolve(chrome.storage.local.set({protectionRevision:String(data.revision)})).catch(()=>{}); } catch {}
-    try { Promise.resolve(chrome.action.setBadgeText({text:data.listError?'!':data.ads?'✓':'—'})).catch(()=>{}); } catch {}
+    try { Promise.resolve(chrome.action.setBadgeText({text:adBadge(data)})).catch(()=>{}); } catch {}
   }
   }catch(error){recordDiagnostic(op,error);throw error;}
   // Language persistence is optional UI housekeeping, not a protection failure.

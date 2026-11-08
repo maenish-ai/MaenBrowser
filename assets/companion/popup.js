@@ -4,7 +4,7 @@ import {appendError} from './error-journal.js';
 import {revealVideoControls} from './video-controls.js';
 import {t} from './i18n.js';
 import {diagnosticCode,describeError,diagnosticReport} from './diagnostics.js';
-import {api, $, host, matchesHost, message} from './api.js';
+import {api, nativeApi, adBadge, $, host, matchesHost, message} from './api.js';
 let state, tab;
 const open = path => chrome.tabs.create({url: chrome.runtime.getURL(path)});
 async function refresh(){
@@ -19,10 +19,28 @@ async function refresh(){
   $('toggle').disabled=false;
   $('exception').checked=state.exceptions.some(d=>matchesHost(domain,d));
   $('exception').disabled=!domain || !/^https?:/.test(tab?.url || '') || state.family;
-  $('count').textContent=t('{count} requests blocked this browser session',{count:state.blockedRequests});
+  showCount(state);
   message($('status'),state.listError ? new Error('Filter files are missing or empty. Repair the installation.') : state.family?'Family Protection is ON. Changes need the parent PIN.':'Native protection connected.');
-  try{await chrome.action.setBadgeText({text:state.listError?'!':state.ads?'✓':'—'});}catch{/* A badge failure must not disable working protection controls. */}
+  try{await chrome.action.setBadgeText({text:adBadge(state)});}catch{/* A badge failure must not disable working protection controls. */}
 }
+function showCount(snapshot){
+  const raw=String(snapshot.adBlockedRequests ?? '');
+  $('count').textContent=/^(0|[1-9]\d{0,19})$/.test(raw)
+    ? t('{count} ad or tracker requests blocked since browser start (all tabs)',{count:raw})
+    : t('Ad counter unavailable. Restart using a matching browser version.');
+}
+$('refreshCount').onclick=async()=>{
+  $('refreshCount').disabled=true;
+  try{await refresh();}catch(e){connectionError(e);}finally{$('refreshCount').disabled=false;}
+};
+// Only while the popup is open; no persistent polling on chat pages.
+let counterReading=false;
+if(typeof globalThis.setInterval==='function')globalThis.setInterval(async()=>{
+  if(counterReading || !state || (typeof document!=='undefined' && document.hidden))return;
+  counterReading=true;
+  try{const latest=await nativeApi('get');if(!state || latest.revision!==state.revision)return;showCount(latest);await chrome.action.setBadgeText({text:adBadge(latest)});}catch{/* Keep the last confirmed count. */}
+  finally{counterReading=false;}
+},5000);
 $('toggle').onclick=async()=>{
   if(!state){$('toggle').disabled=true;try{await refresh();}catch(e){connectionError(e);}return;}
   if(state.family){await open('options.html#family');return;}
@@ -47,6 +65,12 @@ function connectionError(error){
   chrome.action.setBadgeText({text:'?'}).catch(()=>{});
   $('status').textContent=describeError(error);$('status').classList.add('error');
 }
+$('reloadSite').onclick=async()=>{
+  try{
+    if(!Number.isInteger(tab?.id) || !/^https?:/i.test(tab.url||''))throw new Error('Open a normal webpage first.');
+    await chrome.tabs.reload(tab.id);
+  }catch(e){message($('status'),e);}
+};
 $('diagnosticReport').onclick=()=>{$('report').hidden=false;$('report').value=diagnosticReport();$('report').select();};
 refresh().catch(connectionError);
 

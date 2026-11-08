@@ -4,7 +4,7 @@ import {registerRecovery,validCheckpoints} from './session-recovery.js';
 import {inspectIdlePage} from './idle-page-probe.js';
 import {idlePolicy} from './memory-policy.js';
 import {restoreTabList,restoreSession} from './session-restore.js';
-import {nativeApi as api,webUrl,NativeConnectionError} from './api.js';
+import {nativeApi as api,webUrl,NativeConnectionError,adBadge} from './api.js';
 import {candidate,restorableSession} from './tab-policy.js';
 registerRecovery();
 registerSecurityUpdates(api);
@@ -22,7 +22,7 @@ async function setProtectionBadge(value){
 async function syncProtectionBadge(){
   try {
     const s=await api();
-    await setProtectionBadge(s.listError?'!':s.ads?'✓':'—');
+    await setProtectionBadge(adBadge(s));
     return s;
   } catch {
     // Unknown is not the same as disabled. Never display an incorrect OFF state.
