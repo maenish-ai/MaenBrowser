@@ -1,0 +1,9 @@
+# New codec-enabled CEF candidate — 2026-11-08
+
+Stable baseline: GitHub main `52548df14f74` (Windows and Android build succeeded). The installed/pinned binary remains CEF 154.0.34 / Chromium 154.0.8037.98; this change does not update any installed binary.
+
+Official CEF stable index reported 156.0.26+g8ea0c73+chromium-156.0.8078.88; full CEF commit `8ea0c73b5dbed1389c8dafb911a98c41246bb8cb` was resolved via GitHub API. The pinned upstream automation file's SHA-256 is recorded in `config/cef-upgrade-candidate.json`. The codec-enabled third-party provider published no newer release at review time. See `research/2026-11-08/engine.json` and the [CEF stable index](https://cef-builds.spotifycdn.com/index.json). Version alone is not a vulnerability verdict.
+
+`Build pinned newer CEF codec candidate` is a manual, read-only-repository workflow requiring a dedicated Windows x64 self-hosted runner with Visual Studio 2022, compatible SDK, Chromium prerequisites and at least 300 GB free SSD. It builds a proprietary-codec-enabled candidate, validates its archive and flags, then compiles and exercises MaenBrowser against that exact candidate. A new clean directory includes the source commit in its name, avoiding use of a stale automation file. It does not promote or publish the runtime. A clean runner, running the workflow, inspecting logs and actual Windows site/download/media acceptance are still required before a reviewer may pin and distribute the resulting binary. No workflow was dispatched from this workspace.
+
+The signed security-data implementation remains disabled until the owner provisions and verifies a publisher key and reviewed data feed. The unsigned executable updater remains disabled. Existing production readiness gates must not be bypassed. Physical 4/8/16 GB benchmarks and live Gmail/WhatsApp/camera/microphone checks remain unmeasured for the new candidate.

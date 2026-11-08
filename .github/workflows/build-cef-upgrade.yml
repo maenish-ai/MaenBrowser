@@ -17,7 +17,7 @@ jobs:
           python-version: '3.12'
       - name: Build upstream codec candidate on dedicated SSD builder
         shell: pwsh
-        run: .\tools\build-cef-media.ps1 -DownloadDir 'C:\maen-cef-8078' -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
+        run: .\tools\build-cef-media.ps1 -DownloadDir 'C:\maen-cef-8078-8ea0c73' -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
       - name: Verify candidate manifest and archive
         shell: pwsh
         run: .\tools\verify-cef-media-build.ps1 -OutputDir "$env:RUNNER_TEMP\cef-candidate" -ProfilePath config/cef-upgrade-candidate.json
@@ -35,6 +35,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: CEF156-codec-CANDIDATE-runtime-test-results
+          name: CEF156-8078-88-codec-CANDIDATE-runtime-test-results
           path: ${{ runner.temp }}\cef-candidate\*
           if-no-files-found: error
