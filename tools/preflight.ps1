@@ -59,8 +59,23 @@ if ($beforeBody.Contains("CloseBrowser") -or $beforeBody.Contains("SW_HIDE")) {
 $updatedEnd = $clientCpp.IndexOf("}  // namespace maenbrowser", $updatedStart)
 $updatedBody = $clientCpp.Substring($updatedStart, $updatedEnd - $updatedStart)
 if ($updatedBody.Contains("MessageBoxW(")) { throw "Download completion must not block the browser UI." }
-foreach ($forbidden in @("->CloseBrowser(", "ShowWindow(", "->Cancel(")) {
-  if ($updatedBody.Contains($forbidden)) { throw "Download lifetime regression: $forbidden in OnDownloadUpdated" }
+# A successful transfer may close its own empty, isolated popup; the request
+# owner must remain alive during transfers, including concurrent transfers.
+if ($updatedBody.Contains("->Cancel(")) { throw "Download lifetime regression: automatic cancellation is forbidden." }
+foreach ($guard in @(
+  'item->IsInProgress() && !state.path.empty() && blank && isolated',
+  'has_other_window && hidden==hidden_download_popups_.end()',
+  'if(hidden!=hidden_download_popups_.end() && !another)',
+  'item->IsComplete() && blank && isolated && root==previous',
+  '!another && item->IsComplete() &&',
+  'if(show_window)ShowWindow(show_window,SW_SHOWNOACTIVATE)',
+  'if(close_popup && popup && popup->IsValid())popup->GetHost()->CloseBrowser(false)'
+)) {
+  if (-not $updatedBody.Contains($guard)) { throw "Download lifecycle guard missing: $guard" }
+}
+if ([regex]::Matches($updatedBody, '->CloseBrowser\(').Count -ne 1 -or
+    [regex]::Matches($updatedBody, 'ShowWindow\(').Count -ne 2) {
+  throw "Download lifecycle regression: unexpected popup operation."
 }
 foreach ($needle in @("GetPercentComplete()", "GetFullPath()", "IsComplete()")) {
   if (-not $updatedBody.Contains($needle)) { throw "Download progress tracking missing: $needle" }
