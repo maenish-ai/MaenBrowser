@@ -120,7 +120,7 @@ try{
     if(request.url==='/post-attachment'){
       let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
         if(request.method!=='POST'||body!=='token=one-time-download'||!request.headers.referer?.endsWith('/download-origin')){response.writeHead(403);response.end('Original download context required');return;}
-        response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-post-download.bin"'});response.end('post-download-context-intact');
+        response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-post-download.bin"','Content-Length':'28'});response.write('post-download-');setTimeout(()=>response.end('context-intact'),5000);
       });return;
     }
     if(request.url==='/redirect-attachment'){
@@ -128,7 +128,7 @@ try{
     }
     if(request.url==='/redirected-attachment'){
       if(!request.headers.referer?.endsWith('/download-origin')){response.writeHead(403);response.end('Missing download referrer');return;}
-      response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-redirect-download.bin"'});response.end('redirect-download-context-intact');return;
+      response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="maen-redirect-download.bin"','Content-Length':'32'});response.write('redirect-download-');setTimeout(()=>response.end('context-intact'),5000);return;
     }
     if(request.url==='/download'){
       const chunk=Buffer.alloc(65536,0x6d);let count=0;
@@ -380,19 +380,28 @@ try{
   for(const kind of ['post','redirect']){
     const beforeIds=await evaluate(`chrome.downloads.search({}).then(items=>items.map(d=>d.id))`);
     await navigate(fixtureUrl+'download-origin');
+    const visibleWindows=()=>Number(execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-File',path.resolve('tests/visible_browser_windows.ps1'),'-BrowserProcessId',String(processHandle.pid)],{encoding:'utf8'}).trim());
+    const originalWindowCount=visibleWindows();
+    assert(originalWindowCount>0,'Browser window was not visible to the test');
     const destination=fixtureUrl+(kind==='post'?'post-attachment':'redirect-attachment');
     const script=kind==='post'
       ? `(()=>{const form=document.createElement('form');form.method='POST';form.target='_blank';form.action=${JSON.stringify(destination)};const input=document.createElement('input');input.name='token';input.value='one-time-download';form.append(input);document.body.append(form);form.submit();})()`
       : `(()=>{const a=document.createElement('a');a.href=${JSON.stringify(destination)};a.target='_blank';document.body.append(a);a.click();})()`;
     await send('Runtime.evaluate',{expression:script,userGesture:true});
     await navigate(controlUrl);
-    let pageDownload;
-    for(let n=0;n<120;n++){
+    let pageDownload, checkedWindow=false;
+    for(let n=0;n<160;n++){
       pageDownload=await evaluate(`chrome.downloads.search({}).then(items=>items.find(d=>!${JSON.stringify(beforeIds)}.includes(d.id)))`);
       if(pageDownload?.state==='complete')break;
       assert(pageDownload?.state!=='interrupted',kind+' popup download interrupted: '+pageDownload?.error);
+      if(pageDownload?.state==='in_progress' && !checkedWindow) {
+        await pause(1200);
+        assert(visibleWindows()<=originalWindowCount,kind+' download left an extra visible browser window');
+        checkedWindow=true;
+      }
       await pause(100);
     }
+    assert(checkedWindow,kind+' never reached in-progress window verification');
     assert.equal(pageDownload?.state,'complete',kind+' page-initiated download did not complete');
     assert.equal(fs.readFileSync(pageDownload.filename,'utf8'),kind==='post'?'post-download-context-intact':'redirect-download-context-intact');
     fs.unlinkSync(pageDownload.filename);

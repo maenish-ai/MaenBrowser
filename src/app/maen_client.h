@@ -119,6 +119,8 @@ class MaenClient final : public CefClient,
   std::deque<PendingTab> pending_tabs_;
   std::set<int> popup_browser_ids_;
   std::map<int, CefRefPtr<CefBrowser>> popup_browsers_;
+  // UI thread only: windows hidden while their original download remains alive.
+  std::map<int, HWND> hidden_download_popups_;
 
   IMPLEMENT_REFCOUNTING(MaenClient);
   DISALLOW_COPY_AND_ASSIGN(MaenClient);

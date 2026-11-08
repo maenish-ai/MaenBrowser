@@ -265,6 +265,7 @@ void MaenClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
     std::lock_guard<std::mutex> lock(downloads_mutex_);
     popup_browser_ids_.erase(id);
     popup_browsers_.erase(id);
+    hidden_download_popups_.erase(id);
   }
   if (browser_count_.fetch_sub(1, std::memory_order_acq_rel) == 1)
     CefQuitMessageLoop();
@@ -277,6 +278,12 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 bool) {
   CEF_REQUIRE_UI_THREAD();
   if (!browser || !frame || !frame->IsMain() || !request) return false;
+  // A popup that becomes a real page must never remain invisible.
+  auto hidden = hidden_download_popups_.find(browser->GetIdentifier());
+  if (hidden != hidden_download_popups_.end()) {
+    if (IsWindow(hidden->second)) ShowWindow(hidden->second, SW_SHOWNOACTIVATE);
+    hidden_download_popups_.erase(hidden);
+  }
   const std::wstring url = request->GetURL().ToWString();
 
   if (IsSettingsAlias(request->GetURL().ToString())) {
@@ -374,20 +381,8 @@ bool MaenClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
   CEF_REQUIRE_UI_THREAD();
   if (!callback || !download_item) return false;
 
-  // Download reliability rule:
-  // Do NOT close the initiating browser/popup from OnBeforeDownload.
-  // In Chrome Runtime the download manager may still depend on that browser
-  // while ownership is being transferred. Closing it here can race with the
-  // transfer and surface as an immediate "Canceled" download on sites that
-  // use redirects or short-lived download pages (including GitHub artifacts).
-  //
-  // We intentionally prefer a harmless transient popup over a canceled file.
-  // Popup cleanup, if reintroduced later, must occur only after a separately
-  // proven lifecycle signal and must never be coupled to download start.
-
-  // If a real popup initiated this download, remember the association only.
-  // We do NOT hide or close anything here. Chromium must first report the
-  // download as in progress; this avoids the old GitHub immediate-Canceled race.
+  // Preserve the original browser/request through handoff. A blank isolated
+  // popup may be hidden only after progress starts, and closed after success.
   if (browser) {
     std::lock_guard<std::mutex> lock(downloads_mutex_);
     const int browser_id = browser->GetIdentifier();
@@ -414,16 +409,62 @@ void MaenClient::OnDownloadUpdated(CefRefPtr<CefBrowser>,
                                    CefRefPtr<CefDownloadItemCallback>) {
   CEF_REQUIRE_UI_THREAD();
   if (!item) return;
-  // The download manager owns transfer lifetime. Never hide/close a window or
-  // tab here: it can contain another transfer, or have been moved into the
-  // main window while retaining its original popup identity.
-  std::lock_guard<std::mutex> lock(downloads_mutex_);
-  const uint32_t id=item->GetId();
-  auto& state=downloads_[id];
-  const auto path=Utf16(item->GetFullPath());
-  if(!path.empty())state.path=path;
-  state.last_percent=item->GetPercentComplete();
-  if(item->IsComplete()||item->IsCanceled()||item->IsInterrupted())downloads_.erase(id);
+  CefRefPtr<CefBrowser> popup;
+  HWND hide_window = nullptr, show_window = nullptr;
+  bool close_popup = false;
+  {
+    std::lock_guard<std::mutex> lock(downloads_mutex_);
+    const uint32_t id=item->GetId();
+    auto& state=downloads_[id];
+    const auto path=Utf16(item->GetFullPath());
+    if(!path.empty())state.path=path;
+    state.last_percent=item->GetPercentComplete();
+    const int popup_id=state.popup_browser_id;
+    const auto found=popup_browsers_.find(popup_id);
+    if(found!=popup_browsers_.end()) popup=found->second;
+    HWND root=nullptr;
+    bool isolated=false, has_other_window=false, blank=false;
+    if(popup && popup->IsValid() && popup->IsPopup() && popup->GetMainFrame()) {
+      const auto url=popup->GetMainFrame()->GetURL().ToString();
+      blank=url.empty() || url=="about:blank";
+      root=GetAncestor(popup->GetHost()->GetWindowHandle(),GA_ROOT);
+      isolated=root && IsWindow(root);
+      for(const auto& [other_id,other]:browser_instances_) {
+        if(other_id==popup_id || !other || !other->IsValid())continue;
+        HWND other_root=GetAncestor(other->GetHost()->GetWindowHandle(),GA_ROOT);
+        if(other_root==root) isolated=false;
+        if(other_root && other_root!=root && !other->IsPopup())has_other_window=true;
+      }
+    }
+    const bool terminal=item->IsComplete()||item->IsCanceled()||item->IsInterrupted();
+    auto hidden=hidden_download_popups_.find(popup_id);
+    // Never hide the Save As dialog, a page, a shared tab window or the only
+    // browser window. The original request and browser stay alive throughout.
+    if(!terminal && item->IsInProgress() && !state.path.empty() && blank && isolated &&
+       has_other_window && hidden==hidden_download_popups_.end() && IsWindowVisible(root)) {
+      hidden_download_popups_[popup_id]=root;hide_window=root;
+    }
+    if(terminal) {
+      downloads_.erase(id);
+      bool another=false;
+      for(const auto& [other_id,other]:downloads_)if(other.popup_browser_id==popup_id){another=true;break;}
+      hidden=hidden_download_popups_.find(popup_id);
+      if(hidden!=hidden_download_popups_.end() && !another) {
+        HWND previous=hidden->second;hidden_download_popups_.erase(hidden);
+        if(item->IsComplete() && blank && isolated && root==previous)close_popup=true;
+        else if(IsWindow(previous))show_window=previous;
+      } else if(hidden==hidden_download_popups_.end() && !another && item->IsComplete() &&
+                blank && isolated && has_other_window) {
+        // Very short downloads may complete before any progress event.
+        close_popup=true;
+      }
+    }
+  }
+  if(hide_window)ShowWindow(hide_window,SW_HIDE);
+  if(show_window)ShowWindow(show_window,SW_SHOWNOACTIVATE);
+  // Only after a successful terminal event and only for the still-empty,
+  // isolated popup. Never close a browser while any associated download runs.
+  if(close_popup && popup && popup->IsValid())popup->GetHost()->CloseBrowser(false);
 }
 
 }  // namespace maenbrowser
