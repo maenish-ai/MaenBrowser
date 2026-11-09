@@ -240,7 +240,7 @@ else()
 endif()
 add_test(NAME control_origin COMMAND MaenControlOriginTests)
 
-foreach(pair "MaenParentPolicyTests;tests/parent_policy_test.cpp" "MaenSecuritySnapshotTests;tests/security_snapshot_test.cpp" "MaenAgentProfileTests;tests/agent_profile_test.cpp" "MaenPopupPolicyTests;tests/popup_policy_test.cpp" "MaenSettingsStampTests;tests/settings_stamp_test.cpp" "MaenAdShimTests;tests/ad_shim_policy_test.cpp")
+foreach(pair "MaenParentPolicyTests;tests/parent_policy_test.cpp" "MaenSecuritySnapshotTests;tests/security_snapshot_test.cpp" "MaenAgentProfileTests;tests/agent_profile_test.cpp" "MaenPopupPolicyTests;tests/popup_policy_test.cpp" "MaenSettingsStampTests;tests/settings_stamp_test.cpp" "MaenAdShimTests;tests/ad_shim_policy_test.cpp" "MaenNetworkErrorTests;tests/network_error_category_test.cpp")
   list(GET pair 0 test_target)
   list(GET pair 1 test_source)
   add_executable(${test_target} ${test_source})

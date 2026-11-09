@@ -68,6 +68,7 @@ try{
   await waitForControlApi(()=>rawCall({op:'get'}));
   const technical=await call({op:'technical'});
   assert.equal(technical.status,200);assert.equal(technical.data.ok,true);
+  assert.equal(technical.data.networkDiagnosticsVersion,1,'Network diagnostic feature unavailable');
   assert(technical.data.engine.startsWith('CEF '));
   assert(['UltraLite','Lite','Balanced','Performance'].includes(technical.data.resourceMode));
   assert(technical.data.browserProcessMemoryMiB>0);

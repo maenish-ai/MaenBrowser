@@ -28,6 +28,7 @@
 #include "src/protection/identity.h"
 #include "src/protection/control_origin.h"
 #include "src/protection/ad_shim_policy.h"
+#include "src/protection/network_error_category.h"
 #include "src/protection/response_cors.h"
 #include "include/base/cef_logging.h"
 #include "src/storage/local_profile.h"
@@ -38,6 +39,8 @@ std::atomic<std::shared_ptr<const Settings>> g_settings{std::make_shared<const S
 struct AdRules { DomainRules domains; std::string error; };
 std::atomic<std::shared_ptr<const AdRules>> g_ad_rules{std::make_shared<const AdRules>()};
 std::atomic<uint64_t> g_blocked{0};
+std::atomic<int> g_network_error{0};
+std::atomic<uint64_t> g_network_error_tick{0};
 // Number of requests denied specifically by ad/tracker rules since browser launch.
 std::atomic<uint64_t> g_ad_blocked{0};
 std::mutex g_write;
@@ -482,6 +485,11 @@ std::filesystem::path InstallDirectory() {
 std::string ControlsUrl(const char* page) { return std::string(kExtensionOrigin) + "/" + page; }
 std::shared_ptr<const Settings> Current() { return g_settings.load(); }
 bool FamilyEnabled() { return Current()->family; }
+void RecordMainFrameNetworkError(int code) {
+  if(NetworkErrorCategory(code).empty())return;
+  g_network_error.store(code, std::memory_order_relaxed);
+  g_network_error_tick.store(GetTickCount64(), std::memory_order_release);
+}
 void Initialize() {
   CefRegisterSchemeHandlerFactory("https", "maen.browser", new NoNetworkFactory());
   auto shims=std::make_shared<AdShims>();
@@ -589,6 +597,17 @@ std::string Api(const std::string& body) {
     out->SetString("version", kVersion);
     out->SetString("engine", "CEF " CEF_VERSION);
     out->SetString("mediaEngine", "CEF; automatic WebView2 routing disabled");
+    out->SetInt("networkDiagnosticsVersion", 1);
+    // One process-wide recent category, no URL/IP and no persistent history.
+    const auto error_tick=g_network_error_tick.load(std::memory_order_acquire);
+    const auto now_tick=GetTickCount64();
+    if(error_tick && now_tick>=error_tick && now_tick-error_tick<=5*60*1000) {
+      const auto category=NetworkErrorCategory(g_network_error.load(std::memory_order_relaxed));
+      if(!category.empty()) {
+        out->SetString("recentNetworkCategory", std::string(category));
+        out->SetInt("recentNetworkAgeSeconds", static_cast<int>((now_tick-error_tick)/1000));
+      }
+    }
     const auto profile = resource::DetectResourceProfile();
     out->SetString("resourceMode", resource::ModeName(profile.mode));
     MEMORYSTATUSEX memory{}; memory.dwLength = sizeof(memory);

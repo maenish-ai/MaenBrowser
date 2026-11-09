@@ -15,6 +15,9 @@ before=s[s.index('bool MaenClient::OnBeforeDownload'):s.index('void MaenClient::
 assert 'if (!callback || !download_item) return false;' in before
 assert before.count('callback->Continue(download_path, ask)')==1
 assert 'chrome.downloads.cancel' not in (r/'assets/companion/background.js').read_text(encoding='utf-8')
+created=s[s.index('void MaenClient::OnAfterCreated'):s.index('void MaenClient::OnGotFocus')]
+assert 'created_root' in created and 'hidden_download_popups_.erase(it)' in created
+assert 'SW_SHOWNOACTIVATE' in created
 print('Download ownership: original popup request preserved, one continuation, only isolated blank popups hidden in progress; close after success, restore on failure')
 
 embedded=(r/'src/media/webview2_embedded.cpp').read_text(encoding='utf-8')

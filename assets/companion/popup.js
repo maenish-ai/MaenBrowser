@@ -1,3 +1,4 @@
+import {describeNetwork} from './network-diagnostics.js';
 import {inspectPageMedia} from './page-media-probe.js';
 import {mediaError} from './media-errors.js';
 import {appendError} from './error-journal.js';
@@ -65,6 +66,12 @@ function connectionError(error){
   chrome.action.setBadgeText({text:'?'}).catch(()=>{});
   $('status').textContent=describeError(error);$('status').classList.add('error');
 }
+$('networkDiagnostic').onclick=async()=>{
+  $('networkDiagnostic').disabled=true;
+  try{const details=await nativeApi('technical');$('networkResult').textContent=describeNetwork(details,t);}
+  catch(e){$('networkResult').textContent=describeError(e);}
+  finally{$('networkDiagnostic').disabled=false;}
+};
 $('reloadSite').onclick=async()=>{
   try{
     if(!Number.isInteger(tab?.id) || !/^https?:/i.test(tab.url||''))throw new Error('Open a normal webpage first.');

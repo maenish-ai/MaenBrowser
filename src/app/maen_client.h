@@ -56,6 +56,9 @@ class MaenClient final : public CefClient,
   CefRefPtr<CefCommandHandler> GetCommandHandler() override { return this; }
   CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
   void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) override;
+  void OnLoadError(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+      CefLoadHandler::ErrorCode errorCode, const CefString& errorText,
+      const CefString& failedUrl) override;
   bool OnChromeCommand(CefRefPtr<CefBrowser> browser, int command_id,
                        cef_window_open_disposition_t disposition) override;
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(

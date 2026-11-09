@@ -129,6 +129,15 @@ void MaenClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
 
   ApplyMaenWindowIcon(browser->GetHost()->GetWindowHandle());
   browser_instances_[browser->GetIdentifier()] = browser;
+  // If a hidden download popup gains another tab, it is no longer an empty,
+  // isolated popup. Restore its window immediately so that tab is reachable.
+  const HWND created_root=GetAncestor(browser->GetHost()->GetWindowHandle(),GA_ROOT);
+  for(auto it=hidden_download_popups_.begin();it!=hidden_download_popups_.end();) {
+    if(it->first!=browser->GetIdentifier() && created_root && it->second==created_root) {
+      if(IsWindow(it->second))ShowWindow(it->second,SW_SHOWNOACTIVATE);
+      it=hidden_download_popups_.erase(it);
+    }else ++it;
+  }
   std::erase_if(pending_tabs_,[](const PendingTab& tab){return GetTickCount64()>tab.deadline;});
   if(!browser->IsPopup()) {
     const HWND root=GetAncestor(browser->GetHost()->GetWindowHandle(),GA_ROOT);
@@ -336,6 +345,17 @@ bool MaenClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   // Let the native resource handler commit a local placeholder at this URL.
   // OnLoadEnd then attaches WebView2 without losing Chrome's address/history.
   return false;
+}
+
+void MaenClient::OnLoadError(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+                             CefLoadHandler::ErrorCode errorCode, const CefString&,
+                             const CefString& failedUrl) {
+  CEF_REQUIRE_UI_THREAD();
+  if (!browser || !frame || !frame->IsMain() ||
+      browser->GetHost()->GetRequestContext()->GetCachePath().empty()) return;
+  const auto url=protection::ParseUrl(failedUrl.ToString());
+  if(url.scheme=="http" || url.scheme=="https")
+    protection::RecordMainFrameNetworkError(static_cast<int>(errorCode));
 }
 
 void MaenClient::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int status) {

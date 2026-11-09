@@ -38,6 +38,8 @@ Url ParseUrl(const std::string& url);
 std::filesystem::path InstallDirectory();
 std::string ControlsUrl(const char* page = "options.html");
 void Initialize();
+// Stores only a transient category and monotonic age, never an address or credentials.
+void RecordMainFrameNetworkError(int code);
 std::shared_ptr<const Settings> Current();
 bool Block(const std::string& url, const std::string& source, bool document);
 bool BlockNavigation(const std::string& url);

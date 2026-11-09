@@ -1,0 +1,13 @@
+import {strict as assert} from 'node:assert';
+import {readFileSync} from 'node:fs';import vm from 'node:vm';
+import {adBadge} from '../assets/companion/api.js';
+import {describeNetwork} from '../assets/companion/network-diagnostics.js';
+const code=readFileSync('assets/companion/popup.js','utf8').replace(/^import .*;\n/gm,'');
+const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',disabled:false,classList:{add(){}},select(){}});return nodes.get(id)};
+let requests=0;const snapshot={ok:true,ads:true,family:false,exceptions:[],version:'1.13.0',revision:'1',adBlockedRequests:'0'};
+const chrome={tabs:{query:async()=>[{id:7,url:'https://example.com'}]},runtime:{getManifest:()=>({version:'1.13.0'})},action:{setBadgeText:async()=>{}}};
+const t=(s,v={})=>s.replace(/\{(\w+)\}/g,(_,k)=>String(v[k]??''));
+const context=vm.createContext({$,chrome,console,Error,t,adBadge,describeNetwork,host:()=> 'example.com',matchesHost:()=>false,api:async()=>snapshot,nativeApi:async op=>{assert.equal(op,'technical');requests++;return {ok:true,networkDiagnosticsVersion:1,recentNetworkCategory:'proxy',recentNetworkAgeSeconds:4}},message(){},diagnosticCode:()=>'',describeError:()=>'',diagnosticReport:()=>'',revealVideoControls(){}});
+vm.runInContext(code,context);await new Promise(r=>setImmediate(r));assert.equal(requests,0,'Network diagnostics must require an explicit click');
+await $('networkDiagnostic').onclick();assert.equal(requests,1);assert.match($('networkResult').textContent,/proxy or tunnel/);assert.match($('networkResult').textContent,/does not prove/);assert.equal($('networkDiagnostic').disabled,false);
+console.log('Network diagnostic UI is explicit, local, categorized and does not claim VPN causation');
