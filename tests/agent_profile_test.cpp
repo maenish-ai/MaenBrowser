@@ -11,4 +11,11 @@ int main(){
  assert(AgentProfile(normal,normal.parent_path())==fallback);
  assert(AgentProfile(normal,"relative")==fallback);
  assert(AgentProfile(normal,root/"YourAgent"/"Facebook")==fs::weakly_canonical(root/"YourAgent"/"Facebook"));
+ const auto agent_root=fallback;
+ const auto manus=AgentProfile(normal,agent_root/"manus");
+ const auto claude=AgentProfile(normal,agent_root/"claude");
+ assert(manus==fs::weakly_canonical(agent_root/"manus"));
+ assert(claude==fs::weakly_canonical(agent_root/"claude"));
+ assert(manus!=claude);
+ assert(manus!=fs::weakly_canonical(normal));
 }
