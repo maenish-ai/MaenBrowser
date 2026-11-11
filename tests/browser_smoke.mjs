@@ -107,6 +107,11 @@ try{
       response.end('<!doctype html><meta charset="utf-8"><title>MaenBrowser H264 test</title><video id="h264" controls muted autoplay playsinline src="/clip.mp4"></video>');
       return;
     }
+    if(request.url==='/arabic-input'){
+      response.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+      response.end('<!doctype html><meta charset="utf-8"><title>Arabic input test</title><input id="arabic-input" dir="auto"><textarea id="arabic-textarea" dir="auto"></textarea><div id="arabic-editable" contenteditable="true" dir="auto"></div>');
+      return;
+    }
     if(request.url==='/clip.mp4'){
       const range=/^bytes=(\d+)-(\d*)$/.exec(request.headers.range||'');
       if(range){
@@ -159,6 +164,21 @@ try{
   assert.equal(await evaluate('location.href'),controlUrl,'External launch replaced the original page');
   await evaluate(`chrome.tabs.remove(${externalTab.id})`);
   console.log('PASS: external URL opens a new tab in the current window and preserves the original');
+
+  // Exercise mixed Arabic/Latin Unicode through Chromium's input path in a real CEF page.
+  await navigate(fixtureUrl+'arabic-input');
+  const arabicText='مرحبا MaenBrowser 2026';
+  await evaluate(`document.getElementById('arabic-input').focus()`);
+  await send('Input.insertText',{text:arabicText});
+  assert.equal(await evaluate(`document.getElementById('arabic-input').value`),arabicText,'Arabic/Latin input value changed');
+  assert.equal(await evaluate(`getComputedStyle(document.getElementById('arabic-input')).direction`),'rtl','dir=auto should follow the first Arabic character');
+  await evaluate(`document.getElementById('arabic-textarea').focus()`);
+  await send('Input.insertText',{text:arabicText});
+  assert.equal(await evaluate(`document.getElementById('arabic-textarea').value`),arabicText,'Arabic text area input changed');
+  await evaluate(`document.getElementById('arabic-editable').focus()`);
+  await send('Input.insertText',{text:arabicText});
+  assert.equal(await evaluate(`document.getElementById('arabic-editable').textContent`),arabicText,'Arabic contenteditable input changed');
+  console.log('PASS: CEF preserves mixed Arabic/Latin text and auto RTL in input, textarea and contenteditable');
 
   await navigate(fixtureUrl);
   const popupUrl=fixtureUrl+'clicked-link';
